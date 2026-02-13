@@ -1,0 +1,44 @@
+
+services:
+  # 1. Database 
+  postgres:
+    image: postgres:15
+    container_name: tour_postgres 
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123 
+      POSTGRES_DB: tour_db         
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # 2. Backend 
+  backend:
+    build: ./backend
+    container_name: tour-backend
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: admin
+      DB_PASSWORD: password123
+      DB_NAME: tour_db
+    depends_on:
+      - postgres
+
+  # 3. Frontend 
+  frontend:
+    build: ./frontend
+    container_name: tour-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
