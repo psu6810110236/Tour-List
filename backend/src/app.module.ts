@@ -1,26 +1,35 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm'; // ต้อง install @nestjs/typeorm pg
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    // เพิ่มส่วนนี้เพื่อเชื่อมต่อ Database ตาม Requirement
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      envFilePath: '.env', 
+    }),
+
+    // 2. เชื่อมต่อ Database แบบ Async
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
+        port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
+        
+        // ✅ ใช้ autoLoadEntities อย่างเดียว ไม่ต้องใส่ entities: [User] ตรงๆ
+        // วิธีนี้จะไปดึงไฟล์ที่ใช้ @Entity() มาให้อัตโนมัติ ลดปัญหา Error ตอน Build
         autoLoadEntities: true,
-        synchronize: true, // ใช้เฉพาะ Dev mode
+        
+        // synchronize: true จะสร้าง/แก้ไข Table ใน DB ให้ตาม Entity อัตโนมัติ (ห้ามใช้บน Production)
+        synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),
-      inject: [ConfigService],
     }),
   ],
   controllers: [AppController],
