@@ -1,25 +1,30 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, JoinColumn } from 'typeorm';
+import { Role } from './role.entity';
 
 @Entity()
 export class User {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ unique: true })
   email: string;
 
   @Column()
-  name: string;
+  passwordHash: string;
 
-  @Column({ default: 'user' }) // 'user' หรือ 'admin'
-  role: string;
+  @Column()
+  fullName: string;
 
-  @Column({ nullable: true })
-  password?: string;
+  @Column({ default: 'local' })
+  provider: string;
+
+  @Column()
+  roleId: string;
+
+  @ManyToOne(() => Role, (role) => role.users)
+  @JoinColumn({ name: 'roleId' })
+  role: Role;
 
   @CreateDateColumn()
   createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }
