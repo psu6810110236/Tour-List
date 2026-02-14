@@ -3,15 +3,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+// Import Entities ที่ต้องใช้ใน Seeding
+import { Role } from './entities/role.entity';
+import { Province } from './entities/province.entity';
+import { Tour } from './entities/tour.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ 
-      isGlobal: true,
-      envFilePath: '.env', 
-    }),
-
-    // 2. เชื่อมต่อ Database แบบ Async
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -22,15 +21,12 @@ import { AppService } from './app.service';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        
-        // ✅ ใช้ autoLoadEntities อย่างเดียว ไม่ต้องใส่ entities: [User] ตรงๆ
-        // วิธีนี้จะไปดึงไฟล์ที่ใช้ @Entity() มาให้อัตโนมัติ ลดปัญหา Error ตอน Build
         autoLoadEntities: true,
-        
-        // synchronize: true จะสร้าง/แก้ไข Table ใน DB ให้ตาม Entity อัตโนมัติ (ห้ามใช้บน Production)
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),
     }),
+    // ✅ เพิ่มส่วนนี้เพื่อให้ AppService ใช้งาน Repository ได้
+    TypeOrmModule.forFeature([Role, Province, Tour]),
   ],
   controllers: [AppController],
   providers: [AppService],
