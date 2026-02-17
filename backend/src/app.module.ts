@@ -3,10 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-// Import Entities ที่ต้องใช้ใน Seeding
 import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
+import { User } from './entities/user.entity'; 
 
 @Module({
   imports: [
@@ -25,8 +25,8 @@ import { Tour } from './entities/tour.entity';
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),
     }),
-    // ✅ เพิ่มส่วนนี้เพื่อให้ AppService ใช้งาน Repository ได้
-    TypeOrmModule.forFeature([Role, Province, Tour]),
+    // เพิ่ม User เข้าไปในลิสต์นี้เพื่อให้ TypeORM รู้จักความสัมพันธ์
+    TypeOrmModule.forFeature([Role, Province, Tour, User]), 
   ],
   controllers: [AppController],
   providers: [AppService],
