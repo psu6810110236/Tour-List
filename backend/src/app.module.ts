@@ -7,6 +7,7 @@ import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
 import { User } from './entities/user.entity'; 
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { User } from './entities/user.entity';
     }),
     // เพิ่ม User เข้าไปในลิสต์นี้เพื่อให้ TypeORM รู้จักความสัมพันธ์
     TypeOrmModule.forFeature([Role, Province, Tour, User]), 
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

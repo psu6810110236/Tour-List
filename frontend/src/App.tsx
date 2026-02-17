@@ -1,35 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import ChatWidget from './components/ChatWidget';
+import AdminChatPage from './pages/AdminChatPage';
 
 function App() {
-  const [count, setCount] = useState(0)
+  // 👇 ตรวจสอบ URL ว่าถ้าลงท้ายด้วย /admin ให้แสดงหน้าแอดมิน
+  const isAdminPage = window.location.pathname === '/admin';
 
+  if (isAdminPage) {
+    return <AdminChatPage />;
+  }
+
+  // ถ้าไม่ใช่หน้าแอดมิน ให้แสดงหน้า Landing Page ปกติ
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 relative">
+      <header className="bg-white p-4 shadow-sm flex justify-between items-center px-10">
+        <h1 className="text-2xl font-bold text-blue-600">RoamHub Tour</h1>
+        <nav className="space-x-4 text-gray-600">
+          <a href="#" className="hover:text-blue-600">หน้าแรก</a>
+          <a href="#" className="hover:text-blue-600">แพ็คเกจทัวร์</a>
+        </nav>
+      </header>
+
+      <main className="container mx-auto mt-20 text-center px-4">
+        <h2 className="text-5xl font-extrabold text-gray-800 mb-6 drop-shadow-sm">
+          ค้นพบความมหัศจรรย์ของ<span className="text-blue-600">ประเทศไทย</span>
+        </h2>
+        <p className="text-xl text-gray-500 mb-8 max-w-2xl mx-auto">
+          สัมผัสความงามของวัฒนธรรม ธรรมชาติ และการผจญภัยที่เราคัดสรรมาเพื่อคุณโดยเฉพาะ
         </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+        <button className="bg-orange-500 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-lg hover:bg-orange-600 transition">
+          จองเลยตอนนี้
+        </button>
+      </main>
+
+      {/* Chat Widget สำหรับลูกค้า */}
+      <ChatWidget />
+    </div>
+  );
 }
 
-export default App
+export default App;

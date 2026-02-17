@@ -1,19 +1,28 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
-import { User } from './user.entity'; // อ้างอิง User entity ที่มีอยู่แล้ว
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity';
 
 @Entity()
 export class Message {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
-  content: String;
+  content: string;
 
-  @ManyToOne(() => User, (user) => user.id) 
+  @Column()
+  senderId: string;
+
+  // 👇 เพิ่มคอลัมน์นี้: เพื่อระบุคนรับ (Admin หรือ User)
+  @Column({ nullable: true })
+  receiverId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'senderId' })
   sender: User;
 
-  // กรณีเป็นห้องแชทรวม หรือแชทส่วนตัว อาจจะเก็บ roomId หรือ receiverId เพิ่มเติมได้
-  // ในตัวอย่างนี้ขอทำแบบห้องแชทรวมง่ายๆ ก่อนนะครับ
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'receiverId' })
+  receiver: User;
 
   @CreateDateColumn()
   createdAt: Date;
