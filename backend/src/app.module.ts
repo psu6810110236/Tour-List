@@ -7,6 +7,9 @@ import { AppService } from './app.service';
 import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { User } from './entities/user.entity';
 
 @Module({
   imports: [
@@ -22,11 +25,13 @@ import { Tour } from './entities/tour.entity';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        synchronize: true,
       }),
     }),
     // ✅ เพิ่มส่วนนี้เพื่อให้ AppService ใช้งาน Repository ได้
-    TypeOrmModule.forFeature([Role, Province, Tour]),
+    TypeOrmModule.forFeature([Role, Province, Tour, User]),
+    UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
