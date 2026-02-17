@@ -8,6 +8,8 @@ import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
 import { User } from './entities/user.entity'; 
 import { ChatModule } from './chat/chat.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -23,11 +25,12 @@ import { ChatModule } from './chat/chat.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        synchronize: true,
       }),
     }),
-    // เพิ่ม User เข้าไปในลิสต์นี้เพื่อให้ TypeORM รู้จักความสัมพันธ์
     TypeOrmModule.forFeature([Role, Province, Tour, User]), 
+    UsersModule,
+    AuthModule,
     ChatModule,
   ],
   controllers: [AppController],
