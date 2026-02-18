@@ -1,24 +1,49 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+// frontend/src/App.tsx
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login';       // Import Component ที่สร้างใหม่
+import Register from './pages/Register'; // Import Component ที่สร้างใหม่
 import AdminRoute from './components/AdminRoute';
 
-// ตัวอย่าง Component หน้าต่างๆ
-const Home = () => <div>Home Page</div>;
-const Login = () => <div>Login Page (ต้องทำ Form)</div>;
-const AdminDashboard = () => <div>Welcome Admin! Secret Data Here.</div>;
+// Mock Component
+const Home = () => (
+    <div className="p-10">
+        <h1 className="text-2xl">หน้าแรก (ทัวร์ทั้งหมด)</h1>
+        <p>ทุกคนเข้าหน้านี้ได้</p>
+        <a href="/booking" className="text-blue-500 underline mt-4 block">ทดลองกดจอง (ต้อง Login)</a>
+    </div>
+);
+
+const BookingPage = () => <div>หน้าจองทัวร์ (สำหรับสมาชิกเท่านั้น)</div>;
+const AdminDashboard = () => <div>Welcome Admin!</div>;
+
+// ✅ Component ช่วยป้องกัน Route
+const PrivateRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return <div>Loading...</div>;
+  // ถ้าไม่มี user ให้เด้งไปหน้า login
+  return user ? <Outlet /> : <Navigate to="/login" replace />;
+};
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* ✅ Route สาธารณะ (ไม่ต้อง Login) */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           
-          {/* ✅ ส่วนที่ป้องกันหน้า Admin */}
+          {/* ✅ Route ที่ต้อง Login ก่อน (เช่น การจอง) */}
+          <Route element={<PrivateRoute />}>
+             <Route path="/booking" element={<BookingPage />} />
+             <Route path="/profile" element={<div>User Profile</div>} />
+          </Route>
+
+          {/* ✅ Route ของ Admin */}
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
-            {/* เพิ่มหน้า Admin อื่นๆ ตรงนี้ได้เลย */}
           </Route>
           
         </Routes>
