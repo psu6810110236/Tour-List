@@ -1,7 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+// backend/src/auth/auth.service.ts
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from './dto/create-user.dto'; // ✅ Import DTO
 
 @Injectable()
 export class AuthService {
@@ -10,7 +12,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // ตรวจสอบ Username/Password
+  // ... validateUser (คงเดิม)
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findOneByEmail(email);
     if (user && (await bcrypt.compare(pass, user.passwordHash))) {
@@ -20,7 +22,7 @@ export class AuthService {
     return null;
   }
 
-  // สร้าง Token เมื่อ Login ผ่าน
+  // ... login (คงเดิม)
   async login(user: any) {
     const payload = { email: user.email, sub: user.id, role: user.role?.name };
     return {
@@ -32,5 +34,25 @@ export class AuthService {
         role: user.role?.name,
       }
     };
+  }
+
+  // ✅ ฟังก์ชัน Register แบบรับ DTO
+  async register(createUserDto: CreateUserDto) {
+    // 1. ตรวจสอบว่ามีอีเมลนี้หรือยัง
+    const existingUser = await this.usersService.findOneByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new BadRequestException('Email already exists');
+    }
+
+    // 2. Hash Password
+    const salt = await bcrypt.genSalt();
+    const passwordHash = await bcrypt.hash(createUserDto.password, salt);
+
+    // 3. ส่งต่อให้ UsersService บันทึก
+    const newUser = await this.usersService.create(createUserDto, passwordHash);
+
+    // 4. ส่งค่ากลับ (ไม่ส่ง passwordHash)
+    const { passwordHash: p, ...result } = newUser;
+    return result;
   }
 }

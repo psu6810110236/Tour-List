@@ -1,7 +1,7 @@
 # backend/Dockerfile
 
 # 1. ใช้ Node.js v18 เป็นฐาน
-FROM node:18-alpine
+FROM node:20-alpine
 
 # 2. กำหนด Folder ทำงาน
 WORKDIR /app

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Calendar, DollarSign, Package, CheckCircle, 
   XCircle, Clock, LogOut, Search, 
-  Plus, Edit, Trash2, Eye, TrendingUp, Settings, Filter
+  Plus, Edit, Trash2, Eye, TrendingUp, Filter
 } from 'lucide-react';
 
 import { mockBookings, tours, getLang } from '../data/mockData';

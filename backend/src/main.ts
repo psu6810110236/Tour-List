@@ -1,5 +1,10 @@
-// ✅ เพิ่มบรรทัดนี้ไว้บนสุด เพื่อแก้ปัญหา crypto ใน Node.js v18+
-global['crypto'] = require('crypto');
+if (!global.crypto) {
+  Object.defineProperty(global, 'crypto', {
+    value: require('crypto').webcrypto,
+    writable: true,
+    configurable: true,
+  });
+}
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';

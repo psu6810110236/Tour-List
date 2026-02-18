@@ -1,31 +1,36 @@
 // src/App.tsx
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Outlet, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminRoute from './components/AdminRoute';
 import ChatWidget from './components/ChatWidget';
 
-// นำเข้า Component
-import HomePage from './components/home-page'; 
+// --- Import Pages & Components ---
+import Login from './pages/Login'; // ใช้หน้า Login จริงของคุณ
+import Register from './pages/Register';
+import HomePage from './components/home-page';
 import { Navigation } from './components/navigation';
 import { ProvincePage } from './components/ProvincePage';
 import TourDetailPage from './pages/TourDetailPage'; 
 import AdminChatPage from './pages/AdminChatPage';
-import AdminDashboardPage from './pages/AdminDashboardPage'; // ตรวจสอบชื่อไฟล์ให้ตรงกัน
+import AdminDashboardPage from './pages/AdminDashboardPage';
 
 // นำเข้า Service และ Type
 import { tourService } from './services/api';
 import type { Province } from './data/mockData'; 
 
-// หน้า Login ชั่วคราว (คุณสามารถเปลี่ยนเป็น Component Login จริงของคุณได้)
-const Login = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-50">
-    <div className="p-10 bg-white rounded-3xl shadow-xl text-center">
-      <h1 className="text-2xl font-bold mb-4">เข้าสู่ระบบ</h1>
-      <p className="text-gray-500">กรุณาเข้าสู่ระบบเพื่อใช้งานส่วนแอดมิน</p>
-    </div>
-  </div>
-);
+// --- Mock Pages สำหรับส่วนที่ยังไม่ได้สร้างไฟล์แยก ---
+const ProvincesPage = () => <div className="p-10 pt-24 text-center"><h1>🌴 หน้าจังหวัดทั้งหมด (Provinces)</h1><p>รวมที่เที่ยวแยกตามจังหวัด</p></div>;
+const BookingPage = () => <div className="p-10 pt-24 text-center"><h1>📅 หน้าจองทัวร์ (Booking)</h1><p>ระบบจองจะอยู่ที่นี่</p></div>;
+const BookingsHistoryPage = () => <div className="p-10 pt-24 text-center"><h1>🎫 ประวัติการจอง (My Bookings)</h1><p>รายการที่จองแล้วจะขึ้นหน้านี้</p></div>;
+const UserProfile = () => <div className="p-10 pt-24 text-center"><h1>👤 โปรไฟล์ผู้ใช้ (Profile)</h1><p>แก้ไขข้อมูลส่วนตัว</p></div>;
+
+// Component สำหรับป้องกัน Route ที่ต้อง Login (สำหรับ User ทั่วไป)
+const PrivateRoute = () => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="p-20 text-center font-bold text-[#00A699]">กำลังตรวจสอบสิทธิ์...</div>;
+  return user ? <Outlet /> : <Navigate to="/login" replace />;
+};
 
 // ✅ Component ตัวช่วยสำหรับดึงข้อมูลจังหวัดจาก API (สำหรับหน้า /province/:id)
 const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
@@ -38,7 +43,6 @@ const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
     const fetchProvince = async () => {
       try {
         const response = await tourService.getProvinces();
-        // ค้นหาจังหวัดที่ตรงกับ ID ใน URL
         const found = response.data.find((p: any) => p.id === id);
         setProvinceData(found || null);
       } catch (error) {
@@ -67,40 +71,68 @@ const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
 
 function AppContent() {
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'th' | 'en'>('th');
 
-  // ✅ ฟังก์ชันกลางสำหรับการเปลี่ยนหน้า (Handle Navigation)
-  const handleNavigate = (page: string) => {
-    if (page === 'home') {
-      navigate('/');
-    } else if (page.startsWith('admin/')) {
-      navigate(`/${page}`); // รองรับ admin/dashboard, admin/chat
-    } else {
-      navigate(`/${page}`);
+  // Logic: แปลง URL ปัจจุบัน เป็นชื่อ Tab เพื่อให้ Navbar แสดงสีถูกต้อง
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    if (path === '/' || path.startsWith('/tour')) return 'home';
+    if (path.startsWith('/province') || path === '/provinces') return 'provinces';
+    if (path.startsWith('/booking') || path.startsWith('/my-bookings')) return 'bookings';
+    return '';
+  };
+
+  // Logic: ฟังก์ชันกลางสำหรับการเปลี่ยนหน้า
+  const handleNavigate = (pageId: string) => {
+    switch (pageId) {
+        case 'home': navigate('/'); break;
+        case 'provinces': navigate('/provinces'); break;
+        case 'bookings': navigate('/my-bookings'); break;
+        case 'dashboard': navigate('/profile'); break;
+        case 'admin/dashboard': navigate('/admin/dashboard'); break;
+        default: navigate(`/${pageId}`);
     }
   };
 
+  // ซ่อน Navbar และ Chat ในหน้า Login/Register และหน้า Admin (แอดมินมี Navbar แยกในตัว)
+  const isAuthPage = ['/login', '/register'].includes(location.pathname);
+  const isAdminPage = location.pathname.startsWith('/admin');
+  const showNavAndChat = !isAuthPage && !isAdminPage;
+
   return (
     <div className="min-h-screen bg-white">
-      <Navigation 
-        currentPage="" // ปล่อยว่างไว้หรือใช้ location.pathname
-        onNavigate={handleNavigate}
-        userName={user?.fullName || "Guest User"}
-        onShowTutorial={() => alert("Tutorial Coming Soon!")}
-        cartCount={0} 
-        language={language}
-        onToggleLanguage={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
-      />
+      {showNavAndChat && (
+        <Navigation
+          currentPage={getCurrentPage()}
+          onNavigate={handleNavigate}
+          userName={user?.fullName || "Guest User"}
+          onShowTutorial={() => alert("Tutorial Coming Soon!")}
+          cartCount={0}
+          onOpenCart={() => console.log("Open Cart")}
+          language={language}
+          onToggleLanguage={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
+        />
+      )}
 
       <Routes>
-        {/* ----- Public Routes ----- */}
+        {/* === Public Routes === */}
         <Route path="/" element={<HomePage language={language} />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/provinces" element={<ProvincesPage />} />
         <Route path="/province/:id" element={<ProvinceRouteWrapper language={language} />} />
         <Route path="/tour/:id" element={<TourDetailPage />} />
-        <Route path="/login" element={<Login />} />
-        
-        {/* ----- Protected Admin Routes ----- */}
+
+        {/* === Private Routes (ต้อง Login) === */}
+        <Route element={<PrivateRoute />}>
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/my-bookings" element={<BookingsHistoryPage />} />
+          <Route path="/profile" element={<UserProfile />} />
+        </Route>
+
+        {/* === Admin Routes (เฉพาะ Admin) === */}
         <Route element={<AdminRoute />}>
           <Route 
             path="/admin/dashboard" 
@@ -109,23 +141,17 @@ function AppContent() {
           <Route path="/admin/chat" element={<AdminChatPage />} />
         </Route>
 
-        {/* ----- 404 Fallback ----- */}
+        {/* === 404 Fallback === */}
         <Route path="*" element={
           <div className="p-20 text-center">
             <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">404</h1>
             <p className="text-gray-500 mb-8">ไม่พบหน้านี้ในระบบ</p>
-            <button 
-              onClick={() => navigate('/')}
-              className="bg-[#00A699] text-white px-8 py-3 rounded-2xl font-bold"
-            >
-              กลับหน้าแรก
-            </button>
+            <button onClick={() => navigate('/')} className="bg-[#00A699] text-white px-8 py-3 rounded-2xl font-bold">กลับหน้าแรก</button>
           </div>
         } />
       </Routes>
 
-      {/* Widget แชทที่แสดงทุกหน้า */}
-      <ChatWidget />
+      {showNavAndChat && <ChatWidget />}
     </div>
   );
 }
