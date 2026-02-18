@@ -99,7 +99,6 @@ export const translations = {
       startExploring: "Start Exploring",
       status: "Status",
     },
-    // --- เพิ่มหมวด Admin ---
     admin: {
       title: "Admin Dashboard",
       subtitle: "Manage bookings, payments, and tours",
@@ -165,7 +164,6 @@ export const translations = {
         rejectBtn: "Reject Booking",
       },
     },
-    // --- เพิ่มหมวด Dashboard (User) ---
     dashboard: {
       memberSince: "Member since",
       logout: "Logout",
@@ -316,7 +314,6 @@ export const translations = {
       startExploring: "ค้นหาทัวร์",
       status: "สถานะ",
     },
-    // --- เพิ่มหมวด Admin ---
     admin: {
       title: "แดชบอร์ดผู้ดูแลระบบ",
       subtitle: "จัดการการจอง การชำระเงิน และทัวร์",
@@ -382,7 +379,6 @@ export const translations = {
         rejectBtn: "ปฏิเสธการจอง",
       },
     },
-    // --- เพิ่มหมวด Dashboard (User) ---
     dashboard: {
       memberSince: "เป็นสมาชิกตั้งแต่",
       logout: "ออกจากระบบ",
@@ -437,4 +433,4 @@ export const translations = {
       removeItem: "ลบรายการ",
     },
   },
-};
+} as const; // ✅ สำคัญมาก: เติม as const เพื่อให้ TS รู้ว่าโครงสร้างข้อมูลนี้เปลี่ยนแปลงไม่ได้
