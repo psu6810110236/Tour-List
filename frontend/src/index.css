@@ -1,12 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ปรับ body ให้เต็มจอและสีพื้นหลังถูกต้อง */
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background-color: #f9fafb; /* สีเทาอ่อน */
+  background-color: #f9fafb;
   font-family: sans-serif;
 }
