@@ -13,6 +13,7 @@ export class CreateReviewDto {
   @IsNumber()
   tourId: number;
 
-  @IsNumber()
+  @IsString()
   userId: number; // รับมาตรงๆ ก่อนเพราะยังไม่มี Auth Token
+  
 }

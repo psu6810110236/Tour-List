@@ -1,10 +1,11 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
 import { Province } from './province.entity';
+import { Review } from './review.entity'; 
 
 @Entity()
 export class Tour {
-  @PrimaryColumn()
-  id: string; // เช่น 'cm-001'
+  @PrimaryGeneratedColumn()
+  id: number; 
 
   @Column()
   name: string;
@@ -39,7 +40,7 @@ export class Tour {
   @Column({ default: 0 })
   reviewCount: number;
 
-  // ข้อมูลที่เป็นรายการ (Array) เราจะเก็บเป็น JSON ใน Database
+  // ข้อมูลที่เป็นรายการ (Array) เก็บเป็น JSON
   @Column('json')
   highlights: string[];
 
@@ -64,11 +65,14 @@ export class Tour {
   // --- Relations ---
   
   @Column()
-  provinceId: string;
+  provinceId: string; 
 
   @ManyToOne(() => Province)
   @JoinColumn({ name: 'provinceId' })
   province: Province;
+
+  @OneToMany(() => Review, (review) => review.tour)
+  reviews: Review[];
 
   @CreateDateColumn()
   createdAt: Date;

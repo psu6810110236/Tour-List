@@ -10,12 +10,14 @@ import { Tour } from './entities/tour.entity';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { User } from './entities/user.entity';
+import { Review } from './entities/review.entity';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule,TypeOrmModule.forFeature([Review])],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
@@ -32,6 +34,7 @@ import { User } from './entities/user.entity';
     TypeOrmModule.forFeature([Role, Province, Tour, User]),
     UsersModule,
     AuthModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,7 +1,6 @@
-// backend/src/entities/review.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from './user.entity'; // ✅ ใช้ ./ เพราะอยู่โฟลเดอร์เดียวกันแล้ว
-import { Tour } from './tour.entity'; // ✅ ใช้ ./ เพราะอยู่โฟลเดอร์เดียวกันแล้ว
+import { User } from './user.entity'; 
+import { Tour } from './tour.entity';
 
 @Entity()
 export class Review {
@@ -14,13 +13,14 @@ export class Review {
   @Column({ type: 'text', nullable: true })
   comment: string;
 
-  @CreateDateColumn()ห
+  @CreateDateColumn()
   createdAt: Date;
 
-  @Column()
-  tourId: number;
+  @ManyToOne(() => Tour, (tour) => tour.reviews, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tourId' }) 
+  tour: Tour;  
 
-  @Column()
-  userId: number;
-
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' }) 
+  user: User;
 }

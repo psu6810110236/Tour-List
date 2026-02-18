@@ -7,7 +7,6 @@ import { Tour } from './entities/tour.entity';
 import { User } from './entities/user.entity'; 
 import * as bcrypt from 'bcrypt'; 
 
-
 @Injectable()
 export class AppService implements OnApplicationBootstrap {
   constructor(
@@ -22,7 +21,7 @@ export class AppService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap() {
-    // ใช้ Promise.all เพื่อความเร็วและลดปัญหาแย่งกันเขียน DB
+
     await this.seedRoles();
     await this.seedUsers();
     const provinces = await this.seedProvinces();
@@ -66,12 +65,13 @@ export class AppService implements OnApplicationBootstrap {
 
   private async seedTours(provinces: Province[]) {
     const count = await this.tourRepository.count();
+
     if (count === 0 && provinces.length > 0) {
       const cm = provinces.find((p) => p.id === 'chiang-mai');
       if (cm) {
         await this.tourRepository.save([
           {
-            id: 'cm-001',
+
             provinceId: cm.id,
             name: 'Doi Inthanon National Park One Day Tour',
             name_th: 'ทัวร์ดอยอินทนนท์ 1 วัน',
@@ -91,6 +91,7 @@ export class AppService implements OnApplicationBootstrap {
             ],
             included: ['Lunch', 'Insurance', 'Entry Fees'],
             notIncluded: ['Tips', 'Personal Expenses'],
+
           },
         ]);
         console.log('✅ Seeded Mock Tours');
@@ -101,7 +102,8 @@ export class AppService implements OnApplicationBootstrap {
   private async seedUsers() {
     const adminEmail = 'admin@test.com';
     const userEmail = 'user@test.com';
-    const password = 'password123';
+    const password = 'password123'; 
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const adminRole = await this.roleRepository.findOne({ where: { name: 'ADMIN' } });
@@ -113,7 +115,7 @@ export class AppService implements OnApplicationBootstrap {
         passwordHash: hashedPassword,
         fullName: 'Admin Tester',
         role: adminRole,
-        roleId: adminRole.id,
+        // roleId: adminRole.id, 
         provider: 'local',
       });
       console.log('✅ Seeded Admin User');
@@ -125,7 +127,7 @@ export class AppService implements OnApplicationBootstrap {
         passwordHash: hashedPassword,
         fullName: 'Normal User',
         role: userRole,
-        roleId: userRole.id,
+        // roleId: userRole.id,
         provider: 'local',
       });
       console.log('✅ Seeded Normal User');
