@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
-import { User } from '../entities/user.entity'; // Import Entity ของคุณ
+import { User } from '../entities/user.entity';
+import { Role } from '../entities/role.entity'; // ✅ 1. Import Role Entity
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])], // เชื่อมต่อ Entity User
+  // ✅ 2. เพิ่ม Role เข้าไปใน list นี้
+  imports: [TypeOrmModule.forFeature([User, Role])],
   providers: [UsersService],
-  exports: [UsersService], // Export เพื่อให้ AuthModule เรียกใช้ได้ในอนาคต
+  exports: [UsersService],
 })
-export class UsersModule {}
+export class UsersModule { }

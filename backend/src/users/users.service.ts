@@ -28,12 +28,12 @@ export class UsersService {
     const { email, fullName } = createUserDto;
 
     // 1. หา Role 'user' จาก Database
-    const userRole = await this.roleRepository.findOne({ where: { name: 'user' } });
+    const userRole = await this.roleRepository.findOne({ where: { name: 'USER' } });
 
     // (Optional) ถ้าไม่มี Role user ให้ใช้ ID มั่วๆ หรือสร้างใหม่ (กัน Error)
     // แต่ควรมี Role 'user' ใน DB อยู่แล้วนะ
     if (!userRole) {
-      throw new InternalServerErrorException('Default role "user" not found.');
+      throw new InternalServerErrorException('Default role "USER" not found.');
     }
 
     // 2. สร้าง User Object
