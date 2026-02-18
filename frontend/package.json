@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@tailwindcss/postcss": "^4.1.18",
+=======
+    "axios": "^1.13.5",
+>>>>>>> f5a12176374a0cea49b7c8c7dfcca5fa9d40e7e5
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "jwt-decode": "^4.0.0",
@@ -18,7 +22,11 @@
     "react": "^19.2.0",
     "react-day-picker": "^9.13.2",
     "react-dom": "^19.2.0",
+<<<<<<< HEAD
     "socket.io-client": "^4.8.3",
+=======
+    "react-router-dom": "^7.13.0",
+>>>>>>> f5a12176374a0cea49b7c8c7dfcca5fa9d40e7e5
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
