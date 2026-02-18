@@ -1,23 +1,27 @@
-// src/app/components/home-page.tsx
+// src/components/home-page.tsx
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ เพิ่ม: สำหรับเปลี่ยนหน้า
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   MapPin,
   ArrowRight,
-  TrendingUp,
-  Globe // ✅ เพิ่ม: ไอคอนเปลี่ยนภาษา
+  TrendingUp
 } from "lucide-react";
 import { provinces } from "../data/mockData";
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
 
-export default function HomePage() { 
-  const navigate = useNavigate();
-  const [language, setLanguage] = useState<Language>('th'); // ✅ สร้าง State ภาษาเอง
+// ✅ 1. เพิ่ม Interface สำหรับรับ Props
+interface HomePageProps {
+  language: Language;
+}
 
-  // ✅ ฟังก์ชันจำลอง onNavigate ให้ทำงานกับ Router จริง
+export default function HomePage({ language }: HomePageProps) { 
+  const navigate = useNavigate();
+
+  // ❌ ลบ const [language, setLanguage] = useState ออก เพราะรับจาก App.tsx แล้ว
+
+  // ✅ ฟังก์ชันสำหรับเปลี่ยนหน้า
   const onNavigate = (page: string, data?: any) => {
     if (page === "provinces") {
       navigate("/provinces");
@@ -36,16 +40,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden relative">
       
-      {/* ✅ ปุ่มเปลี่ยนภาษา (ลอยมุมขวาบน) */}
-      <div className="absolute top-6 right-6 z-50">
-        <button 
-          onClick={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
-          className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-white/30 transition shadow-lg"
-        >
-          <Globe className="w-4 h-4" />
-          <span className="font-bold text-sm">{language.toUpperCase()}</span>
-        </button>
-      </div>
+      {/* ❌ ลบปุ่ม Globe ในหน้านี้ออก เพราะเรามีที่ Navigation แล้ว */}
 
       {/* ===== HERO SECTION ===== */}
       <div className="relative min-h-[550px] md:h-[600px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0">
