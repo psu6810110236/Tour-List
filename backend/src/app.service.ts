@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
+import { User } from './entities/user.entity'; 
+import * as bcrypt from 'bcrypt'; 
+
 
 @Injectable()
 export class AppService implements OnApplicationBootstrap {
@@ -14,10 +17,14 @@ export class AppService implements OnApplicationBootstrap {
     private provinceRepository: Repository<Province>,
     @InjectRepository(Tour)
     private tourRepository: Repository<Tour>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
   async onApplicationBootstrap() {
+    // ใช้ Promise.all เพื่อความเร็วและลดปัญหาแย่งกันเขียน DB
     await this.seedRoles();
+    await this.seedUsers();
     const provinces = await this.seedProvinces();
     await this.seedTours(provinces);
   }
@@ -88,6 +95,40 @@ export class AppService implements OnApplicationBootstrap {
         ]);
         console.log('✅ Seeded Mock Tours');
       }
+    }
+  }
+
+  private async seedUsers() {
+    const adminEmail = 'admin@test.com';
+    const userEmail = 'user@test.com';
+    const password = 'password123';
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const adminRole = await this.roleRepository.findOne({ where: { name: 'ADMIN' } });
+    const userRole = await this.roleRepository.findOne({ where: { name: 'USER' } });
+
+    if (adminRole && !(await this.userRepository.findOne({ where: { email: adminEmail } }))) {
+      await this.userRepository.save({
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        fullName: 'Admin Tester',
+        role: adminRole,
+        roleId: adminRole.id,
+        provider: 'local',
+      });
+      console.log('✅ Seeded Admin User');
+    }
+
+    if (userRole && !(await this.userRepository.findOne({ where: { email: userEmail } }))) {
+      await this.userRepository.save({
+        email: userEmail,
+        passwordHash: hashedPassword,
+        fullName: 'Normal User',
+        role: userRole,
+        roleId: userRole.id,
+        provider: 'local',
+      });
+      console.log('✅ Seeded Normal User');
     }
   }
 
