@@ -1,3 +1,6 @@
+// ✅ เพิ่มบรรทัดนี้ไว้บนสุด เพื่อแก้ปัญหา crypto ใน Node.js v18+
+global['crypto'] = require('crypto');
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';

@@ -10,6 +10,7 @@ import { User } from './entities/user.entity';
 import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { ToursModule } from './tours/tours.module'; // ✅ 1. เพิ่ม Import
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
     AuthModule,
     ChatModule,
+    ToursModule, // ✅ 2. เพิ่ม ToursModule เข้าไปใน imports
   ],
   controllers: [AppController],
   providers: [AppService],

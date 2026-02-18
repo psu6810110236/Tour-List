@@ -1,3 +1,5 @@
+// src/components/navigation.tsx
+
 import { useState } from "react";
 import {
     Home,
@@ -10,9 +12,10 @@ import {
     X,
     ShoppingBag,
     ChevronDown,
+    LayoutDashboard, // ✅ เพิ่ม Icon สำหรับ Admin
+    LogOut
 } from "lucide-react";
 
-// ✅ import ให้ตรงกับโครงสร้างจริง
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
 
@@ -56,15 +59,11 @@ export function Navigation({
     const [logoError, setLogoError] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // ดึงข้อมูลคำแปลตามภาษาปัจจุบัน
     const t = translations[language].nav;
-    const tCart = translations[language].cart; // ✅ ตัวแปร tCart พร้อมใช้งาน
+    const tCart = translations[language].cart;
 
-    const LOGO_ICON =
-        "https://github.com/psu6810110318/-/blob/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png?raw=true";
-
-    const LOGO_TEXT =
-        "https://github.com/psu6810110318/-/blob/main/image-removebg-preview.png?raw=true";
+    const LOGO_ICON = "https://github.com/psu6810110318/-/blob/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png?raw=true";
+    const LOGO_TEXT = "https://github.com/psu6810110318/-/blob/main/image-removebg-preview.png?raw=true";
 
     const navItems = [
         { id: "home", label: t.home, icon: <Home className="w-5 h-5" /> },
@@ -110,8 +109,7 @@ export function Navigation({
                                 key={item.id}
                                 onClick={() => onNavigate(item.id)}
                                 className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${currentPage === item.id ||
-                                    (item.id === "provinces" &&
-                                        currentPage.startsWith("province"))
+                                    (item.id === "provinces" && currentPage.includes("province"))
                                     ? "bg-white text-[#00A699] shadow-md ring-1 ring-black/5"
                                     : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
                                     }`}
@@ -125,10 +123,10 @@ export function Navigation({
                     {/* ===== ACTIONS ===== */}
                     <div className="flex items-center gap-2 sm:gap-4">
 
-                        {/* ✅ CART - เพิ่ม title ให้แสดงคำว่า "ตะกร้าของฉัน" */}
+                        {/* CART */}
                         <button
                             onClick={onOpenCart}
-                            title={tCart.title} // แสดงผลจาก translations[language].cart.title
+                            title={tCart.title}
                             className="relative p-3 text-gray-600 hover:text-[#00A699] hover:bg-[#00A699]/5 rounded-2xl transition-all border border-transparent hover:border-[#00A699]/20"
                         >
                             <ShoppingBag className="w-6 h-6" />
@@ -137,7 +135,6 @@ export function Navigation({
                                     {cartCount}
                                 </Badge>
                             )}
-                            <span className="sr-only">{tCart.title}</span>
                         </button>
 
                         {/* LANGUAGE */}
@@ -160,46 +157,39 @@ export function Navigation({
                                             <User className="w-6 h-6" />
                                         </AvatarFallback>
                                     </Avatar>
-
                                     <div className="text-left hidden sm:block">
-                                        <p className="text-sm font-bold text-gray-900 leading-tight">
-                                            {userName}
-                                        </p>
-                                        <p className="text-[10px] text-gray-500 font-medium uppercase">
-                                            {t.viewProfile}
-                                        </p>
+                                        <p className="text-sm font-bold text-gray-900 leading-tight">{userName}</p>
+                                        <p className="text-[10px] text-gray-500 font-medium uppercase">{t.viewProfile}</p>
                                     </div>
-
                                     <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
                                 </button>
                             </DropdownMenuTrigger>
 
-                            <DropdownMenuContent
-                                align="end"
-                                className="w-56 rounded-2xl p-2 shadow-xl border-gray-100"
-                            >
+                            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-gray-100">
                                 <DropdownMenuLabel className="font-bold text-gray-400 text-[10px] px-3 py-2 uppercase">
-                                    Account
+                                    Account Management
                                 </DropdownMenuLabel>
 
+                                {/* ✅ เพิ่มปุ่มไปหน้า Admin Dashboard */}
                                 <DropdownMenuItem
-                                    onClick={() => onNavigate("dashboard")}
-                                    className="rounded-xl p-3 cursor-pointer font-bold"
+                                    onClick={() => onNavigate("admin/dashboard")}
+                                    className="rounded-xl p-3 cursor-pointer font-bold text-blue-600 hover:bg-blue-50"
                                 >
-                                    <User className="w-4 h-4 mr-3" /> Profile
+                                    <LayoutDashboard className="w-4 h-4 mr-3" /> Admin Panel
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                    onClick={onShowTutorial}
-                                    className="rounded-xl p-3 cursor-pointer font-bold"
-                                >
-                                    <HelpCircle className="w-4 h-4 mr-3" /> Tutorial
+                                <DropdownMenuItem onClick={() => onNavigate("profile")} className="rounded-xl p-3 cursor-pointer font-bold">
+                                    <User className="w-4 h-4 mr-3" /> My Profile
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem onClick={onShowTutorial} className="rounded-xl p-3 cursor-pointer font-bold">
+                                    <HelpCircle className="w-4 h-4 mr-3" /> Help & Tutorial
                                 </DropdownMenuItem>
 
                                 <DropdownMenuSeparator className="my-2" />
 
-                                <DropdownMenuItem className="rounded-xl p-3 cursor-pointer text-red-500 font-bold">
-                                    <X className="w-4 h-4 mr-3" /> Logout
+                                <DropdownMenuItem className="rounded-xl p-3 cursor-pointer text-red-500 font-bold hover:bg-red-50">
+                                    <LogOut className="w-4 h-4 mr-3" /> Logout
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -209,17 +199,13 @@ export function Navigation({
                             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             className="md:hidden p-3 text-gray-600"
                         >
-                            {isMobileMenuOpen ? (
-                                <X className="w-6 h-6" />
-                            ) : (
-                                <Menu className="w-6 h-6" />
-                            )}
+                            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* ===== MOBILE MENU ===== */}
+            {/* MOBILE MENU */}
             {isMobileMenuOpen && (
                 <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-2xl py-4 px-4 flex flex-col gap-2 z-50">
                     {navItems.map((item) => (
@@ -229,16 +215,23 @@ export function Navigation({
                                 onNavigate(item.id);
                                 setIsMobileMenuOpen(false);
                             }}
-                            className={`flex items-center gap-4 p-4 rounded-2xl font-bold ${currentPage === item.id
-                                ? "bg-[#00A699]/10 text-[#00A699]"
-                                : "text-gray-600"
-                                }`}
+                            className={`flex items-center gap-4 p-4 rounded-2xl font-bold ${currentPage === item.id ? "bg-[#00A699]/10 text-[#00A699]" : "text-gray-600"}`}
                         >
                             {item.icon} {item.label}
                         </button>
                     ))}
 
-                    {/* ✅ MOBILE LANGUAGE SWITCH - เพิ่มปุ่มเปลี่ยนภาษาในมือถือ */}
+                    {/* Mobile Admin Link */}
+                    <button
+                        onClick={() => {
+                            onNavigate("admin/dashboard");
+                            setIsMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-4 p-4 rounded-2xl font-bold text-blue-600 hover:bg-blue-50"
+                    >
+                        <LayoutDashboard className="w-5 h-5" /> Admin Panel
+                    </button>
+
                     <button
                         onClick={() => {
                             onToggleLanguage();
@@ -247,7 +240,7 @@ export function Navigation({
                         className="flex items-center gap-4 p-4 rounded-2xl font-bold text-gray-600 hover:bg-gray-50"
                     >
                         <Globe className="w-5 h-5 text-[#00A699]" />
-                        {language === 'th' ? 'English' : 'ภาษาไทย'}
+                        {language === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
                     </button>
                 </div>
             )}

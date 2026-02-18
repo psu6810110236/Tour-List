@@ -1,41 +1,65 @@
 // src/App.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminRoute from './components/AdminRoute';
 import ChatWidget from './components/ChatWidget';
-import AdminChatPage from './pages/AdminChatPage';
 
 // นำเข้า Component
 import HomePage from './components/home-page'; 
 import { Navigation } from './components/navigation';
-import { ProvincePage } from './components/ProvincePage'; // ✅ นำเข้าหน้า ProvincePage
-import { provinces } from './data/mockData'; // ✅ นำเข้าข้อมูลจังหวัด
+import { ProvincePage } from './components/ProvincePage';
+import TourDetailPage from './pages/TourDetailPage'; 
+import AdminChatPage from './pages/AdminChatPage';
+import AdminDashboardPage from './pages/AdminDashboardPage'; // ตรวจสอบชื่อไฟล์ให้ตรงกัน
 
-const Login = () => <div className="p-10 text-center"><h1>หน้า Login</h1></div>;
+// นำเข้า Service และ Type
+import { tourService } from './services/api';
+import type { Province } from './data/mockData'; 
 
-// ✅ Component ตัวช่วยสำหรับดึงข้อมูลจังหวัดตาม ID จาก URL
-const ProvinceRouteWrapper = ({ language }: { language: any }) => {
-  const { id } = useParams(); // อ่านค่า id จาก URL (เช่น phuket)
+// หน้า Login ชั่วคราว (คุณสามารถเปลี่ยนเป็น Component Login จริงของคุณได้)
+const Login = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="p-10 bg-white rounded-3xl shadow-xl text-center">
+      <h1 className="text-2xl font-bold mb-4">เข้าสู่ระบบ</h1>
+      <p className="text-gray-500">กรุณาเข้าสู่ระบบเพื่อใช้งานส่วนแอดมิน</p>
+    </div>
+  </div>
+);
+
+// ✅ Component ตัวช่วยสำหรับดึงข้อมูลจังหวัดจาก API (สำหรับหน้า /province/:id)
+const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
+  const { id } = useParams(); 
   const navigate = useNavigate();
-  
-  // หาข้อมูลจังหวัดที่ตรงกับ id
-  const provinceData = provinces.find(p => p.id === id);
+  const [provinceData, setProvinceData] = useState<Province | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // ถ้าไม่เจอจังหวัด ให้แสดงข้อความแจ้งเตือน (หรือ Redirect ไปหน้าแรก)
-  if (!provinceData) {
-    return <div className="p-20 text-center">ไม่พบข้อมูลจังหวัดที่คุณค้นหา</div>;
-  }
+  useEffect(() => {
+    const fetchProvince = async () => {
+      try {
+        const response = await tourService.getProvinces();
+        // ค้นหาจังหวัดที่ตรงกับ ID ใน URL
+        const found = response.data.find((p: any) => p.id === id);
+        setProvinceData(found || null);
+      } catch (error) {
+        console.error("Error fetching province:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProvince();
+  }, [id]);
 
-  // ส่งข้อมูลเข้า ProvincePage พร้อมฟังก์ชันเปลี่ยนหน้า
+  if (loading) return <div className="p-20 text-center font-bold text-[#00A699]">กำลังโหลดข้อมูลจังหวัด...</div>;
+  if (!provinceData) return <div className="p-20 text-center font-bold text-red-500">ไม่พบข้อมูลจังหวัดที่คุณค้นหา</div>;
+
   return (
     <ProvincePage 
       province={provinceData}
       language={language}
       onNavigate={(page, data) => {
         if (page === 'home') navigate('/');
-        else if (page === 'tour-detail' && data) navigate(`/tour/${data.id}`); // ลิ้งค์ไปหน้าทัวร์ (ถ้ามี)
-        else console.log('Navigate to', page);
+        else if (page === 'tour-detail' && data) navigate(`/tour/${data.id}`);
       }}
     />
   );
@@ -43,46 +67,75 @@ const ProvinceRouteWrapper = ({ language }: { language: any }) => {
 
 function AppContent() {
   const { user } = useAuth();
-  const [currentPage, setCurrentPage] = useState('home');
+  const navigate = useNavigate();
   const [language, setLanguage] = useState<'th' | 'en'>('th');
 
+  // ✅ ฟังก์ชันกลางสำหรับการเปลี่ยนหน้า (Handle Navigation)
+  const handleNavigate = (page: string) => {
+    if (page === 'home') {
+      navigate('/');
+    } else if (page.startsWith('admin/')) {
+      navigate(`/${page}`); // รองรับ admin/dashboard, admin/chat
+    } else {
+      navigate(`/${page}`);
+    }
+  };
+
   return (
-    <BrowserRouter>
+    <div className="min-h-screen bg-white">
       <Navigation 
-        currentPage={currentPage}
-        onNavigate={(page) => setCurrentPage(page)}
-        userName={user?.fullName || "Guest"}
-        onShowTutorial={() => console.log("Show Tutorial")}
+        currentPage="" // ปล่อยว่างไว้หรือใช้ location.pathname
+        onNavigate={handleNavigate}
+        userName={user?.fullName || "Guest User"}
+        onShowTutorial={() => alert("Tutorial Coming Soon!")}
         cartCount={0} 
         language={language}
         onToggleLanguage={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
       />
 
       <Routes>
+        {/* ----- Public Routes ----- */}
         <Route path="/" element={<HomePage language={language} />} />
-        
-        {/* ✅ เพิ่ม Route สำหรับหน้าจังหวัด */}
         <Route path="/province/:id" element={<ProvinceRouteWrapper language={language} />} />
-        
-        {/* Route สำหรับหน้าทัวร์ (เผื่อทำต่อในอนาคต) */}
-        <Route path="/tour/:id" element={<div className="p-20 text-center">หน้ารายละเอียดทัวร์ (กำลังพัฒนา)</div>} />
-
+        <Route path="/tour/:id" element={<TourDetailPage />} />
         <Route path="/login" element={<Login />} />
         
+        {/* ----- Protected Admin Routes ----- */}
         <Route element={<AdminRoute />}>
+          <Route 
+            path="/admin/dashboard" 
+            element={<AdminDashboardPage onNavigate={handleNavigate} language={language} />} 
+          />
           <Route path="/admin/chat" element={<AdminChatPage />} />
         </Route>
+
+        {/* ----- 404 Fallback ----- */}
+        <Route path="*" element={
+          <div className="p-20 text-center">
+            <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter">404</h1>
+            <p className="text-gray-500 mb-8">ไม่พบหน้านี้ในระบบ</p>
+            <button 
+              onClick={() => navigate('/')}
+              className="bg-[#00A699] text-white px-8 py-3 rounded-2xl font-bold"
+            >
+              กลับหน้าแรก
+            </button>
+          </div>
+        } />
       </Routes>
-      
+
+      {/* Widget แชทที่แสดงทุกหน้า */}
       <ChatWidget />
-    </BrowserRouter>
+    </div>
   );
 }
 
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AuthProvider>
   );
 }

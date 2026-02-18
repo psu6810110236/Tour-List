@@ -1,5 +1,6 @@
 // src/components/home-page.tsx
 
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -7,11 +8,22 @@ import {
   ArrowRight,
   TrendingUp
 } from "lucide-react";
-import { provinces } from "../data/mockData";
+// ✅ เปลี่ยนจาก mockData เป็น service ที่เชื่อม API
+import { tourService } from "../services/api";
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
 
-// ✅ 1. เพิ่ม Interface สำหรับรับ Props
+// ✅ สร้าง Interface ให้ตรงกับข้อมูลที่จะได้รับจาก Backend
+interface Province {
+  id: string;
+  name: string;
+  name_th: string;
+  tourCount: number;
+  image: string;
+  description: string;
+  description_th: string;
+}
+
 interface HomePageProps {
   language: Language;
 }
@@ -19,9 +31,26 @@ interface HomePageProps {
 export default function HomePage({ language }: HomePageProps) { 
   const navigate = useNavigate();
 
-  // ❌ ลบ const [language, setLanguage] = useState ออก เพราะรับจาก App.tsx แล้ว
+  // ✅ สร้าง State สำหรับเก็บข้อมูลจริงจาก API
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // ✅ ฟังก์ชันสำหรับเปลี่ยนหน้า
+  // ✅ ดึงข้อมูลจังหวัดจาก Backend เมื่อเปิดหน้าเว็บ
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const response = await tourService.getProvinces();
+        setProvinces(response.data);
+      } catch (error) {
+        console.error("Error fetching provinces:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProvinces();
+  }, []);
+
   const onNavigate = (page: string, data?: any) => {
     if (page === "provinces") {
       navigate("/provinces");
@@ -40,8 +69,6 @@ export default function HomePage({ language }: HomePageProps) {
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden relative">
       
-      {/* ❌ ลบปุ่ม Globe ในหน้านี้ออก เพราะเรามีที่ Navigation แล้ว */}
-
       {/* ===== HERO SECTION ===== */}
       <div className="relative min-h-[550px] md:h-[600px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0">
         
@@ -136,50 +163,57 @@ export default function HomePage({ language }: HomePageProps) {
           </button>
         </div>
 
-        {/* Province Cards Grid */}
-        <div className="province-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {provinces.map((province) => (
-            <button
-              key={province.id}
-              onClick={() => onNavigate("province", province)}
-              className="group bg-white rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
-            >
-              <div className="relative h-56 md:h-64 overflow-hidden">
-                <img
-                  src={province.image}
-                  alt={province.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
+        {/* ✅ Loading State Check */}
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00A699]"></div>
+          </div>
+        ) : (
+          /* Province Cards Grid */
+          <div className="province-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {provinces.map((province) => (
+              <button
+                key={province.id}
+                onClick={() => onNavigate("province", province)}
+                className="group bg-white rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
+              >
+                <div className="relative h-56 md:h-64 overflow-hidden">
+                  <img
+                    src={province.image}
+                    alt={province.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
 
-                <div className="absolute bottom-6 left-6 right-6">
-                  <div className="flex items-center gap-2 text-white mb-2">
-                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                      <MapPin className="w-4 h-4" />
+                  <div className="absolute bottom-6 left-6 right-6">
+                    <div className="flex items-center gap-2 text-white mb-2">
+                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-xl md:text-2xl font-bold tracking-wide">
+                        {language === 'th' ? province.name_th : province.name}
+                      </h3>
                     </div>
-                    <h3 className="text-xl md:text-2xl font-bold tracking-wide">
-                      {language === 'th' ? province.name_th : province.name}
-                    </h3>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/90 text-xs md:text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                      {province.tourCount} {h.toursAvailable}
-                    </span>
-                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ArrowRight className="w-4 h-4" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/90 text-xs md:text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
+                        {province.tourCount} {h.toursAvailable}
+                      </span>
+                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="p-5 md:p-6">
-                <p className="text-gray-600 text-xs md:text-sm line-clamp-2 leading-relaxed">
-                  {language === 'th' ? province.description_th : province.description}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
+                <div className="p-5 md:p-6">
+                  <p className="text-gray-600 text-xs md:text-sm line-clamp-2 leading-relaxed">
+                    {language === 'th' ? province.description_th : province.description}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Why Choose Us Section */}
