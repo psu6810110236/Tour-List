@@ -1,34 +1,26 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
-import { User } from './user.entity';
-import { Tour } from './tour.entity';
+// backend/src/entities/review.entity.ts
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity'; // ✅ ใช้ ./ เพราะอยู่โฟลเดอร์เดียวกันแล้ว
+import { Tour } from './tour.entity'; // ✅ ใช้ ./ เพราะอยู่โฟลเดอร์เดียวกันแล้ว
 
 @Entity()
 export class Review {
-  @PrimaryColumn()
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column('float')
-  rating: number; // คะแนน 1-5
+  @Column({ type: 'int' })
+  rating: number; 
 
-  @Column('text')
+  @Column({ type: 'text', nullable: true })
   comment: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn()ห
   createdAt: Date;
 
-  // --- Relations ---
+  @Column()
+  tourId: number;
 
   @Column()
-  userId: string;
+  userId: number;
 
-  @Column()
-  tourId: string;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user: User;
-
-  @ManyToOne(() => Tour)
-  @JoinColumn({ name: 'tourId' })
-  tour: Tour;
 }
