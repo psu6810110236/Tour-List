@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   MapPin,
   Filter,
-  Clock,
   DollarSign,
   Star,
   TrendingUp,
@@ -14,7 +13,7 @@ import {
 
 import { tourService } from "../services/api";
 import { getLang } from "../data/mockData";
-import type { Province, Tour } from "../data/mockData";
+import type { Province } from "../data/mockData";
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
 
