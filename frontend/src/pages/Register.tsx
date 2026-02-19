@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Lock, User, ArrowLeft, Globe } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { translations } from "../data/translations";
 import type { Language } from "../data/translations";
@@ -9,7 +9,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [language, setLanguage] = useState<Language>("th");
+  const [language] = useState<Language>("th");
   const [error, setError] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
