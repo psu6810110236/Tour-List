@@ -13,46 +13,49 @@ export class ToursService {
     private provinceRepository: Repository<Province>,
   ) {}
 
-  // ฟังก์ชันค้นหาทัวร์ พร้อมตัวกรอง (Filter)
   async search(filters: any) {
     const query = this.tourRepository.createQueryBuilder('tour')
-      .leftJoinAndSelect('tour.province', 'province'); // Join เพื่อเอาข้อมูลจังหวัดมาด้วย
+      .leftJoinAndSelect('tour.province', 'province');
 
-    // 1. กรองตามจังหวัด (Province ID)
-    if (filters.provinceId) {
-      query.andWhere('tour.provinceId = :provinceId', { provinceId: filters.provinceId });
-    }
+    if (filters.provinceId) query.andWhere('tour.provinceId = :provinceId', { provinceId: filters.provinceId });
+    if (filters.minPrice) query.andWhere('tour.price >= :minPrice', { minPrice: Number(filters.minPrice) });
+    if (filters.maxPrice) query.andWhere('tour.price <= :maxPrice', { maxPrice: Number(filters.maxPrice) });
 
-    // 2. กรองตามราคา (Min - Max)
-    if (filters.minPrice) {
-      query.andWhere('tour.price >= :minPrice', { minPrice: Number(filters.minPrice) });
-    }
-    if (filters.maxPrice) {
-      query.andWhere('tour.price <= :maxPrice', { maxPrice: Number(filters.maxPrice) });
-    }
-
-    // 3. เรียงลำดับข้อมูล
-    if (filters.sort === 'price_asc') {
-      query.orderBy('tour.price', 'ASC');
-    } else if (filters.sort === 'price_desc') {
-      query.orderBy('tour.price', 'DESC');
-    } else {
-      query.orderBy('tour.rating', 'DESC'); // ค่าเริ่มต้น: เรียงตามคะแนนนิยม
-    }
+    if (filters.sort === 'price_asc') query.orderBy('tour.price', 'ASC');
+    else if (filters.sort === 'price_desc') query.orderBy('tour.price', 'DESC');
+    else query.orderBy('tour.rating', 'DESC');
 
     return await query.getMany();
   }
 
-  // ดึงรายละเอียดทัวร์ตาม ID
   async findOne(id: string) {
-    return this.tourRepository.findOne({ 
-      where: { id },
-      relations: ['province'] 
-    });
+    return this.tourRepository.findOne({ where: { id }, relations: ['province'] });
   }
 
-  // ดึงข้อมูลจังหวัดทั้งหมด (สำหรับหน้า HomePage)
   async findAllProvinces() {
     return this.provinceRepository.find();
+  }
+
+  async createProvince(provinceData: Partial<Province>) {
+    const newProvince = this.provinceRepository.create(provinceData);
+    return await this.provinceRepository.save(newProvince);
+  }
+
+  async createTour(tourData: Partial<Tour>) {
+    const newTour = this.tourRepository.create(tourData);
+    if (tourData.provinceId) {
+      const province = await this.provinceRepository.findOne({ where: { id: tourData.provinceId }});
+      if (province) {
+        province.tourCount = (province.tourCount || 0) + 1;
+        await this.provinceRepository.save(province);
+      }
+    }
+    return await this.tourRepository.save(newTour);
+  }
+
+  // 🟢 1. เพิ่มฟังก์ชันสำหรับอัปเดตข้อมูลทัวร์
+  async updateTour(id: string, tourData: Partial<Tour>) {
+    await this.tourRepository.update(id, tourData);
+    return this.tourRepository.findOne({ where: { id } });
   }
 }
