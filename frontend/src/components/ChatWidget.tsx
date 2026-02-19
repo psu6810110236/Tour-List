@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, Image as ImageIcon, Minus } from 'lucide-react';
+// 1. นำเข้า useAuth เพื่อดึงข้อมูล user จริงที่ Login อยู่
+import { useAuth } from '../context/AuthContext'; 
 
 interface ChatMessage {
   id: string;
   senderType: 'user' | 'admin';
   text: string;
   timestamp: Date;
-  isImage?: boolean; // เพิ่มตัวเช็คว่าเป็นรูปไหม
+  isImage?: boolean;
 }
 
-// ⚠️ สำคัญมาก: ต้องเปลี่ยนตรงนี้เป็น UUID ที่มีอยู่จริงในตาราง User ของคุณ
-// ถ้าใช้ ID มั่วๆ ระบบจะบันทึกไม่ได้ และข้อความจะไม่ขึ้น
-const CURRENT_USER_ID = "ใส่-UUID-จาก-Database-ของคุณที่นี่"; 
-
 export default function ChatWidget() {
+  const { user } = useAuth(); // 2. ดึงข้อมูล User จากระบบ
   const [isOpen, setIsOpen] = useState(false);
-  // ข้อความเริ่มต้น (Static)
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -30,135 +28,131 @@ export default function ChatWidget() {
   const [socket, setSocket] = useState<Socket | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref สำหรับซ่อนปุ่มเลือกไฟล์
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. เชื่อมต่อ Socket เมื่อเปิดหน้าเว็บ
+  // 3. เชื่อมต่อ Socket และจัดการการรับข้อความ
   useEffect(() => {
-    const newSocket = io('http://localhost:3000'); // เช็คว่า Backend รันที่ Port 3000
+    // เปลี่ยนเป็น URL ของ Backend คุณ
+    const newSocket = io('http://localhost:3000'); 
     setSocket(newSocket);
 
-    // รอรับข้อความจาก Server
     newSocket.on('receiveMessage', (msg: any) => {
-      const isMe = msg.sender.id === CURRENT_USER_ID;
-      
-      // เช็คว่าข้อความนี้เป็นรูปภาพหรือไม่ (ดูว่าขึ้นต้นด้วย data:image หรือไม่)
+      // ตรวจสอบว่าเป็นข้อความของฉันหรือไม่ โดยเทียบกับ user.id จริงในระบบ
+      const isMe = msg.sender?.id === user?.id;
       const isImg = msg.content && msg.content.startsWith('data:image');
 
       setMessages((prev) => [...prev, {
-        id: msg.id,
+        id: msg.id || Math.random().toString(),
         senderType: isMe ? 'user' : 'admin',
         text: msg.content,
-        timestamp: new Date(msg.createdAt),
+        timestamp: new Date(msg.createdAt || Date.now()),
         isImage: isImg
       }]);
     });
 
     return () => { newSocket.disconnect(); };
-  }, []);
+  }, [user?.id]); // Re-connect เมื่อ User ID เปลี่ยน
 
-  // 2. เลื่อนหน้าจอลงล่างสุดเสมอเมื่อมีข้อความใหม่
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [messages, isOpen]);
 
-  // 3. ฟังก์ชันส่งข้อความ (ตัวอักษร)
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || !socket) return;
+    if (!input.trim() || !socket || !user) return;
     
-    sendMessage(input); // ส่งข้อความ
+    sendMessage(input);
     setInput('');
   };
 
-  // 4. ฟังก์ชันกลางสำหรับส่งข้อมูลเข้า Socket (ใช้ได้ทั้ง Text และ Image)
   const sendMessage = (content: string) => {
+    if (!user?.id) {
+        alert("กรุณาเข้าสู่ระบบก่อนใช้งานแชท");
+        return;
+    }
     socket?.emit('sendMessage', {
       content: content,
-      senderId: CURRENT_USER_ID, 
+      senderId: user.id, // 4. ใช้ ID จริงจาก AuthContext
     });
   };
 
-  // 5. ฟังก์ชันเลือกรูปภาพและแปลงเป็น Base64
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 1024 * 1024) { // จำกัดขนาด 1MB
+        alert("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 1MB");
+        return;
+      }
       const reader = new FileReader();
-      // เมื่อแปลงไฟล์เสร็จแล้ว ให้ส่งข้อมูล Base64 ไปเหมือนข้อความปกติ
       reader.onloadend = () => {
         const base64String = reader.result as string;
         sendMessage(base64String); 
       };
-      reader.readAsDataURL(file); // เริ่มแปลงไฟล์
+      reader.readAsDataURL(file);
     }
-    // เคลียร์ค่า input เพื่อให้เลือกรูปเดิมซ้ำได้ถ้าต้องการ
     e.target.value = '';
   };
 
-  // --- ส่วนแสดงผล (UI) ---
+  // ถ้ายังไม่ Login ไม่ต้องโชว์ปุ่มแชท (หรือจะโชว์แล้วเด้งไปหน้า Login ก็ได้)
+  if (!user) return null;
 
-  // สถานะปิด: โชว์ปุ่มวงกลม
   if (!isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 z-50"
+        className="fixed bottom-6 right-6 w-16 h-16 bg-[#00A699] hover:bg-[#008c82] text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 animate-bounce-subtle"
       >
         <MessageCircle size={32} />
-        {/* จุดแดงแจ้งเตือน (Simulation) */}
-        <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-white rounded-full"></span>
       </button>
     );
   }
 
-  // สถานะเปิด: โชว์หน้าต่างแชท
   return (
-    <div className="fixed bottom-6 right-6 w-[380px] h-[600px] bg-white rounded-[32px] shadow-2xl flex flex-col overflow-hidden border border-gray-100 z-50 font-sans animate-in slide-in-from-bottom-10 duration-300">
+    <div className="fixed bottom-6 right-6 w-[360px] h-[550px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden border border-gray-100 z-50 font-sans animate-in slide-in-from-bottom-5 duration-300">
       
-      {/* Header */}
-      <div className="bg-blue-600 p-5 flex justify-between items-center text-white shrink-0">
+      {/* Header - เปลี่ยนสีให้เข้ากับธีมหลัก */}
+      <div className="bg-[#00A699] p-5 flex justify-between items-center text-white shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center overflow-hidden">
-               {/* รูป Admin */}
-               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="Admin" className="w-full h-full object-cover" />
+               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=RoamHub" alt="Admin" className="w-full h-full object-cover" />
             </div>
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-blue-600 rounded-full"></div>
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-[#00A699] rounded-full"></div>
           </div>
           <div>
-            <h3 className="font-bold text-base leading-tight">Admin Support</h3>
-            <p className="text-blue-100 text-xs">ตอบกลับทันที</p>
+            <h3 className="font-bold text-sm leading-tight">ฝ่ายบริการลูกค้า</h3>
+            <p className="text-white/80 text-[10px]">ออนไลน์พร้อมช่วยเหลือ</p>
           </div>
         </div>
         <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-full transition">
-          <Minus size={24} />
+          <Minus size={20} />
         </button>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 bg-[#F8F9FA] p-4 overflow-y-auto flex flex-col gap-4" ref={scrollRef}>
-        {messages.map((msg) => {
+      <div className="flex-1 bg-[#F9FAFB] p-4 overflow-y-auto flex flex-col gap-3" ref={scrollRef}>
+        {messages.map((msg, idx) => {
           const isUser = msg.senderType === 'user';
           return (
-            <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-              
-              {/* รูป Avatar สำหรับ Admin */}
+            <div key={`${msg.id}-${idx}`} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
               {!isUser && (
-                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-600 font-bold mr-2 mt-auto">RH</div>
+                 <div className="w-7 h-7 rounded-full bg-[#00A699]/10 flex items-center justify-center text-[10px] text-[#00A699] font-bold mr-2 mt-auto mb-1">RH</div>
               )}
               
-              <div className={`max-w-[75%] p-3.5 text-sm leading-relaxed shadow-sm ${
+              <div className={`max-w-[80%] p-3 text-[13px] leading-relaxed shadow-sm ${
                 isUser 
-                  ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' 
-                  : 'bg-white text-gray-800 border border-gray-100 rounded-2xl rounded-tl-sm'
+                  ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]' 
+                  : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
               }`}>
-                {/* ถ้าเป็นรูป ให้แสดง tag img ถ้าเป็นข้อความ ให้แสดง text */}
                 {msg.isImage ? (
-                  <img src={msg.text} alt="sent image" className="rounded-lg max-w-full border border-white/20" />
+                  <img src={msg.text} alt="sent image" className="rounded-lg max-w-full" />
                 ) : (
                   msg.text
                 )}
                 
-                <div className={`text-[10px] mt-1 text-right ${isUser ? 'text-blue-200' : 'text-gray-400'}`}>
+                <div className={`text-[9px] mt-1 text-right opacity-70 ${isUser ? 'text-white' : 'text-gray-400'}`}>
                   {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                 </div>
               </div>
@@ -169,9 +163,7 @@ export default function ChatWidget() {
 
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-gray-50 shrink-0">
-        <form onSubmit={handleSend} className="flex items-end gap-2">
-          
-          {/* Input file ซ่อนอยู่ (Hidden) */}
+        <form onSubmit={handleSend} className="flex items-center gap-2">
           <input 
             type="file" 
             accept="image/*" 
@@ -179,34 +171,32 @@ export default function ChatWidget() {
             onChange={handleFileSelect} 
             className="hidden" 
           />
-          
-          {/* ปุ่มกดเพื่อเรียก Input file */}
           <button 
             type="button" 
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-gray-400 hover:text-blue-600 transition mb-1"
+            className="p-2 text-gray-400 hover:text-[#00A699] transition"
           >
-            <ImageIcon size={24} />
+            <ImageIcon size={22} />
           </button>
 
-          {/* ช่องพิมพ์ข้อความ */}
-          <div className="flex-1 bg-gray-100 rounded-[24px] px-4 py-3 flex items-center">
+          <div className="flex-1 bg-gray-100 rounded-full px-4 py-2">
             <input 
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="พิมพ์ข้อความ..." 
-              className="bg-transparent w-full text-sm focus:outline-none text-gray-700 placeholder-gray-400"
+              placeholder="สอบถามข้อมูลเพิ่มเติม..." 
+              className="bg-transparent w-full text-xs focus:outline-none text-gray-700 placeholder-gray-400"
             />
           </div>
 
-          {/* ปุ่มส่ง */}
           <button 
             type="submit" 
             disabled={!input.trim()}
-            className={`${input.trim() ? 'bg-blue-600 hover:scale-105' : 'bg-gray-300'} text-white w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-all mb-1`}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+              input.trim() ? 'bg-[#00A699] text-white shadow-lg' : 'bg-gray-200 text-gray-400'
+            }`}
           >
-            <Send size={20} className={input.trim() ? 'ml-1' : ''} />
+            <Send size={18} className={input.trim() ? 'translate-x-0.5' : ''} />
           </button>
         </form>
       </div>

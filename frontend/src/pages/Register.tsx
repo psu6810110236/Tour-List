@@ -1,5 +1,9 @@
 import { useState } from "react";
+<<<<<<< HEAD
 import { Mail, Lock, User, ArrowLeft } from "lucide-react";
+=======
+import { Mail, Lock, User, ArrowLeft} from "lucide-react";
+>>>>>>> origin/feat/browse-search-implementation
 import { useNavigate } from "react-router-dom";
 import { translations } from "../data/translations";
 import type { Language } from "../data/translations";
