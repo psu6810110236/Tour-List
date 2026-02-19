@@ -13,7 +13,7 @@ import { Navigation } from './components/navigation';
 import { ProvincePage } from './components/ProvincePage';
 import TourDetailPage from './pages/TourDetailPage'; 
 import AdminChatPage from './pages/AdminChatPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
+import { AdminDashboard as AdminDashboardPage } from './pages/AdminDashboardPage';
 
 // นำเข้า Service และ Type
 import { tourService } from './services/api';
@@ -123,7 +123,8 @@ function AppContent() {
         <Route path="/register" element={<Register />} />
         <Route path="/provinces" element={<ProvincesPage />} />
         <Route path="/province/:id" element={<ProvinceRouteWrapper language={language} />} />
-        <Route path="/tour/:id" element={<TourDetailPage />} />
+        {/* 🟢 แก้ไขบรรทัดนี้แล้ว ส่งค่า language ไปให้ TourDetailPage */}
+        <Route path="/tour/:id" element={<TourDetailPage language={language} />} />
 
         {/* === Private Routes (ต้อง Login) === */}
         <Route element={<PrivateRoute />}>
