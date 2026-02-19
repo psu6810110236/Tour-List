@@ -5,7 +5,7 @@ import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
 import { User } from './entities/user.entity'; 
-import * as bcrypt from 'bcrypt'; 
+import * as bcrypt from 'bcryptjs'; 
 
 @Injectable()
 export class AppService implements OnApplicationBootstrap {

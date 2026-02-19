@@ -1,17 +1,26 @@
+if (!global.crypto) {
+  Object.defineProperty(global, 'crypto', {
+    value: require('crypto').webcrypto,
+    writable: true,
+    configurable: true,
+  });
+}
+
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-// Import Entities ที่ต้องใช้ใน Seeding
 import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
+import { User } from './entities/user.entity'; 
+import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { User } from './entities/user.entity';
 import { Review } from './entities/review.entity';
 import { ReviewsModule } from './reviews/reviews.module';
+import { ToursModule } from './tours/tours.module';
 
 @Module({
   imports: [
@@ -21,20 +30,22 @@ import { ReviewsModule } from './reviews/reviews.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
+        // ✅ ตรวจสอบว่าใน .env ค่า DB_HOST=postgres (ถ้าใช้ Docker)
         host: configService.get<string>('DB_HOST'),
         port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: true, // พัฒนาอยู่ให้เปิดไว้เพื่อสร้าง Table อัตโนมัติ
       }),
     }),
-    // ✅ เพิ่มส่วนนี้เพื่อให้ AppService ใช้งาน Repository ได้
-    TypeOrmModule.forFeature([Role, Province, Tour, User]),
+    TypeOrmModule.forFeature([Role, Province, Tour, User]), 
     UsersModule,
     AuthModule,
     ReviewsModule,
+    ChatModule,
+    ToursModule,
   ],
   controllers: [AppController],
   providers: [AppService],
