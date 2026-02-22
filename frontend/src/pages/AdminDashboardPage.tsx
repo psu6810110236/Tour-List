@@ -18,7 +18,7 @@ import {
   Trash2,
   ListChecks
 } from 'lucide-react';
-import { mockBookings, getLang } from '../data/mockData';
+import { getLang } from '../data/mockData';
 import type { Tour, Province } from '../data/mockData';
 import { translations } from "../data/translations";
 import type { Language } from "../data/translations";
@@ -38,14 +38,14 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   // 🟢 State สำหรับจัดการข้อมูลจริงจาก Backend
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
+  const [bookingsList, setBookingsList] = useState<any[]>([]); 
   
   // 🟢 State สำหรับฟอร์มเพิ่ม/แก้ไขทัวร์
   const [isAddingTour, setIsAddingTour] = useState(false);
-  const [editingTourId, setEditingTourId] = useState<string | null>(null); // ✅ ใช้จำว่ากำลังแก้ไขทัวร์ไหน
+  const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
 
-  // ✅ สร้างแบบฟอร์มเริ่มต้นว่างๆ เพื่อความสะดวกในการรีเซ็ต
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
     provinceId: '', province: '', province_th: '', price: 0, duration: '', duration_th: '', image: '',
@@ -61,7 +61,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
   const LOGO_URL = "https://github.com/psu6810110318/-/blob/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png?raw=true";
 
-  // 🟢 ฟังก์ชันดึงข้อมูลจาก Backend
   const fetchAdminData = async () => {
     try {
       const [toursRes, provRes, bookingsRes] = await Promise.all([
@@ -81,11 +80,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     fetchAdminData();
   }, []);
 
-  // 🟢 ฟังก์ชันเมื่อกดปุ่ม "แก้ไข" (ดึงข้อมูลเก่ามาใส่ฟอร์ม)
   const handleEditClick = (tour: Tour) => {
     setEditingTourId(tour.id);
     
-    // จัดการ provinceId ในกรณีที่ Backend ส่งมาเป็น Object
     const currentProvinceId = typeof tour.province === 'object' && tour.province !== null 
       ? (tour.province as any).id 
       : tour.provinceId || tour.province;
@@ -99,7 +96,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     setCreateNewProvince(false);
   };
 
-  // 🟢 ฟังก์ชันบันทึกทัวร์และจังหวัดลง Database (รองรับทั้ง สร้าง และ แก้ไข)
   const handleSaveTour = async () => {
     if (!(tourForm.name || tourForm.name_th) || !tourForm.provinceId) {
       return alert("กรุณากรอกชื่อทัวร์และเลือกจังหวัด");
@@ -118,7 +114,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           await tourService.createProvince(newProv);
       }
 
-      // 🟢 ตรวจสอบว่ามี editingTourId ไหม ถ้ามี = แก้ไข ถ้าไม่มี = สร้างใหม่
       if (editingTourId) {
         await tourService.updateTour(editingTourId, tourForm);
         alert(language === 'th' ? "อัปเดตทัวร์สำเร็จ!" : "Tour Updated Successfully!");
@@ -131,9 +126,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       
       setIsAddingTour(false);
       setEditingTourId(null);
-      fetchAdminData(); // โหลดข้อมูลตารางใหม่
+      fetchAdminData(); 
 
-      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` }); // รีเซ็ตฟอร์ม
+      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` }); 
       setCreateNewProvince(false);
     } catch (error) {
       console.error("Error saving tour:", error);
@@ -141,19 +136,16 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     }
   };
   
-  
-  // 🔴 ฟังก์ชันลบทัวร์
   const handleDeleteTour = async (id: string) => {
-    // ให้มี Pop-up เด้งถามก่อนลบ เพื่อป้องกันการกดพลาด
     const isConfirm = window.confirm(
       language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบทัวร์นี้?" : "Are you sure you want to delete this tour?"
     );
 
     if (isConfirm) {
       try {
-        await tourService.deleteTour(id); // เรียกใช้ API ลบ
+        await tourService.deleteTour(id); 
         alert(language === 'th' ? "ลบทัวร์สำเร็จ!" : "Tour Deleted Successfully!");
-        fetchAdminData(); // รีเฟรชตารางข้อมูลใหม่
+        fetchAdminData(); 
       } catch (error) {
         console.error("Error deleting tour:", error);
         alert(language === 'th' ? "เกิดข้อผิดพลาดในการลบทัวร์" : "Failed to delete tour");
@@ -177,17 +169,16 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     }));
   };
 
-  // Stats ข้อมูลจำลองสำหรับการจอง
   const stats = {
-    totalBookings: mockBookings.length,
-    pendingVerification: mockBookings.filter(b => b.status === 'pending').length,
-    approvedBookings: mockBookings.filter(b => b.status === 'approved').length,
-    totalRevenue: mockBookings.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.totalPrice, 0)
+    totalBookings: bookingsList.length,
+    pendingVerification: bookingsList.filter(b => b.status === 'pending').length,
+    approvedBookings: bookingsList.filter(b => b.status === 'approved').length,
+    totalRevenue: bookingsList.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.totalPrice, 0)
   };
 
   const handleApproveBooking = async (bookingId: string) => {
     try {
-      await bookingService.updateBookingStatus(bookingId, 'approved'); // ยิง API อนุมัติ
+      await bookingService.updateBookingStatus(bookingId, 'approved'); 
       alert(language === 'th' ? `อนุมัติการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} approved!`);
       fetchAdminData(); 
       setSelectedBooking(null); 
@@ -196,16 +187,31 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       alert("เกิดข้อผิดพลาดในการอนุมัติ");
     }
   };
-
   const handleRejectBooking = async (bookingId: string) => {
-   try {
-      await bookingService.updateBookingStatus(bookingId, 'rejected'); // ยิง API ปฏิเสธ
-      alert(language === 'th' ? `ปฏิเสธการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} rejected!`);
-      fetchAdminData(); 
-      setSelectedBooking(null); 
-    } catch (error) {
-      console.error("Error rejecting booking:", error);
-      alert("เกิดข้อผิดพลาดในการปฏิเสธ");
+    try {
+       await bookingService.updateBookingStatus(bookingId, 'rejected'); 
+       alert(language === 'th' ? `ปฏิเสธการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} rejected!`);
+       fetchAdminData(); 
+       setSelectedBooking(null); 
+     } catch (error) {
+       console.error("Error rejecting booking:", error);
+       alert("เกิดข้อผิดพลาดในการปฏิเสธ");
+     }
+  };
+  const handleDeleteBooking = async (bookingId: string) => {
+    const isConfirm = window.confirm(
+      language === 'th' ? `คุณแน่ใจหรือไม่ว่าต้องการลบการจองรหัส ${bookingId} ถาวร?` : `Are you sure you want to permanently delete booking ${bookingId}?`
+    );
+
+    if (isConfirm) {
+      try {
+        await bookingService.deleteBooking(bookingId); 
+        alert(language === 'th' ? "ลบการจองสำเร็จ!" : "Booking deleted successfully!");
+        fetchAdminData(); 
+      } catch (error) {
+        console.error("Error deleting booking:", error);
+        alert(language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking");
+      }
     }
   };
 
@@ -250,7 +256,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 onClick={() => { 
                   setActiveTab(tab); 
                   setIsAddingTour(false); 
-                  setEditingTourId(null); // รีเซ็ตสถานะเมื่อเปลี่ยน Tab
+                  setEditingTourId(null); 
                 }}
                 className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition whitespace-nowrap ${
                   activeTab === tab
@@ -327,7 +333,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             <div className="bg-white rounded-3xl p-6 shadow-lg">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.recent}</h2>
               <div className="space-y-3">
-                {mockBookings.slice(0, 5).map((booking) => (
+                {bookingsList.slice(0, 5).map((booking) => (
                   <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -344,14 +350,17 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold text-gray-900">฿{booking.totalPrice.toLocaleString()}</div>
+                      <div className="font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</div>
                       <div className={`text-sm font-medium ${
                         booking.status === 'pending' ? 'text-yellow-600' :
                         booking.status === 'approved' ? 'text-green-600' : 'text-red-600'
-                      }`}>{booking.status.toUpperCase()}</div>
+                      }`}>{booking.status?.toUpperCase()}</div>
                     </div>
                   </div>
                 ))}
+                {bookingsList.length === 0 && (
+                  <div className="text-center text-gray-500 py-4">ไม่มีรายการจองล่าสุด</div>
+                )}
               </div>
             </div>
           </div>
@@ -388,31 +397,41 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {mockBookings.map((booking) => (
+                    {bookingsList.map((booking) => (
                       <tr key={booking.id} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language)}</div>
                           <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">User #{booking.userId.slice(-3)}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">User #{booking.userId?.slice(-3)}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{new Date(booking.date).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">฿{booking.totalPrice.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${
                             booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             booking.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                           }`}>
-                            {booking.status.toUpperCase()}
+                            {booking.status?.toUpperCase()}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <button onClick={() => setSelectedBooking(booking)} className="text-[#00A699] hover:text-[#008c81] font-medium text-sm transition">
-                            <Eye className="w-5 h-5" />
-                          </button>
-                        </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <button onClick={() => setSelectedBooking(booking)} className="text-[#00A699] hover:text-[#008c81] transition p-1" title="ดูรายละเอียด">
+                                <Eye className="w-5 h-5" />
+                              </button>
+                              <button onClick={() => handleDeleteBooking(booking.id)} className="text-red-500 hover:text-red-600 transition p-1" title="ลบการจอง">
+                                 <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </td>
                       </tr>
                     ))}
+                    {bookingsList.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="text-center py-6 text-gray-500">ไม่มีข้อมูลการจอง</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -428,7 +447,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               <p className="text-gray-600 mt-1">{t.payment.desc}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {mockBookings.filter(b => b.status === 'pending').map((booking) => (
+              {bookingsList.filter(b => b.status === 'pending').map((booking) => (
                 <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg">
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -449,11 +468,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                     <div>
                       <div className="text-gray-600 mb-1">{t.payment.amount}</div>
-                      <div className="font-semibold text-gray-900">฿{booking.totalPrice.toLocaleString()}</div>
+                      <div className="font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</div>
                     </div>
                     <div>
                       <div className="text-gray-600 mb-1">{t.payment.paymentDate}</div>
-                      <div className="font-semibold text-gray-900">{new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</div>
+                      <div className="font-semibold text-gray-900">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
                     </div>
                   </div>
                   <div className="flex gap-3">
@@ -466,7 +485,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
                 </div>
               ))}
-              {mockBookings.filter(b => b.status === 'pending').length === 0 && (
+              {bookingsList.filter(b => b.status === 'pending').length === 0 && (
                 <div className="col-span-2 bg-white rounded-3xl p-12 text-center shadow-lg">
                   <div className="text-6xl mb-4">✓</div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{t.payment.caughtUp}</h3>
@@ -540,7 +559,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
-                                {/* 🟢 ปุ่ม Edit จะเรียกฟังก์ชันที่เตรียมไว้ให้เอาข้อมูลไปใส่ฟอร์ม */}
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
@@ -689,7 +707,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                     selectedBooking.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}
+                    {selectedBooking.status?.charAt(0).toUpperCase() + selectedBooking.status?.slice(1)}
                   </span>
                 </div>
                 <div>
@@ -710,11 +728,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">{common.totalPrice}</div>
-                  <div className="text-xl font-bold text-[#00A699]">฿{selectedBooking.totalPrice.toLocaleString()}</div>
+                  <div className="text-xl font-bold text-[#00A699]">฿{selectedBooking.totalPrice?.toLocaleString()}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">{t.modal.bookedOn}</div>
-                  <div className="font-medium text-gray-900">{new Date(selectedBooking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</div>
+                  <div className="font-medium text-gray-900">{selectedBooking.bookingDate ? new Date(selectedBooking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
                 </div>
               </div>
             </div>
@@ -733,8 +751,4 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       )}
     </div>
   );
-}
-
-function setBookingsList(data: any) {
-  throw new Error('Function not implemented.');
 }
