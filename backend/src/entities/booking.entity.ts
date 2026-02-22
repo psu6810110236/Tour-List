@@ -50,4 +50,6 @@ export class Booking {
   @ManyToOne(() => Tour)
   @JoinColumn({ name: 'tourId' })
   tour: Tour;
+  
 }
+

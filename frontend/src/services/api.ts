@@ -20,3 +20,8 @@ export const tourService = {
   updateTour: (id: string, data: any) => api.put(`/tours/${id}`, data),
   deleteTour: (id: string) => api.delete(`/tours/${id}`),
 };
+
+export const bookingService = {
+  getAllBookings: () => api.get('/bookings'),
+  updateBookingStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
+};

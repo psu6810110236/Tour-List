@@ -1,5 +1,3 @@
-// src/pages/AdminDashboardPage.tsx
-
 import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
@@ -26,7 +24,7 @@ import { translations } from "../data/translations";
 import type { Language } from "../data/translations";
 
 // ✅ นำเข้า API Service สำหรับเชื่อม Backend
-import { tourService } from '../services/api';
+import { tourService, bookingService } from '../services/api';
 
 interface AdminDashboardProps {
   onNavigate: (page: string, data?: any) => void;
@@ -66,12 +64,14 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   // 🟢 ฟังก์ชันดึงข้อมูลจาก Backend
   const fetchAdminData = async () => {
     try {
-      const [toursRes, provRes] = await Promise.all([
+      const [toursRes, provRes, bookingsRes] = await Promise.all([
         tourService.search({}), 
-        tourService.getProvinces()
+        tourService.getProvinces(),
+        bookingService.getAllBookings() 
       ]);
       setAllTours(toursRes.data);
       setAllProvinces(provRes.data);
+      setBookingsList(bookingsRes.data); 
     } catch (error) {
       console.error("Error fetching admin data:", error);
     }
@@ -140,6 +140,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล ลองตรวจสอบ Console");
     }
   };
+  
+  
   // 🔴 ฟังก์ชันลบทัวร์
   const handleDeleteTour = async (id: string) => {
     // ให้มี Pop-up เด้งถามก่อนลบ เพื่อป้องกันการกดพลาด
@@ -183,14 +185,28 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     totalRevenue: mockBookings.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.totalPrice, 0)
   };
 
-  const handleApproveBooking = (bookingId: string) => {
-    alert(language === 'th' ? `อนุมัติการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} approved!`);
-    setSelectedBooking(null);
+  const handleApproveBooking = async (bookingId: string) => {
+    try {
+      await bookingService.updateBookingStatus(bookingId, 'approved'); // ยิง API อนุมัติ
+      alert(language === 'th' ? `อนุมัติการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} approved!`);
+      fetchAdminData(); 
+      setSelectedBooking(null); 
+    } catch (error) {
+      console.error("Error approving booking:", error);
+      alert("เกิดข้อผิดพลาดในการอนุมัติ");
+    }
   };
 
-  const handleRejectBooking = (bookingId: string) => {
-    alert(language === 'th' ? `ปฏิเสธการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} rejected!`);
-    setSelectedBooking(null);
+  const handleRejectBooking = async (bookingId: string) => {
+   try {
+      await bookingService.updateBookingStatus(bookingId, 'rejected'); // ยิง API ปฏิเสธ
+      alert(language === 'th' ? `ปฏิเสธการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} rejected!`);
+      fetchAdminData(); 
+      setSelectedBooking(null); 
+    } catch (error) {
+      console.error("Error rejecting booking:", error);
+      alert("เกิดข้อผิดพลาดในการปฏิเสธ");
+    }
   };
 
   return (
@@ -717,4 +733,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       )}
     </div>
   );
+}
+
+function setBookingsList(data: any) {
+  throw new Error('Function not implemented.');
 }
