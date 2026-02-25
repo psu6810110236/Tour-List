@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MessageSquare, Send, Image as ImageIcon } from 'lucide-react';
-import { useAuth } from '../context/AuthContext'; // นำเข้าเพื่อดึง ID แอดมินจริง
+import { useAuth } from '../auth/context/AuthContext'; // นำเข้าเพื่อดึง ID แอดมินจริง
 
 interface Contact {
   id: string;

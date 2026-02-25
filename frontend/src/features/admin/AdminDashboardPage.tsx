@@ -18,13 +18,13 @@ import {
   Trash2,
   ListChecks
 } from 'lucide-react';
-import { getLang } from '../data/mockData';
-import type { Tour, Province } from '../data/mockData';
-import { translations } from "../data/translations";
-import type { Language } from "../data/translations";
+import { getLang } from '../../data/mockData';
+import type { Tour, Province } from '../../data/mockData';
+import { translations } from "../../data/translations";
+import type { Language } from "../../data/translations";
 
 // ✅ นำเข้า API Service สำหรับเชื่อม Backend
-import { tourService, bookingService } from '../services/api';
+import { tourService, bookingService } from '../../services/api';
 
 interface AdminDashboardProps {
   onNavigate: (page: string, data?: any) => void;

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { translations } from "../data/translations";
-import type { Language } from "../data/translations";
+import { translations } from "../../data/translations";
+import type { Language } from "../../data/translations";
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

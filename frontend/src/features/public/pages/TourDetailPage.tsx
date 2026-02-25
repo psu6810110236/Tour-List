@@ -5,10 +5,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
 // นำเข้า API และฟังก์ชันแปลภาษา
-import { tourService } from '../services/api';
-import { getLang } from '../data/mockData';
-import type { Language } from "../data/translations";
-import { translations } from "../data/translations";
+import { tourService } from '../../../services/api';
+import { getLang } from '../../../data/mockData';
+import type { Language } from "../../../data/translations";
+import { translations } from "../../../data/translations";
 
 interface TourDetailPageProps {
   language?: Language;

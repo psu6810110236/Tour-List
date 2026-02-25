@@ -9,9 +9,9 @@ import {
   TrendingUp
 } from "lucide-react";
 // ✅ เปลี่ยนจาก mockData เป็น service ที่เชื่อม API
-import { tourService } from "../services/api";
-import type { Language } from "../data/translations";
-import { translations } from "../data/translations";
+import { tourService } from "../../../services/api";
+import type { Language } from "../../../data/translations";
+import { translations } from "../../../data/translations";
 
 // ✅ สร้าง Interface ให้ตรงกับข้อมูลที่จะได้รับจาก Backend
 interface Province {

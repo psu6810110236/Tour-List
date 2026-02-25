@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, Image as ImageIcon, Minus } from 'lucide-react';
 // 1. นำเข้า useAuth เพื่อดึงข้อมูล user จริงที่ Login อยู่
-import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../features/auth/context/AuthContext'; 
 
 interface ChatMessage {
   id: string;
