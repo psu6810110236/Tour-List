@@ -14,7 +14,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // จัดการ Error format ให้เป็นมาตรฐานเดียวกันทั้งระบบ
-  //app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(new AllExceptionsFilter());
   // 🟢 เพิ่มบรรทัดนี้เพื่ออนุญาตให้ Frontend เรียก API ได้
   app.enableCors({
     origin: true, // หรือใส่ 'http://localhost:5173'
