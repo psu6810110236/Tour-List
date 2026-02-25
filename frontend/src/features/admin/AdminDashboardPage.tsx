@@ -19,9 +19,10 @@ import {
   ListChecks
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
-import type { Tour, Province } from '../../data/mockData';
+import type { Province } from '../../data/mockData';
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
+import type { Booking, Tour } from '../../types';
 
 // ✅ นำเข้า API Service สำหรับเชื่อม Backend
 import { tourService, bookingService } from '../../services/api';
@@ -38,7 +39,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   // 🟢 State สำหรับจัดการข้อมูลจริงจาก Backend
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
-  const [bookingsList, setBookingsList] = useState<any[]>([]); 
+  const [bookingsList, setBookingsList] = useState<Booking[]>([]);
   
   // 🟢 State สำหรับฟอร์มเพิ่ม/แก้ไขทัวร์
   const [isAddingTour, setIsAddingTour] = useState(false);
@@ -48,7 +49,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
-    provinceId: '', province: '', province_th: '', price: 0, duration: '', duration_th: '', image: '',
+    provinceId: '', province: '', price: 0, duration: '', duration_th: '', image: '',
     highlights: [], highlights_th: [], itinerary: [{ day: 1, title: '', title_th: '', activities: [], activities_th: [] }],
     included: [], included_th: [], notIncluded: [], notIncluded_th: []
   };
@@ -104,8 +105,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       if (createNewProvince) {
           const newProv = {
               id: tourForm.provinceId!,
-              name: tourForm.province!,
-              name_th: tourForm.province_th || tourForm.province!,
+              name: String(tourForm.province || ''),
+              name_th: String(tourForm.province || ''),
               tourCount: 0,
               image: tourForm.image || '',
               description: '',
@@ -157,7 +158,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     const selected = allProvinces.find(p => p.id === e.target.value);
     if (selected) {
       setTourForm({
-        ...tourForm, provinceId: selected.id, province: selected.name, province_th: selected.name_th
+        ...tourForm, provinceId: selected.id, province: selected.name
       });
     }
   };
@@ -165,7 +166,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const handleAddDay = () => {
     setTourForm(prev => ({
       ...prev,
-      itinerary: [...(prev.itinerary || []), { day: (prev.itinerary?.length || 0) + 1, title: '', activities: [] }]
+      itinerary: [...(prev.itinerary || []), { day: (prev.itinerary?.length || 0) + 1, title: '', title_th: '', activities: [], activities_th: [] }]
     }));
   };
 
@@ -405,7 +406,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                           <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">User #{booking.userId?.slice(-3)}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{new Date(booking.date).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">{new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${
@@ -609,7 +610,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                      ) : (
                         <div className="grid grid-cols-2 gap-4">
                            <input placeholder="Province ID (e.g., hat-yai)" className="p-4 border rounded-xl" onChange={e => setTourForm({...tourForm, provinceId: e.target.value})}/>
-                           <input placeholder="Province Name (TH/EN)" className="p-4 border rounded-xl" onChange={e => setTourForm({...tourForm, province: e.target.value, province_th: e.target.value})}/>
+                           <input placeholder="Province Name (TH/EN)" className="p-4 border rounded-xl" onChange={e => setTourForm({...tourForm, province: e.target.value})}/>
                         </div>
                      )}
                   </div>
