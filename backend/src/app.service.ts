@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm'; // เพิ่ม Filter สำหรับ Search
 import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
@@ -20,13 +20,47 @@ export class AppService implements OnApplicationBootstrap {
     private userRepository: Repository<User>,
   ) {}
 
+  //ทำงานอัตโนมัติเมื่อ Start Server
   async onApplicationBootstrap() {
-
     await this.seedRoles();
     await this.seedUsers();
     const provinces = await this.seedProvinces();
     await this.seedTours(provinces);
   }
+
+  // ======================================================
+  // 🟢 ส่วนที่ 1: DATA RETRIEVAL (สำหรับ API เรียกใช้)
+  // ======================================================
+
+  // ดึงจังหวัดทั้งหมด
+  async getAllProvinces() {
+    return await this.provinceRepository.find();
+  }
+
+  // ดึงทัวร์ทั้งหมด
+  async getAllTours() {
+    return await this.tourRepository.find();
+  }
+
+  // ดึงรายละเอียดทัวร์รายตัว
+  async getTourById(id: number) {
+    return await this.tourRepository.findOne({ where: { id } });
+  }
+
+  // ระบบ Search & Filter ทัวร์ (รองรับ Price, Province)
+  async searchTours(query: { provinceId?: string; maxPrice?: number; minPrice?: number }) {
+    const where: any = {};
+    
+    if (query.provinceId) where.provinceId = query.provinceId;
+    if (query.maxPrice) where.price = LessThanOrEqual(query.maxPrice);
+    if (query.minPrice) where.price = MoreThanOrEqual(query.minPrice);
+
+    return await this.tourRepository.find({ where });
+  }
+
+  // ======================================================
+  // 🟡 ส่วนที่ 2: DATA SEEDING (ใส่ข้อมูลเริ่มต้น)
+  // ======================================================
 
   private async seedRoles() {
     const count = await this.roleRepository.count();
@@ -71,7 +105,6 @@ export class AppService implements OnApplicationBootstrap {
       if (cm) {
         await this.tourRepository.save([
           {
-
             provinceId: cm.id,
             name: 'Doi Inthanon National Park One Day Tour',
             name_th: 'ทัวร์ดอยอินทนนท์ 1 วัน',
@@ -91,7 +124,6 @@ export class AppService implements OnApplicationBootstrap {
             ],
             included: ['Lunch', 'Insurance', 'Entry Fees'],
             notIncluded: ['Tips', 'Personal Expenses'],
-
           },
         ]);
         console.log('✅ Seeded Mock Tours');
@@ -109,28 +141,40 @@ export class AppService implements OnApplicationBootstrap {
     const adminRole = await this.roleRepository.findOne({ where: { name: 'ADMIN' } });
     const userRole = await this.roleRepository.findOne({ where: { name: 'USER' } });
 
-    if (adminRole && !(await this.userRepository.findOne({ where: { email: adminEmail } }))) {
-      await this.userRepository.save({
-        email: adminEmail,
-        passwordHash: hashedPassword,
-        fullName: 'Admin Tester',
-        role: adminRole,
-        // roleId: adminRole.id, 
-        provider: 'local',
-      });
-      console.log('✅ Seeded Admin User');
+    if (adminRole) {
+      const existingAdmin = await this.userRepository.findOne({ where: { email: adminEmail } });
+      if (existingAdmin) {
+        existingAdmin.passwordHash = hashedPassword;
+        await this.userRepository.save(existingAdmin);
+        console.log('✅ Updated Admin password to hashed version');
+      } else {
+        await this.userRepository.save({
+          email: adminEmail,
+          passwordHash: hashedPassword,
+          fullName: 'Admin Tester',
+          role: adminRole,
+          provider: 'local',
+        });
+        console.log('✅ Seeded Admin User');
+      }
     }
 
-    if (userRole && !(await this.userRepository.findOne({ where: { email: userEmail } }))) {
-      await this.userRepository.save({
-        email: userEmail,
-        passwordHash: hashedPassword,
-        fullName: 'Normal User',
-        role: userRole,
-        // roleId: userRole.id,
-        provider: 'local',
-      });
-      console.log('✅ Seeded Normal User');
+    if (userRole) {
+      const existingUser = await this.userRepository.findOne({ where: { email: userEmail } });
+      if (existingUser) {
+        existingUser.passwordHash = hashedPassword;
+        await this.userRepository.save(existingUser);
+        console.log('✅ Updated User password to hashed version');
+      } else {
+        await this.userRepository.save({
+          email: userEmail,
+          passwordHash: hashedPassword,
+          fullName: 'Normal User',
+          role: userRole,
+          provider: 'local',
+        });
+        console.log('✅ Seeded Normal User');
+      }
     }
   }
 

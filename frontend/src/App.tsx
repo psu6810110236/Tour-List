@@ -15,12 +15,15 @@ import TourDetailPage from './pages/TourDetailPage';
 import AdminChatPage from './pages/AdminChatPage';
 import { AdminDashboard as AdminDashboardPage } from './pages/AdminDashboardPage';
 
+// 🟢 นำเข้าหน้า AllProvincesPage ที่เพิ่งสร้างใหม่
+import AllProvincesPage from './pages/AllProvincesPage';
+
 // นำเข้า Service และ Type
 import { tourService } from './services/api';
 import type { Province } from './data/mockData'; 
 
 // --- Mock Pages สำหรับส่วนที่ยังไม่ได้สร้างไฟล์แยก ---
-const ProvincesPage = () => <div className="p-10 pt-24 text-center"><h1>🌴 หน้าจังหวัดทั้งหมด (Provinces)</h1><p>รวมที่เที่ยวแยกตามจังหวัด</p></div>;
+// ลบ ProvincesPage แบบ Mock ทิ้งไปแล้ว
 const BookingPage = () => <div className="p-10 pt-24 text-center"><h1>📅 หน้าจองทัวร์ (Booking)</h1><p>ระบบจองจะอยู่ที่นี่</p></div>;
 const BookingsHistoryPage = () => <div className="p-10 pt-24 text-center"><h1>🎫 ประวัติการจอง (My Bookings)</h1><p>รายการที่จองแล้วจะขึ้นหน้านี้</p></div>;
 const UserProfile = () => <div className="p-10 pt-24 text-center"><h1>👤 โปรไฟล์ผู้ใช้ (Profile)</h1><p>แก้ไขข้อมูลส่วนตัว</p></div>;
@@ -121,9 +124,11 @@ function AppContent() {
         <Route path="/" element={<HomePage language={language} />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/provinces" element={<ProvincesPage />} />
+        
+        {/* 🟢 เปลี่ยนตรงนี้ให้เรียกใช้งาน AllProvincesPage ที่ดึงข้อมูลจาก DB จริงๆ */}
+        <Route path="/provinces" element={<AllProvincesPage language={language} />} />
+        
         <Route path="/province/:id" element={<ProvinceRouteWrapper language={language} />} />
-        {/* 🟢 แก้ไขบรรทัดนี้แล้ว ส่งค่า language ไปให้ TourDetailPage */}
         <Route path="/tour/:id" element={<TourDetailPage language={language} />} />
 
         {/* === Private Routes (ต้อง Login) === */}

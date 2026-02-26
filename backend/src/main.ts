@@ -4,24 +4,26 @@ if (!global.crypto) {
 }
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+// import { AllExceptionsFilter } from './common/filters/http-exception.filter'; // ถูกคอมเมนต์ไว้ตามของเดิม
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  app.enableCors();
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
-  // จัดการ Error format ให้เป็นมาตรฐานเดียวกันทั้งระบบ
-  //app.useGlobalFilters(new AllExceptionsFilter());
-  // 🟢 เพิ่มบรรทัดนี้เพื่ออนุญาตให้ Frontend เรียก API ได้
+  // 🟢 เปิดใช้งาน CORS แบบละเอียด (อนุญาตให้ Frontend เรียก API ได้)
   app.enableCors({
-    origin: true, // หรือใส่ 'http://localhost:5173'
+    origin: true, // อนุญาตทุกโดเมน (เหมาะสำหรับตอน Develop) หรือจะเจาะจงเป็น 'http://localhost:5173' ก็ได้
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
+  // เปิดใช้งาน Validation สำหรับตรวจสอบข้อมูลที่ส่งเข้ามา
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  // จัดการ Error format ให้เป็นมาตรฐานเดียวกันทั้งระบบ (ตอนนี้ปิดไว้อยู่)
+  // app.useGlobalFilters(new AllExceptionsFilter());
+
   await app.listen(3000);
+  console.log('🚀 Application is running on: http://localhost:3000');
 }
 bootstrap();

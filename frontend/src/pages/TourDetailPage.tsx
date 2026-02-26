@@ -4,11 +4,44 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
-// นำเข้า API และฟังก์ชันแปลภาษา
-import { tourService } from '../services/api';
+// นำเข้าฟังก์ชันแปลภาษา
 import { getLang } from '../data/mockData';
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
+
+// ✅ 1. สร้าง Interface สำหรับแผนการเดินทาง (Itinerary)
+interface ItineraryDay {
+  day: number;
+  title?: string;
+  title_th?: string;
+  activities?: string[];
+  activities_th?: string[];
+  [key: string]: unknown; // เผื่อฟังก์ชัน getLang เรียกใช้ key อื่นๆ
+}
+
+// ✅ 2. สร้าง Interface สำหรับข้อมูลทัวร์ (Tour) ให้ตรงกับ Database
+interface TourDetail {
+  id: string | number;
+  name?: string;
+  name_th?: string;
+  province?: string | { name?: string; name_th?: string; [key: string]: unknown };
+  duration?: string;
+  rating?: number;
+  reviewCount?: number;
+  description?: string;
+  description_th?: string;
+  image?: string;
+  price?: number;
+  maxGroupSize?: string | number;
+  highlights?: string[];
+  highlights_th?: string[];
+  included?: string[];
+  included_th?: string[];
+  notIncluded?: string[];
+  notIncluded_th?: string[];
+  itinerary?: ItineraryDay[];
+  [key: string]: unknown; // เผื่อฟังก์ชัน getLang เรียกใช้ key อื่นๆ
+}
 
 interface TourDetailPageProps {
   language?: Language;
@@ -18,11 +51,11 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // State สำหรับจัดการข้อมูลและ UI
-  const [tour, setTour] = useState<any>(null);
+  // ✅ 3. เปลี่ยนจาก useState<any> เป็น useState<TourDetail | null>
+  const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedDay, setExpandedDay] = useState<number | null>(1); // เปิดวันที่ 1 ไว้เป็นค่าเริ่มต้น
+  const [expandedDay, setExpandedDay] = useState<number | null>(1);
   const [showVideo, setShowVideo] = useState(false);
   
   const t = translations[language].tourDetail;
@@ -32,20 +65,32 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   useEffect(() => {
     if (!id) return;
 
-    const fetchTour = async () => {
+    const fetchTourDetail = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const response = await tourService.getById(id);
-        setTour(response.data);
-      } catch (err) {
+        // ยิง API ไปที่ Backend NestJS ของเรา
+        const response = await fetch(`http://localhost:3000/api/tours/${id}`);
+        
+        if (!response.ok) {
+           throw new Error('ไม่พบข้อมูลทัวร์นี้ หรือเซิร์ฟเวอร์มีปัญหา');
+        }
+
+        const data: TourDetail = await response.json();
+        setTour(data);
+      } catch (err: unknown) { // ✅ 4. เปลี่ยนจาก any เป็น unknown และเช็ค type
         console.error("Error fetching tour details:", err);
-        setError("ไม่สามารถโหลดข้อมูลทัวร์ได้ หรือไม่พบทัวร์นี้");
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("ไม่สามารถโหลดข้อมูลทัวร์ได้");
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTour();
+    fetchTourDetail();
   }, [id]);
 
   // Loading State
@@ -68,15 +113,15 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
     );
   }
 
-  // 🟢 จัดการข้อมูลให้ปลอดภัย (ป้องกันกรณีค่าเป็น Null จาก Database)
+  // 🟢 จัดการข้อมูลให้ปลอดภัย
   const provinceName = typeof tour.province === 'object' && tour.province !== null
     ? getLang(tour.province, 'name', language) 
     : getLang(tour, 'province', language);
 
-  const currentHighlights = language === 'th' && tour.highlights_th?.length > 0 ? tour.highlights_th : (tour.highlights || []);
+  const currentHighlights = language === 'th' && tour.highlights_th && tour.highlights_th.length > 0 ? tour.highlights_th : (tour.highlights || []);
   const currentItinerary = tour.itinerary || [];
-  const currentIncluded = language === 'th' && tour.included_th?.length > 0 ? tour.included_th : (tour.included || []);
-  const currentNotIncluded = language === 'th' && tour.notIncluded_th?.length > 0 ? tour.notIncluded_th : (tour.notIncluded || []);
+  const currentIncluded = language === 'th' && tour.included_th && tour.included_th.length > 0 ? tour.included_th : (tour.included || []);
+  const currentNotIncluded = language === 'th' && tour.notIncluded_th && tour.notIncluded_th.length > 0 ? tour.notIncluded_th : (tour.notIncluded || []);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -161,7 +206,8 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-[#00A699] pl-4">{t.itinerary}</h2>
                 <div className="space-y-4">
-                  {currentItinerary.map((day: any) => (
+                  {/* ✅ 5. ระบุ Type ให้ parameter day เป็น ItineraryDay แทน any */}
+                  {currentItinerary.map((day: ItineraryDay) => (
                     <div key={day.day} className="border border-gray-200 rounded-2xl overflow-hidden transition-all hover:shadow-md">
                       <button 
                         onClick={() => setExpandedDay(expandedDay === day.day ? null : day.day)} 
@@ -183,7 +229,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                       {expandedDay === day.day && (
                         <div className="px-5 pb-6 pt-2 bg-gray-50/80 border-t border-gray-100">
                           <div className="space-y-3 pl-4 border-l-2 border-gray-200 ml-6 mt-2">
-                            {((language === 'th' && day.activities_th?.length > 0) ? day.activities_th : (day.activities || [])).map((activity: string, idx: number) => (
+                            {((language === 'th' && day.activities_th && day.activities_th.length > 0) ? day.activities_th : (day.activities || [])).map((activity: string, idx: number) => (
                               <div key={idx} className="flex items-start gap-3 relative">
                                 <div className="w-3 h-3 bg-[#00A699] rounded-full mt-1.5 absolute -left-[23px] ring-4 ring-white" />
                                 <span className="text-gray-700 leading-relaxed">{activity}</span>

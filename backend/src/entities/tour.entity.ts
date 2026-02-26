@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  ManyToOne, 
+  OneToMany, 
+  CreateDateColumn, 
+  UpdateDateColumn, 
+  JoinColumn 
+} from 'typeorm';
 import { Province } from './province.entity';
 import { Review } from './review.entity'; 
 
@@ -19,6 +28,7 @@ export class Tour {
   @Column('text', { nullable: true })
   description_th: string;
 
+  // ✅ ฟิลด์นี้ใช้สำหรับทำ Filter Price (ราคา) มีอยู่แล้ว
   @Column('float')
   price: number;
 
@@ -62,8 +72,13 @@ export class Tour {
   @Column('json', { nullable: true })
   notIncluded_th: string[];
 
+  // 🌟 [เพิ่มใหม่] ฟิลด์นี้ใช้สำหรับทำ Filter Date (วันที่เริ่มทัวร์)
+  @Column({ type: 'date', nullable: true })
+  startDate: Date; 
+
   // --- Relations ---
   
+  // ✅ ฟิลด์นี้ใช้สำหรับทำ Filter Province (จังหวัด) มีอยู่แล้ว
   @Column()
   provinceId: string; 
 

@@ -11,20 +11,36 @@ import {
   X
 } from "lucide-react";
 
-import { tourService } from "../services/api";
 import { getLang } from "../data/mockData";
 import type { Province } from "../data/mockData";
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
 
+// ✅ 1. สร้าง Interface สำหรับ Tour เพื่อลบ Type 'any' ออก
+interface Tour {
+  id: string | number;
+  name?: string;
+  name_th?: string;
+  description?: string;
+  description_th?: string;
+  price: number | string;
+  image?: string;
+  rating?: number;
+  reviewCount?: number;
+  duration?: string;
+  duration_th?: string;
+  [key: string]: unknown;
+}
+
 interface ProvincePageProps {
   province: Province;
-  onNavigate: (page: string, data?: any) => void;
+  onNavigate: (page: string, data?: unknown) => void;
   language: Language;
 }
 
 export function ProvincePage({ province, onNavigate, language }: ProvincePageProps) {
-  const [tours, setTours] = useState<any[]>([]); // เปลี่ยนเป็น any[] ชั่วคราวเพื่อให้รับ Object จาก DB ได้
+  // ✅ 2. เปลี่ยนจาก any[] เป็น Tour[]
+  const [tours, setTours] = useState<Tour[]>([]); 
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
@@ -36,30 +52,35 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
   const tHome = translations[language].home;
   const tBooking = translations[language].booking;
 
+  // 🟢 3. อัปเดตฟังก์ชันดึงข้อมูลให้ส่ง Filter ไปให้ Backend API ประมวลผล
   useEffect(() => {
     const fetchTours = async () => {
       setLoading(true);
       try {
-        const response = await tourService.search({ provinceId: province.id });
-        let fetchedTours = response.data;
+        // ใช้ URLSearchParams เพื่อจัดกลุ่มตัวกรองส่งไปหา Backend
+        const params = new URLSearchParams();
+        
+        // ส่ง ID จังหวัด (หรืออาจจะเปลี่ยนเป็น province.name แล้วแต่ Backend ออกแบบ)
+        params.append('provinceId', province.id);
+        
+        // ถ้ามีการกรอกราคา ให้แนบไปด้วย
+        if (filters.minPrice) params.append('minPrice', filters.minPrice);
+        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+        
+        // แนบการจัดเรียง (price_asc, price_desc, popular)
+        if (filters.sortBy) params.append('sortBy', filters.sortBy);
 
-        // กรองราคาเพิ่มเติม (ฝั่ง Frontend)
-        if (filters.minPrice) {
-          fetchedTours = fetchedTours.filter((t: any) => Number(t.price) >= Number(filters.minPrice));
-        }
-        if (filters.maxPrice) {
-          fetchedTours = fetchedTours.filter((t: any) => Number(t.price) <= Number(filters.maxPrice));
-        }
-
-        // เรียงลำดับ
-        if (filters.sortBy === 'price_asc') {
-          fetchedTours.sort((a: any, b: any) => Number(a.price) - Number(b.price));
-        } else if (filters.sortBy === 'price_desc') {
-          fetchedTours.sort((a: any, b: any) => Number(b.price) - Number(a.price));
-        } else {
-          fetchedTours.sort((a: any, b: any) => Number(b.rating || 0) - Number(a.rating || 0));
+        // ยิง API ไปที่ Search Endpoint ของ Backend 
+        // (เช่น http://localhost:3000/api/tours/search?provinceId=1&minPrice=1000...)
+        const response = await fetch(`http://localhost:3000/api/tours/search?${params.toString()}`);
+        
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
         }
 
+        const fetchedTours: Tour[] = await response.json();
+        
+        // ไม่ต้อง Filter หรือ Sort ฝั่ง Frontend แล้ว (Backend จัดการให้เสร็จ)
         setTours(fetchedTours);
       } catch (error) {
         console.error("Failed to fetch tours", error);
@@ -69,7 +90,7 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
     };
 
     fetchTours();
-  }, [province.id, filters]);
+  }, [province.id, filters]); // เมื่อ filters เปลี่ยน API จะถูกเรียกใหม่ทันที
 
   const toggleFilter = (name: string) => {
     setActiveFilter(activeFilter === name ? null : name);
@@ -274,7 +295,6 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                         <MapPin className="w-4 h-4" />
-                        {/* 🟢 ใช้ชื่อ province จาก Props ได้เลย ป้องกัน Object Error */}
                         <span>{getLang(province, "name", language)}</span>
                       </div>
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
@@ -295,7 +315,6 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
                       <div className="text-right">
                         <div className="text-sm text-gray-500">{t.startingFrom}</div>
                         <div className="text-2xl font-bold text-[#00A699]">
-                          {/* 🟢 ใช้ Number() ป้องกัน Error จาก String */}
                           ฿{Number(tour.price || 0).toLocaleString()}
                         </div>
                       </div>
