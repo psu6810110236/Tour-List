@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Mail, Lock, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { translations } from "../data/translations";
-import type { Language } from "../data/translations";
+import { useAuth } from "./context/AuthContext";
+import { translations } from "../../data/translations";
+import type { Language } from "../../data/translations";
 
 export default function Login() {
   const [email, setEmail] = useState("");

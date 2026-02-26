@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
-// นำเข้าฟังก์ชันแปลภาษา
-import { getLang } from '../data/mockData';
-import type { Language } from "../data/translations";
-import { translations } from "../data/translations";
+// ✅ ใช้ Path ที่ถูกต้องสำหรับโครงสร้างโปรเจกต์ของคุณ
+import { tourService } from '../../../services/api';
+import { getLang } from '../../../data/mockData';
+import type { Language } from "../../../data/translations";
+import { translations } from "../../../data/translations";
 
 // ✅ 1. สร้าง Interface สำหรับแผนการเดินทาง (Itinerary)
 interface ItineraryDay {
@@ -16,7 +17,7 @@ interface ItineraryDay {
   title_th?: string;
   activities?: string[];
   activities_th?: string[];
-  [key: string]: unknown; // เผื่อฟังก์ชัน getLang เรียกใช้ key อื่นๆ
+  [key: string]: unknown; 
 }
 
 // ✅ 2. สร้าง Interface สำหรับข้อมูลทัวร์ (Tour) ให้ตรงกับ Database
@@ -40,7 +41,7 @@ interface TourDetail {
   notIncluded?: string[];
   notIncluded_th?: string[];
   itinerary?: ItineraryDay[];
-  [key: string]: unknown; // เผื่อฟังก์ชัน getLang เรียกใช้ key อื่นๆ
+  [key: string]: unknown;
 }
 
 interface TourDetailPageProps {
@@ -78,7 +79,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
         const data: TourDetail = await response.json();
         setTour(data);
-      } catch (err: unknown) { // ✅ 4. เปลี่ยนจาก any เป็น unknown และเช็ค type
+      } catch (err: unknown) { 
         console.error("Error fetching tour details:", err);
         if (err instanceof Error) {
           setError(err.message);
@@ -206,7 +207,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-[#00A699] pl-4">{t.itinerary}</h2>
                 <div className="space-y-4">
-                  {/* ✅ 5. ระบุ Type ให้ parameter day เป็น ItineraryDay แทน any */}
                   {currentItinerary.map((day: ItineraryDay) => (
                     <div key={day.day} className="border border-gray-200 rounded-2xl overflow-hidden transition-all hover:shadow-md">
                       <button 
@@ -336,7 +336,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                 </button>
                 
                 <p className="text-center text-xs text-gray-400 mt-4">
-                   Free cancellation up to 24 hours before start
+                    Free cancellation up to 24 hours before start
                 </p>
               </div>
 

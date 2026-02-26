@@ -9,9 +9,11 @@ import {
   ArrowRight,
   TrendingUp
 } from "lucide-react";
-import { tourService } from "../services/api";
-import type { Language } from "../data/translations";
-import { translations } from "../data/translations";
+
+// ✅ ใช้ Path นี้เพื่อให้ตรงกับโครงสร้างโฟลเดอร์ปัจจุบันของคุณ
+import { tourService } from "../../../services/api";
+import type { Language } from "../../../data/translations";
+import { translations } from "../../../data/translations";
 
 // ✅ 1. Interface สำหรับจังหวัด
 interface Province {
@@ -157,7 +159,6 @@ export default function HomePage({ language }: HomePageProps) {
               {t.subtitle}
             </p>
 
-            {/* 🟢 เปลี่ยนเป็น Form เพื่อให้กด Enter ได้ และผูกค่า State เข้ากับ Input */}
             <form onSubmit={handleSearch} className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-2 md:p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
               <div className="flex items-center w-full px-2">
                 <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
@@ -269,7 +270,7 @@ export default function HomePage({ language }: HomePageProps) {
         )}
       </div>
 
-      {/* ===== RECOMMENDED TOURS SECTION (ส่วนที่เพิ่มเข้ามาใหม่ดึงจาก DB) ===== */}
+      {/* ===== RECOMMENDED TOURS SECTION ===== */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         <div className="mb-8">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
@@ -298,7 +299,7 @@ export default function HomePage({ language }: HomePageProps) {
                     <p className="text-gray-500 text-sm mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
                     <p className="text-[#FF6B4A] font-bold text-2xl mb-4">฿{tour.price.toLocaleString()}</p>
                     <button
-                      onClick={() => navigate(`/tour/${tour.id}`)} // คลิกลิ้งก์ไปหน้า TourDetailPage
+                      onClick={() => navigate(`/tour/${tour.id}`)}
                       className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-3 rounded-xl font-bold transition flex justify-center items-center gap-2"
                     >
                       {language === 'th' ? 'ดูรายละเอียดทัวร์' : 'View Tour Details'}

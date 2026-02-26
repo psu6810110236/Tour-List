@@ -16,7 +16,7 @@ import {
     LogOut, // ไอคอนสำหรับ Logout
 } from "lucide-react";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../features/auth/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
@@ -28,14 +28,14 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "../components/ui/dropdown-menu";
 
 import {
     Avatar,
     AvatarFallback,
-} from "./ui/avatar";
+} from "../components/ui/avatar";
 
-import { Badge } from "./ui/badge";
+import { Badge } from "../components/ui/badge";
 
 interface NavigationProps {
     currentPage: string;

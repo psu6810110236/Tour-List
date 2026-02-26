@@ -1,19 +1,19 @@
 // src/App.tsx
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Outlet, useParams } from "react-router-dom";
-import { AuthProvider, useAuth } from './context/AuthContext';
-import AdminRoute from './components/AdminRoute';
-import ChatWidget from './components/ChatWidget';
+import { AuthProvider, useAuth } from './features/auth/context/AuthContext';
+import AdminRoute from './features/admin/AdminRoute';
+import ChatWidget from './layouts/ChatWidget';
 
 // --- Import Pages & Components ---
-import Login from './pages/Login'; // ใช้หน้า Login จริงของคุณ
-import Register from './pages/Register';
-import HomePage from './components/home-page';
-import { Navigation } from './components/navigation';
-import { ProvincePage } from './components/ProvincePage';
-import TourDetailPage from './pages/TourDetailPage'; 
-import AdminChatPage from './pages/AdminChatPage';
-import { AdminDashboard as AdminDashboardPage } from './pages/AdminDashboardPage';
+import Login from './features/auth/Login'; // ใช้หน้า Login จริงของคุณ
+import Register from './features/auth/Register';
+import HomePage from './features/public/pages/home-page';
+import { Navigation } from './layouts/navigation';
+import { ProvincePage } from './features/public/pages/ProvincePage';
+import TourDetailPage from './features/public/pages/TourDetailPage'; 
+import AdminChatPage from './features/admin/AdminChatPage';
+import { AdminDashboard as AdminDashboardPage } from './features/admin/AdminDashboardPage';
 
 // 🟢 นำเข้าหน้า AllProvincesPage ที่เพิ่งสร้างใหม่
 import AllProvincesPage from './pages/AllProvincesPage';

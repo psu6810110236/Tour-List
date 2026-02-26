@@ -11,10 +11,12 @@ import {
   X
 } from "lucide-react";
 
-import { getLang } from "../data/mockData";
-import type { Province } from "../data/mockData";
-import type { Language } from "../data/translations";
-import { translations } from "../data/translations";
+// ✅ ใช้ Path ที่ถูกต้องสำหรับการเข้าถึงข้อมูลในโปรเจกต์ของคุณ
+import { tourService } from "../../../services/api";
+import { getLang } from "../../../data/mockData";
+import type { Province } from "../../../data/mockData";
+import type { Language } from "../../../data/translations";
+import { translations } from "../../../data/translations";
 
 // ✅ 1. สร้าง Interface สำหรับ Tour เพื่อลบ Type 'any' ออก
 interface Tour {
@@ -60,7 +62,7 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
         // ใช้ URLSearchParams เพื่อจัดกลุ่มตัวกรองส่งไปหา Backend
         const params = new URLSearchParams();
         
-        // ส่ง ID จังหวัด (หรืออาจจะเปลี่ยนเป็น province.name แล้วแต่ Backend ออกแบบ)
+        // ส่ง ID จังหวัด
         params.append('provinceId', province.id);
         
         // ถ้ามีการกรอกราคา ให้แนบไปด้วย
@@ -71,7 +73,6 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
         if (filters.sortBy) params.append('sortBy', filters.sortBy);
 
         // ยิง API ไปที่ Search Endpoint ของ Backend 
-        // (เช่น http://localhost:3000/api/tours/search?provinceId=1&minPrice=1000...)
         const response = await fetch(`http://localhost:3000/api/tours/search?${params.toString()}`);
         
         if (!response.ok) {

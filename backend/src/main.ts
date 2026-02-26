@@ -4,7 +4,6 @@ if (!global.crypto) {
 }
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-// import { AllExceptionsFilter } from './common/filters/http-exception.filter'; // ถูกคอมเมนต์ไว้ตามของเดิม
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 
 async function bootstrap() {
@@ -20,7 +19,7 @@ async function bootstrap() {
   // เปิดใช้งาน Validation สำหรับตรวจสอบข้อมูลที่ส่งเข้ามา
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  // จัดการ Error format ให้เป็นมาตรฐานเดียวกันทั้งระบบ (ตอนนี้ปิดไว้อยู่)
+  // จัดการ Error format ให้เป็นมาตรฐานเดียวกันทั้งระบบ (หากต้องการใช้งานให้ลบคอมเมนต์ด้านล่างออก)
   // app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.listen(3000);
