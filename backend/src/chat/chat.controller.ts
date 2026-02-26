@@ -1,19 +1,31 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { Message } from '../entities/message.entity';
+import { User } from '../entities/user.entity';
 
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  // ดึงรายชื่อคนที่เคยทักมา
+  /**
+   * 🔹 สำหรับ Admin
+   * ดึงรายชื่อลูกค้าที่เคยทักมา (แสดงเป็นรายชื่อห้อง)
+   * GET /chat/contacts
+   */
   @Get('contacts')
-  async getContacts() {
+  async getContacts(): Promise<User[]> {
     return await this.chatService.getChatContacts();
   }
 
-  // ดึงข้อความทั้งหมดของลูกค้าคนนี้ (Admin ใช้)
+  /**
+   * 🔹 สำหรับ Admin และ User
+   * ดึงข้อความทั้งหมดของ user คนนั้น
+   * GET /chat/messages/:userId
+   */
   @Get('messages/:userId')
-  async getUserMessages(@Param('userId') userId: string) {
+  async getUserMessages(
+    @Param('userId') userId: string,
+  ): Promise<Message[]> {
     return await this.chatService.getMessagesByUser(userId);
   }
 }

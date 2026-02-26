@@ -9,26 +9,36 @@ export class ChatService {
     constructor(
         @InjectRepository(Message)
         private messageRepository: Repository<Message>,
-    ){}
-
-    // 1. ปรับให้รับ receiverId มาบันทึกด้วย
-    async saveMessage(content: string, senderId: string, receiverId?: string): Promise<Message>{
+    ) { }
+    async saveMessage(content: string, senderId: string, receiverId?: string): Promise<Message> {
         const newMessage = this.messageRepository.create({
             content,
             senderId,
-            receiverId, 
+            receiverId,
         });
-        return await this.messageRepository.save(newMessage);
+
+        const saved = await this.messageRepository.save(newMessage);
+
+        const message = await this.messageRepository.findOne({
+            where: { id: saved.id },
+            relations: ['sender', 'receiver'],
+        });
+
+        if (!message) {
+            throw new Error('Failed to load message relations');
+        }
+
+        return message;
     }
 
     // 2. ดึงข้อความทั้งหมดที่เกี่ยวข้องกับ User คนนี้ (ทั้งที่เขาส่งมา และเราตอบกลับไป)
     async getMessagesByUser(userId: string): Promise<Message[]> {
         return await this.messageRepository.find({
             where: [
-                { senderId: userId },   // ข้อความที่ลูกค้าส่งมา
-                { receiverId: userId }  // ข้อความที่ Admin ตอบกลับไปหาลูกค้า
+                { senderId: userId },
+                { receiverId: userId },
             ],
-            relations: ['sender'],
+            relations: ['sender', 'receiver'], // ⭐ สำคัญมาก
             order: { createdAt: 'ASC' },
         });
     }
@@ -42,7 +52,9 @@ export class ChatService {
             .orderBy('message.senderId')
             .addOrderBy('message.createdAt', 'DESC')
             .getMany();
-        
-        return messages.map(msg => msg.sender).filter(u => u); 
+
+        return messages
+            .map(msg => msg.sender)
+            .filter((u): u is User => !!u);
     }
 }

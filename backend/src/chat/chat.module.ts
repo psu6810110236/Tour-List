@@ -4,9 +4,9 @@ import { Message } from '../entities/message.entity';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller'; // 1. Import
-
+import { User } from '../entities/user.entity';
 @Module({
-  imports: [TypeOrmModule.forFeature([Message])],
+  imports: [TypeOrmModule.forFeature([Message, User])],
   controllers: [ChatController], // 2. เพิ่ม Controller ตรงนี้
   providers: [ChatGateway, ChatService],
 })

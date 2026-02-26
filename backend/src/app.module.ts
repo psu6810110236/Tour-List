@@ -39,7 +39,8 @@ import { BookingsModule } from './booking/bookings.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true, // พัฒนาอยู่ให้เปิดไว้เพื่อสร้าง Table อัตโนมัติ
+        synchronize: true, 
+        dropSchema: true,// พัฒนาอยู่ให้เปิดไว้เพื่อสร้าง Table อัตโนมัติ
       }),
     }),
     TypeOrmModule.forFeature([Role, Province, Tour, User]), 

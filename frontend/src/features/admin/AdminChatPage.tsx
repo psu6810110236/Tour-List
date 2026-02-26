@@ -27,30 +27,38 @@ export default function AdminChatPage() {
 
   // 1. เชื่อมต่อ Socket และโหลดรายชื่อลูกค้าที่มีการแชท
   useEffect(() => {
+    if (!user) return;
+
     fetch('http://localhost:3000/chat/contacts')
       .then(res => res.json())
       .then(data => setContacts(data))
       .catch(err => console.error("Error fetching contacts:", err));
 
-    const newSocket = io('http://localhost:3000');
-    setSocket(newSocket);
-
-    newSocket.on('receiveMessage', (msg: any) => {
-      setMessages(prev => [...prev, msg]); 
+    const newSocket = io('http://localhost:3000', {
+      query: {
+        role: 'admin',
+        userId: user.id,
+      },
     });
 
+    newSocket.on('receiveMessage', (msg: any) => {
+      setMessages(prev => [...prev, msg]);
+    });
+
+    setSocket(newSocket);
+
     return () => { newSocket.disconnect(); };
-  }, []);
+  }, [user]);
 
   // 2. โหลดข้อความเก่าเมื่อคลิกเลือก User
   useEffect(() => {
     if (!selectedUser) return;
-    
+
     fetch(`http://localhost:3000/chat/messages/${selectedUser.id}`)
       .then(res => res.json())
       .then(data => setMessages(data))
       .catch(err => console.error("Error fetching messages:", err));
-      
+
   }, [selectedUser]);
 
   // 3. Auto Scroll ลงล่างสุด
@@ -65,17 +73,30 @@ export default function AdminChatPage() {
     e.preventDefault();
     if (!input.trim() || !socket || !selectedUser || !user) return;
 
+    const newMsg: Message = {
+      id: Date.now().toString(), // temp id
+      content: input,
+      sender: {
+        id: user.id,
+        fullName: user.fullName || 'Admin'
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    // ⭐ แสดงข้อความทันทีในแชท (สำคัญ)
+    setMessages(prev => [...prev, newMsg]);
+
     socket.emit('sendMessage', {
       content: input,
-      senderId: user.id, // ใช้ ID แอดมินจากระบบจริง
-      receiverId: selectedUser.id // ระบุส่งหาลูกค้าที่เลือกอยู่
+      senderId: user.id,
+      receiverId: selectedUser.id
     });
 
     setInput('');
   };
 
   // กรองข้อความให้แสดงเฉพาะคู่สนทนาระหว่าง แอดมิน และ ลูกค้าที่เลือก
-  const filteredMessages = messages.filter(m => 
+  const filteredMessages = messages.filter(m =>
     selectedUser && (m.sender.id === selectedUser.id || m.sender.id === user?.id)
   );
 
@@ -89,16 +110,15 @@ export default function AdminChatPage() {
           </h1>
           <p className="text-xs text-white/80 mt-2">จัดการการตอบกลับลูกค้าทั้งหมดที่นี่</p>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto">
           {contacts.length > 0 ? (
             contacts.map(contact => (
               <div
                 key={contact.id}
                 onClick={() => setSelectedUser(contact)}
-                className={`p-5 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-all flex items-center gap-4 ${
-                  selectedUser?.id === contact.id ? 'bg-[#00A699]/5 border-l-4 border-[#00A699]' : ''
-                }`}
+                className={`p-5 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-all flex items-center gap-4 ${selectedUser?.id === contact.id ? 'bg-[#00A699]/5 border-l-4 border-[#00A699]' : ''
+                  }`}
               >
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-[#00A699] font-bold text-lg">
                   {contact.fullName?.charAt(0) || 'U'}
@@ -147,18 +167,17 @@ export default function AdminChatPage() {
 
                 return (
                   <div key={idx} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[65%] p-4 rounded-2xl shadow-sm ${
-                      isAdmin 
-                        ? 'bg-[#00A699] text-white rounded-tr-sm' 
-                        : 'bg-white text-gray-800 rounded-tl-sm border border-gray-100'
-                    }`}>
+                    <div className={`max-w-[65%] p-4 rounded-2xl shadow-sm ${isAdmin
+                      ? 'bg-[#00A699] text-white rounded-tr-sm'
+                      : 'bg-white text-gray-800 rounded-tl-sm border border-gray-100'
+                      }`}>
                       {isImage ? (
                         <img src={msg.content} alt="sent" className="rounded-lg max-w-sm" />
                       ) : (
                         <p className="text-[14px] leading-relaxed font-medium">{msg.content}</p>
                       )}
                       <p className={`text-[10px] mt-2 font-medium ${isAdmin ? 'text-white/70' : 'text-gray-400'}`}>
-                        {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
@@ -181,8 +200,8 @@ export default function AdminChatPage() {
                     className="w-full bg-gray-100 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-[#00A699]/50 outline-none text-sm font-medium transition-all"
                   />
                 </div>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={!input.trim()}
                   className="bg-[#00A699] hover:bg-[#008c82] text-white p-4 rounded-2xl shadow-lg shadow-[#00A699]/20 transition-all hover:scale-105 disabled:bg-gray-300 disabled:shadow-none"
                 >
