@@ -67,7 +67,7 @@ export default function HomePage({ language }: HomePageProps) {
       }
     };
 
-    // 2. ดึงข้อมูลทัวร์
+    // 2. ดึงข้อมูลทัวร์ เก็บหน้าแยก
     const fetchTours = async () => {
       try {
         const response = await axios.get('http://localhost:3000/tours'); 
@@ -366,20 +366,105 @@ export default function HomePage({ language }: HomePageProps) {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-10 md:py-12 border-t border-gray-800 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-3 mb-6 md:mb-8 opacity-50">
-             <div className="w-8 h-8 md:w-10 md:h-10 bg-white/10 rounded-lg flex items-center justify-center text-lg md:text-xl">🏝️</div>
-             <span className="text-lg md:text-xl font-bold tracking-wider">RoamHub Tour</span>
+      <footer className="relative bg-[#0f172a] text-white pt-20 pb-10 overflow-hidden">
+  {/* 💡 เอฟเฟกต์แสงฟุ้งด้านหลัง (Glow Effect) */}
+  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00A699]/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+  
+  <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-16">
+      
+      {/* 🏛️ Column 1: Brand Identity (4 Units) */}
+      <div className="lg:col-span-4 space-y-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white rounded-2xl shadow-xl shadow-[#00A699]/20 flex items-center justify-center p-2 transform hover:rotate-6 transition-transform">
+      
           </div>
-          <p className="text-gray-400 mb-4 font-light text-xs md:text-sm">
-            {language === 'th' ? '🎓 นี่คือโปรโตไทป์เพื่อการศึกษา' : '🎓 This is a high-fidelity UI prototype for academic purposes'}
-          </p>
-          <p className="text-gray-600 text-[10px] md:text-xs">
-            © 2026 RoamHub Tour - University Figma Assignment Project
-          </p>
+          <div>
+            <h2 className="text-2xl-[#00A699] ">
+              RoamHub <span className="text-[#00A699]">Tour</span>
+            </h2>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#00A699] font-bold">Premium Travel Experience</p>
+          </div>
         </div>
-      </footer>
+        
+        <p className="text-gray-400 leading-relaxed text-sm max-w-sm">
+          {language === 'th' 
+            ? 'ยกระดับการเดินทางของคุณด้วยบริการทัวร์ระดับพรีเมียม คัดสรรสถานที่ที่ดีที่สุดเพื่อสร้างความทรงจำที่ไม่รู้ลืม' 
+            : 'Elevate your journey with premium tour services, handpicking the best locations to create unforgettable memories.'}
+        </p>
+
+        {/* Social Icons with Glass effect */}
+        <div className="flex gap-4">
+          {['Facebook', 'Instagram', 'Youtube'].map((social) => (
+            <div key={social} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#00A699] hover:border-[#00A699] transition-all cursor-pointer group">
+              <span className="text-[10px] font-bold group-hover:scale-110 transition-transform">{social[0]}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 🔗 Column 2 & 3: Navigation (4 Units) */}
+      <div className="lg:col-span-4 grid grid-cols-2 gap-8">
+        <div>
+          <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
+            {language === 'th' ? 'สำรวจ' : 'Explore'}
+          </h4>
+          <ul className="space-y-4 text-gray-400 text-sm">
+            {['Destinations', 'Popular Tours', 'Private Trips', 'Activities'].map(item => (
+              <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
+                <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
+            {language === 'th' ? 'บริการ' : 'Services'}
+          </h4>
+          <ul className="space-y-4 text-gray-400 text-sm">
+            {['Booking Policy', 'Partner with Us', 'Help Center', 'Terms'].map(item => (
+              <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
+                <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* ✉️ Column 4: Premium Newsletter (4 Units) */}
+      <div className="lg:col-span-4 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+        <h4 className="text-lg font-bold mb-2">{language === 'th' ? 'รับสิทธิพิเศษก่อนใคร' : 'Exclusive Offers'}</h4>
+        <p className="text-gray-400 text-xs mb-6">
+          {language === 'th' ? 'สมัครสมาชิกเพื่อรับโปรโมชั่นลับเฉพาะคุณ' : 'Join our club for members-only deals and travel tips.'}
+        </p>
+        <form className="relative">
+          <input 
+            type="email" 
+            placeholder="your@email.com" 
+            className="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A699] transition-all"
+          />
+          <button className="absolute right-2 top-2 bottom-2 bg-[#00A699] hover:bg-[#008c81] px-6 rounded-xl font-bold text-sm shadow-lg shadow-[#00A699]/20 transition-all active:scale-95">
+            {language === 'th' ? 'สมัคร' : 'Join'}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {/* 📋 Footer Bottom */}
+    <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="text-gray-500 text-[11px] font-medium tracking-wide">
+        © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
+      </div>
+      <div className="flex items-center gap-8">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" className="h-4 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+      </div>
+    </div>
+  </div>
+</footer>
     </div>
   );
 }
