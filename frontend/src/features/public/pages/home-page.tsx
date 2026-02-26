@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios"; // ✅ เพิ่ม axios สำหรับดึงข้อมูลทัวร์
 import {
   Search,
   MapPin,
   ArrowRight,
   TrendingUp
 } from "lucide-react";
-// ✅ เปลี่ยนจาก mockData เป็น service ที่เชื่อม API
+
+// ✅ ใช้ Path นี้เพื่อให้ตรงกับโครงสร้างโฟลเดอร์ปัจจุบันของคุณ
 import { tourService } from "../../../services/api";
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 
-// ✅ สร้าง Interface ให้ตรงกับข้อมูลที่จะได้รับจาก Backend
+// ✅ 1. Interface สำหรับจังหวัด
 interface Province {
   id: string;
   name: string;
@@ -24,6 +26,16 @@ interface Province {
   description_th: string;
 }
 
+// ✅ 2. Interface สำหรับทัวร์
+interface Tour {
+  id: string | number;
+  name: string;
+  province: string;
+  price: number;
+  date?: string;
+  description?: string;
+}
+
 interface HomePageProps {
   language: Language;
 }
@@ -31,12 +43,19 @@ interface HomePageProps {
 export default function HomePage({ language }: HomePageProps) { 
   const navigate = useNavigate();
 
-  // ✅ สร้าง State สำหรับเก็บข้อมูลจริงจาก API
+  // ✅ State สำหรับเก็บข้อมูลจาก API
   const [provinces, setProvinces] = useState<Province[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tours, setTours] = useState<Tour[]>([]); 
+  
+  const [loadingProvinces, setLoadingProvinces] = useState(true);
+  const [loadingTours, setLoadingTours] = useState(true); 
 
-  // ✅ ดึงข้อมูลจังหวัดจาก Backend เมื่อเปิดหน้าเว็บ
+  // 🟢 State สำหรับเก็บคำค้นหา
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // ✅ ดึงข้อมูลจาก Backend เมื่อเปิดหน้าเว็บ
   useEffect(() => {
+    // 1. ดึงข้อมูลจังหวัด
     const fetchProvinces = async () => {
       try {
         const response = await tourService.getProvinces();
@@ -44,20 +63,60 @@ export default function HomePage({ language }: HomePageProps) {
       } catch (error) {
         console.error("Error fetching provinces:", error);
       } finally {
-        setLoading(false);
+        setLoadingProvinces(false);
+      }
+    };
+
+    // 2. ดึงข้อมูลทัวร์
+    const fetchTours = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/tours'); 
+        setTours(response.data.slice(0, 3)); 
+      } catch (error) {
+        console.error("Error fetching tours:", error);
+      } finally {
+        setLoadingTours(false);
       }
     };
 
     fetchProvinces();
+    fetchTours();
   }, []);
 
-  const onNavigate = (page: string, data?: any) => {
+  const onNavigate = (page: string, data?: Province) => {
     if (page === "provinces") {
       navigate("/provinces");
     } else if (page === "province" && data) {
       navigate(`/province/${data.id}`);
     } else {
       console.log("Navigate to:", page);
+    }
+  };
+
+  // 🟢 ฟังก์ชันจัดการเมื่อผู้ใช้กดปุ่มค้นหาหรือกด Enter
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault(); // ป้องกันหน้าเว็บรีเฟรช
+
+    const trimmedQuery = searchQuery.trim().toLowerCase();
+
+    // ถ้าไม่ได้พิมพ์อะไรเลย ให้ไปหน้ารวมจังหวัด
+    if (!trimmedQuery) {
+      navigate('/provinces');
+      return;
+    }
+
+    // ค้นหาว่าคำที่พิมพ์ ตรงกับชื่อจังหวัดที่มีในระบบหรือไม่ (ทั้งภาษาไทยและอังกฤษ)
+    const matchedProvince = provinces.find(p => 
+      p.name.toLowerCase().includes(trimmedQuery) || 
+      p.name_th.toLowerCase().includes(trimmedQuery)
+    );
+
+    if (matchedProvince) {
+      // ถ้าเจอจังหวัดที่ตรงกัน ให้เด้งไปหน้ารายละเอียดของจังหวัดนั้น
+      navigate(`/province/${matchedProvince.id}`);
+    } else {
+      // ถ้าไม่มีข้อมูลตรงกับที่พิมพ์เลย ให้ไปหน้ารวมจังหวัด
+      navigate('/provinces');
     }
   };
 
@@ -71,7 +130,6 @@ export default function HomePage({ language }: HomePageProps) {
       
       {/* ===== HERO SECTION ===== */}
       <div className="relative min-h-[550px] md:h-[600px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0">
-        
         <div className="absolute inset-0 z-0">
           <img 
             src={HERO_BG} 
@@ -101,19 +159,25 @@ export default function HomePage({ language }: HomePageProps) {
               {t.subtitle}
             </p>
 
-            <div className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-2 md:p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
+            <form onSubmit={handleSearch} className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-2 md:p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
               <div className="flex items-center w-full px-2">
                 <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t.searchPlaceholder}
                   className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
                 />
               </div>
-              <button className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition shadow-lg shadow-orange-200">
+              <button 
+                type="submit"
+                className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
+              >
                 {t.searchBtn}
               </button>
-            </div>
+            </form>
+
           </div>
         </div>
       </div>
@@ -122,28 +186,22 @@ export default function HomePage({ language }: HomePageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 md:-mt-16 relative z-20">
         <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 border border-gray-100">
           <div className="text-center group transition duration-300">
-            <div className="text-4xl md:text-5xl font-bold text-[#00A699] mb-1">
-              83+
-            </div>
+            <div className="text-4xl md:text-5xl font-bold text-[#00A699] mb-1">83+</div>
             <p className="text-gray-500 font-medium text-sm md:text-base">{language === 'th' ? 'ทัวร์ยอดนิยม' : 'Amazing Tours'}</p>
           </div>
           <div className="text-center md:border-l md:border-r border-gray-100 group transition duration-300 py-4 md:py-0">
-            <div className="text-4xl md:text-5xl font-bold text-[#007AFF] mb-1">
-              77
-            </div>
+            <div className="text-4xl md:text-5xl font-bold text-[#007AFF] mb-1">77</div>
             <p className="text-gray-500 font-medium text-sm md:text-base">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</p>
           </div>
           <div className="text-center group transition duration-300">
-            <div className="text-4xl md:text-5xl font-bold text-[#FF6B4A] mb-1">
-              4.8★
-            </div>
+            <div className="text-4xl md:text-5xl font-bold text-[#FF6B4A] mb-1">4.8★</div>
             <p className="text-gray-500 font-medium text-sm md:text-base">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</p>
           </div>
         </div>
       </div>
 
       {/* Province Selection */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div className="max-w-2xl">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
@@ -163,13 +221,11 @@ export default function HomePage({ language }: HomePageProps) {
           </button>
         </div>
 
-        {/* ✅ Loading State Check */}
-        {loading ? (
+        {loadingProvinces ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00A699]"></div>
           </div>
         ) : (
-          /* Province Cards Grid */
           <div className="province-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {provinces.map((province) => (
               <button
@@ -184,7 +240,6 @@ export default function HomePage({ language }: HomePageProps) {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
-
                   <div className="absolute bottom-6 left-6 right-6">
                     <div className="flex items-center gap-2 text-white mb-2">
                       <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -204,7 +259,6 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                   </div>
                 </div>
-
                 <div className="p-5 md:p-6">
                   <p className="text-gray-600 text-xs md:text-sm line-clamp-2 leading-relaxed">
                     {language === 'th' ? province.description_th : province.description}
@@ -216,8 +270,51 @@ export default function HomePage({ language }: HomePageProps) {
         )}
       </div>
 
+      {/* ===== RECOMMENDED TOURS SECTION ===== */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+        <div className="mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+            {language === 'th' ? 'ทัวร์แนะนำสำหรับคุณ' : 'Recommended Tours'}
+          </h2>
+          <p className="text-gray-600 text-base md:text-lg">
+            {language === 'th' ? 'แพ็กเกจทัวร์ยอดฮิตที่เปิดจองในขณะนี้' : 'Popular tour packages available right now'}
+          </p>
+        </div>
+
+        {loadingTours ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#FF6B4A]"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            {tours.map((tour) => (
+              <div key={tour.id} className="bg-white rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col">
+                <div className="p-6 flex-1 flex flex-col">
+                  <h3 className="text-xl font-bold mb-2 line-clamp-2">{tour.name}</h3>
+                  <p className="text-gray-500 mb-4 flex items-center gap-2 font-medium">
+                    <MapPin className="w-4 h-4 text-[#00A699]" />
+                    {tour.province}
+                  </p>
+                  <div className="mt-auto pt-4 border-t border-gray-100">
+                    <p className="text-gray-500 text-sm mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
+                    <p className="text-[#FF6B4A] font-bold text-2xl mb-4">฿{tour.price.toLocaleString()}</p>
+                    <button
+                      onClick={() => navigate(`/tour/${tour.id}`)}
+                      className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-3 rounded-xl font-bold transition flex justify-center items-center gap-2"
+                    >
+                      {language === 'th' ? 'ดูรายละเอียดทัวร์' : 'View Tour Details'}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Why Choose Us Section */}
-      <div className="bg-white py-12 md:py-24">
+      <div className="bg-white py-12 md:py-24 mt-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12 md:mb-16">
             <span className="text-[#00A699] font-bold tracking-wider uppercase text-xs md:text-sm mb-2 block">

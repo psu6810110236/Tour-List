@@ -17,10 +17,24 @@ export class ToursService {
     const query = this.tourRepository.createQueryBuilder('tour')
       .leftJoinAndSelect('tour.province', 'province');
 
-    if (filters.provinceId) query.andWhere('tour.provinceId = :provinceId', { provinceId: filters.provinceId });
-    if (filters.minPrice) query.andWhere('tour.price >= :minPrice', { minPrice: Number(filters.minPrice) });
-    if (filters.maxPrice) query.andWhere('tour.price <= :maxPrice', { maxPrice: Number(filters.maxPrice) });
+    // กรองตามรหัสจังหวัด
+    if (filters.provinceId) {
+      query.andWhere('tour.provinceId = :provinceId', { provinceId: filters.provinceId });
+    }
+    // กรองตามราคาต่ำสุด
+    if (filters.minPrice) {
+      query.andWhere('tour.price >= :minPrice', { minPrice: Number(filters.minPrice) });
+    }
+    // กรองตามราคาสูงสุด
+    if (filters.maxPrice) {
+      query.andWhere('tour.price <= :maxPrice', { maxPrice: Number(filters.maxPrice) });
+    }
+    // 🟢 เพิ่ม Filter สำหรับค้นหาวันที่เริ่มทัวร์ (ค้นหาตั้งแต่วันที่ระบุเป็นต้นไป)
+    if (filters.startDate) {
+      query.andWhere('tour.startDate >= :startDate', { startDate: filters.startDate });
+    }
 
+    // ระบบจัดเรียง (Sorting)
     if (filters.sort === 'price_asc') query.orderBy('tour.price', 'ASC');
     else if (filters.sort === 'price_desc') query.orderBy('tour.price', 'DESC');
     else query.orderBy('tour.rating', 'DESC');
@@ -55,15 +69,16 @@ export class ToursService {
 
   // 🟢 1. เพิ่มฟังก์ชันสำหรับอัปเดตข้อมูลทัวร์
   async updateTour(id: string, tourData: Partial<Tour>) {
-    await this.tourRepository.update(id, tourData);
+    await this.tourRepository.update(Number(id), tourData);
     return this.tourRepository.findOne({ where: { id: Number(id) } });
   }
-    // 🔴 ฟังก์ชันลบทัวร์
+
+  // 🔴 ฟังก์ชันลบทัวร์
   async deleteTour(id: string) {
     const result = await this.tourRepository.delete(Number(id));
     if (result.affected === 0) {
       throw new NotFoundException(`ไม่พบทัวร์รหัส ${id} ที่ต้องการลบ`);
     }
     return { message: 'ลบทัวร์สำเร็จแล้ว' };
-} 
+  }
 }

@@ -23,16 +23,14 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { ToursModule } from './tours/tours.module';
 import { BookingsModule } from './booking/bookings.module';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule,TypeOrmModule.forFeature([Review])],
+      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        // ✅ ตรวจสอบว่าใน .env ค่า DB_HOST=postgres (ถ้าใช้ Docker)
         host: configService.get<string>('DB_HOST'),
         port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
         username: configService.get<string>('DB_USERNAME'),
@@ -40,10 +38,9 @@ import { BookingsModule } from './booking/bookings.module';
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: true, 
-        dropSchema: true,// พัฒนาอยู่ให้เปิดไว้เพื่อสร้าง Table อัตโนมัติ
       }),
     }),
-    TypeOrmModule.forFeature([Role, Province, Tour, User]), 
+    TypeOrmModule.forFeature([Role, Province, Tour, User, Review]), 
     UsersModule,
     AuthModule,
     ReviewsModule,

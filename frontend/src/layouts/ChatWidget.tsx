@@ -32,31 +32,34 @@ export default function ChatWidget() {
 
   // 3. เชื่อมต่อ Socket และจัดการการรับข้อความ
   useEffect(() => {
-    // เปลี่ยนเป็น URL ของ Backend คุณ
     const newSocket = io('http://localhost:3000', {
-      query: {
-        role: 'user',
-        userId: user?.id,
-      },
+      query: { role: 'user', userId: user?.id },
     });
     setSocket(newSocket);
 
     newSocket.on('receiveMessage', (msg: any) => {
       if (!user?.id) return;
 
-      // รับเฉพาะข้อความที่เกี่ยวกับ user คนนี้
-      if (msg.senderId !== user.id && msg.receiverId !== user.id) return;
+      // เช็คว่าใครเป็นคนส่ง
+      const isMe = msg.senderId === user.id || msg.sender?.id === user.id;
 
-      const isMe = msg.sender?.id === user.id;
-      const isImg = msg.content && msg.content.startsWith('data:image');
+      setMessages((prev) => {
+        // 1. ตรวจสอบว่ามีข้อความ id นี้อยู่ใน list หรือยัง (กันซ้ำ)
+        if (prev.some(m => m.id === msg.id)) {
+          return prev;
+        }
 
-      setMessages((prev) => [...prev, {
-        id: msg.id || Math.random().toString(),
-        senderType: isMe ? 'user' : 'admin',
-        text: msg.content,
-        timestamp: new Date(msg.createdAt || Date.now()),
-        isImage: isImg
-      }]);
+        const isImg = msg.content && msg.content.startsWith('data:image');
+
+        // 2. เพิ่มข้อความใหม่เข้าไปใน State
+        return [...prev, {
+          id: msg.id, // ใช้ ID จริงจาก Database
+          senderType: isMe ? 'user' : 'admin',
+          text: msg.content,
+          timestamp: new Date(msg.createdAt || Date.now()),
+          isImage: isImg
+        }];
+      });
     });
 
     return () => { newSocket.disconnect(); };
@@ -76,16 +79,7 @@ export default function ChatWidget() {
           isImage: msg.content.startsWith('data:image')
         }));
 
-        setMessages([
-          {
-            id: 'welcome',
-            senderType: 'admin',
-            text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
-            timestamp: new Date(),
-            isImage: false,
-          },
-          ...mapped
-        ]);
+        setMessages(mapped); // ⭐ ห้ามลืมเด็ดขาด
       })
       .catch(err => console.error('โหลดแชทล้มเหลว:', err));
   }, [user?.id]);
@@ -100,36 +94,38 @@ export default function ChatWidget() {
     e?.preventDefault();
     if (!input.trim() || !socket || !user) return;
 
-    const newMsg: ChatMessage = {
+    socket.emit('sendMessage', {
+      content: input,
+      senderId: user.id,
+      // ❌ ลบ receiverId ออกไปเลย
+    });
+
+    const localMsg: ChatMessage = {
       id: Date.now().toString(),
       senderType: 'user',
       text: input,
       timestamp: new Date(),
-      isImage: false
     };
 
-    // ⭐ แสดงข้อความทันที
-    setMessages(prev => [...prev, newMsg]);
 
-    sendMessage(input);
     setInput('');
   };
-
   const sendMessage = (content: string) => {
     if (!user?.id) {
       alert("กรุณาเข้าสู่ระบบก่อนใช้งานแชท");
       return;
     }
+
+
     socket?.emit('sendMessage', {
-      content: content,
+      content,
       senderId: user.id,
-      receiverId: 'admin', // หรือ adminId จริง
     });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user?.id) return;
 
     if (file.size > 1024 * 1024) {
       alert("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 1MB");
@@ -140,18 +136,11 @@ export default function ChatWidget() {
     reader.onloadend = () => {
       const base64String = reader.result as string;
 
-      // ⭐ แสดงรูปทันทีในแชท
-      const newMsg: ChatMessage = {
-        id: Date.now().toString(),
-        senderType: 'user',
-        text: base64String,
-        timestamp: new Date(),
-        isImage: true
-      };
-
-      setMessages(prev => [...prev, newMsg]);
-
-      sendMessage(base64String);
+      // ❗ ไม่ต้อง setMessages ที่นี่แล้ว
+      socket?.emit('sendMessage', {
+        content: base64String,
+        senderId: user.id,
+      });
     };
 
     reader.readAsDataURL(file);
