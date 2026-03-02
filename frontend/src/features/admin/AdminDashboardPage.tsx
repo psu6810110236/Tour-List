@@ -16,6 +16,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  MessageSquare, // ✅ 1. เพิ่ม icon MessageSquare
   ListChecks
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
@@ -40,7 +41,12 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
   const [bookingsList, setBookingsList] = useState<Booking[]>([]);
-  
+  // --- เพิ่มส่วนนี้ใต้ state ของ bookingsList ---
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
+  const [paymentSearch, setPaymentSearch] = useState('');
+  const [tourSearch, setTourSearch] = useState('');
+  // เพิ่ม state ต่อจากที่มีอยู่
   // 🟢 State สำหรับฟอร์มเพิ่ม/แก้ไขทัวร์
   const [isAddingTour, setIsAddingTour] = useState(false);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -65,13 +71,13 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const fetchAdminData = async () => {
     try {
       const [toursRes, provRes, bookingsRes] = await Promise.all([
-        tourService.search({}), 
+        tourService.search({}),
         tourService.getProvinces(),
-        bookingService.getAllBookings() 
+        bookingService.getAllBookings()
       ]);
       setAllTours(toursRes.data);
       setAllProvinces(provRes.data);
-      setBookingsList(bookingsRes.data); 
+      setBookingsList(bookingsRes.data);
     } catch (error) {
       console.error("Error fetching admin data:", error);
     }
@@ -81,18 +87,13 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     fetchAdminData();
   }, []);
 
+  // ... (ฟังก์ชัน handleEditClick, handleSaveTour, handleDeleteTour, handleSelectProvince, handleAddDay, stats, handleApproveBooking, handleRejectBooking, handleDeleteBooking ทั้งหมดคงเดิม ไม่แตะต้อง) ...
   const handleEditClick = (tour: Tour) => {
     setEditingTourId(tour.id);
-    
-    const currentProvinceId = typeof tour.province === 'object' && tour.province !== null 
-      ? (tour.province as any).id 
+    const currentProvinceId = typeof tour.province === 'object' && tour.province !== null
+      ? (tour.province as any).id
       : tour.provinceId || tour.province;
-
-    setTourForm({ 
-      ...tour,
-      provinceId: currentProvinceId 
-    });
-    
+    setTourForm({ ...tour, provinceId: currentProvinceId });
     setIsAddingTour(true);
     setCreateNewProvince(false);
   };
@@ -103,18 +104,17 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     }
     try {
       if (createNewProvince) {
-          const newProv = {
-              id: tourForm.provinceId!,
-              name: String(tourForm.province || ''),
-              name_th: String(tourForm.province || ''),
-              tourCount: 0,
-              image: tourForm.image || '',
-              description: '',
-              description_th: '',
-          };
-          await tourService.createProvince(newProv);
+        const newProv = {
+          id: tourForm.provinceId!,
+          name: String(tourForm.province || ''),
+          name_th: String(tourForm.province || ''),
+          tourCount: 0,
+          image: tourForm.image || '',
+          description: '',
+          description_th: '',
+        };
+        await tourService.createProvince(newProv);
       }
-
       if (editingTourId) {
         await tourService.updateTour(editingTourId, tourForm);
         alert(language === 'th' ? "อัปเดตทัวร์สำเร็จ!" : "Tour Updated Successfully!");
@@ -124,29 +124,26 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         await tourService.createTour(newTour);
         alert(language === 'th' ? "สร้างทัวร์สำเร็จ!" : "Tour Created Successfully!");
       }
-      
       setIsAddingTour(false);
       setEditingTourId(null);
-      fetchAdminData(); 
-
-      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` }); 
+      fetchAdminData();
+      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` });
       setCreateNewProvince(false);
     } catch (error) {
       console.error("Error saving tour:", error);
       alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล ลองตรวจสอบ Console");
     }
   };
-  
+
   const handleDeleteTour = async (id: string) => {
     const isConfirm = window.confirm(
       language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบทัวร์นี้?" : "Are you sure you want to delete this tour?"
     );
-
     if (isConfirm) {
       try {
-        await tourService.deleteTour(id); 
+        await tourService.deleteTour(id);
         alert(language === 'th' ? "ลบทัวร์สำเร็จ!" : "Tour Deleted Successfully!");
-        fetchAdminData(); 
+        fetchAdminData();
       } catch (error) {
         console.error("Error deleting tour:", error);
         alert(language === 'th' ? "เกิดข้อผิดพลาดในการลบทัวร์" : "Failed to delete tour");
@@ -157,9 +154,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const handleSelectProvince = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = allProvinces.find(p => p.id === e.target.value);
     if (selected) {
-      setTourForm({
-        ...tourForm, provinceId: selected.id, province: selected.name
-      });
+      setTourForm({ ...tourForm, provinceId: selected.id, province: selected.name });
     }
   };
 
@@ -179,10 +174,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
   const handleApproveBooking = async (bookingId: string) => {
     try {
-      await bookingService.updateBookingStatus(bookingId, 'approved'); 
+      await bookingService.updateBookingStatus(bookingId, 'approved');
       alert(language === 'th' ? `อนุมัติการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} approved!`);
-      fetchAdminData(); 
-      setSelectedBooking(null); 
+      fetchAdminData();
+      setSelectedBooking(null);
     } catch (error) {
       console.error("Error approving booking:", error);
       alert("เกิดข้อผิดพลาดในการอนุมัติ");
@@ -190,31 +185,64 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   };
   const handleRejectBooking = async (bookingId: string) => {
     try {
-       await bookingService.updateBookingStatus(bookingId, 'rejected'); 
-       alert(language === 'th' ? `ปฏิเสธการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} rejected!`);
-       fetchAdminData(); 
-       setSelectedBooking(null); 
-     } catch (error) {
-       console.error("Error rejecting booking:", error);
-       alert("เกิดข้อผิดพลาดในการปฏิเสธ");
-     }
+      await bookingService.updateBookingStatus(bookingId, 'rejected');
+      alert(language === 'th' ? `ปฏิเสธการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} rejected!`);
+      fetchAdminData();
+      setSelectedBooking(null);
+    } catch (error) {
+      console.error("Error rejecting booking:", error);
+      alert("เกิดข้อผิดพลาดในการปฏิเสธ");
+    }
   };
   const handleDeleteBooking = async (bookingId: string) => {
     const isConfirm = window.confirm(
       language === 'th' ? `คุณแน่ใจหรือไม่ว่าต้องการลบการจองรหัส ${bookingId} ถาวร?` : `Are you sure you want to permanently delete booking ${bookingId}?`
     );
-
     if (isConfirm) {
       try {
-        await bookingService.deleteBooking(bookingId); 
+        await bookingService.deleteBooking(bookingId);
         alert(language === 'th' ? "ลบการจองสำเร็จ!" : "Booking deleted successfully!");
-        fetchAdminData(); 
+        fetchAdminData();
       } catch (error) {
         console.error("Error deleting booking:", error);
         alert(language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking");
       }
     }
   };
+  // 1. กรองรายการจอง
+  const filteredBookings = bookingsList.filter(b => {
+    const searchLower = (bookingSearch || '').toLowerCase();
+
+    // ดึงค่า tourName หรือ tourNameSnapshot (รองรับทั้งชื่อจาก Mock Data และ Backend)
+    const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
+
+    const matchesSearch =
+      String(b.id || '').toLowerCase().includes(searchLower) ||
+      String(tourName).toLowerCase().includes(searchLower);
+
+    const matchesStatus = bookingStatusFilter === 'all' || b.status === bookingStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // 2. กรองการชำระเงิน (เฉพาะที่ pending)
+  const filteredPayments = bookingsList
+    .filter(b => b.status === 'pending')
+    .filter(b => {
+      const searchLower = (paymentSearch || '').toLowerCase();
+      const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
+
+      return String(b.id || '').toLowerCase().includes(searchLower) ||
+        String(tourName).toLowerCase().includes(searchLower);
+    });
+
+  // 3. กรองทัวร์
+  const filteredTours = allTours.filter(t => {
+    const searchLower = (tourSearch || '').toLowerCase();
+    const tourName = getLang(t, 'name', language) || '';
+
+    return String(tourName).toLowerCase().includes(searchLower) ||
+      String(t.id || '').toLowerCase().includes(searchLower);
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -224,11 +252,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-18 h-18 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden">
-                 <img 
-                    src={LOGO_URL}
-                    alt="RoamHub Tour Logo" 
-                    className="w-16 h-16 object-contain"
-                  />
+                <img
+                  src={LOGO_URL}
+                  alt="RoamHub Tour Logo"
+                  className="w-16 h-16 object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{t.title}</h1>
@@ -254,16 +282,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             {(['overview', 'bookings', 'payments', 'tours'] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => { 
-                  setActiveTab(tab); 
-                  setIsAddingTour(false); 
-                  setEditingTourId(null); 
+                onClick={() => {
+                  setActiveTab(tab);
+                  setIsAddingTour(false);
+                  setEditingTourId(null);
                 }}
-                className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition whitespace-nowrap ${
-                  activeTab === tab
-                    ? 'border-[#00A699] text-[#00A699]'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
+                className={`flex items-center gap-2 px-6 py-4 font-medium border-b-2 transition whitespace-nowrap ${activeTab === tab
+                  ? 'border-[#00A699] text-[#00A699]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  }`}
               >
                 {tab === 'overview' && <LayoutDashboard className="w-5 h-5" />}
                 {tab === 'bookings' && <Calendar className="w-5 h-5" />}
@@ -277,15 +304,26 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 )}
               </button>
             ))}
+
+            {/* ✅ 2. เพิ่มปุ่ม Chat System ตรงนี้ */}
+            <button
+              onClick={() => onNavigate('admin/chat')}
+              className="flex items-center gap-2 px-6 py-4 font-medium border-b-2 border-transparent text-gray-600 hover:text-[#00A699] transition whitespace-nowrap"
+            >
+              <MessageSquare className="w-5 h-5" />
+              {language === 'th' ? 'ระบบแชท' : 'Chat System'}
+            </button>
+
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'overview' && (
+          // ... (เนื้อหา Overview คงเดิม) ...
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white rounded-2xl p-6 shadow-lg">
@@ -337,10 +375,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 {bookingsList.slice(0, 5).map((booking) => (
                   <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        booking.status === 'pending' ? 'bg-yellow-100' :
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${booking.status === 'pending' ? 'bg-yellow-100' :
                         booking.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
-                      }`}>
+                        }`}>
                         {booking.status === 'pending' && <Clock className="w-5 h-5 text-yellow-600" />}
                         {booking.status === 'approved' && <CheckCircle className="w-5 h-5 text-green-600" />}
                         {booking.status === 'rejected' && <XCircle className="w-5 h-5 text-red-600" />}
@@ -352,10 +389,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</div>
-                      <div className={`text-sm font-medium ${
-                        booking.status === 'pending' ? 'text-yellow-600' :
+                      <div className={`text-sm font-medium ${booking.status === 'pending' ? 'text-yellow-600' :
                         booking.status === 'approved' ? 'text-green-600' : 'text-red-600'
-                      }`}>{booking.status?.toUpperCase()}</div>
+                        }`}>{booking.status?.toUpperCase()}</div>
                     </div>
                   </div>
                 ))}
@@ -370,16 +406,29 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         {/* ================= BOOKINGS TAB ================= */}
         {activeTab === 'bookings' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div><h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings}</h2></div>
+            <div className="flex flex-col md:flex-row justify-between gap-4">
+              <h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings}</h2>
               <div className="flex gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input type="text" placeholder={t.table.search} className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699]" />
+                  <input
+                    type="text"
+                    placeholder="ค้นหาชื่อลูกค้า หรือชื่อทัวร์..."
+                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699]"
+                    value={bookingSearch}
+                    onChange={(e) => setBookingSearch(e.target.value)}
+                  />
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium text-gray-700 transition">
-                  <Filter className="w-5 h-5" /> {t.table.filter}
-                </button>
+                <select
+                  className="border border-gray-200 rounded-xl px-4 py-2 bg-white outline-none focus:ring-2 focus:ring-[#00A699]"
+                  value={bookingStatusFilter}
+                  onChange={(e) => setBookingStatusFilter(e.target.value)}
+                >
+                  <option value="all">ทุกสถานะ</option>
+                  <option value="pending">รอดำเนินการ (Pending)</option>
+                  <option value="approved">ยืนยันแล้ว (Approved)</option>
+                  <option value="rejected">ยกเลิก (Rejected)</option>
+                </select>
               </div>
             </div>
 
@@ -387,6 +436,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
+                    {/* ... (ส่วน th ของตารางคงเดิม) ... */}
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.id}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.tour}</th>
@@ -398,8 +448,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {bookingsList.map((booking) => (
+                    {/* 🟢 เปลี่ยนจาก bookingsList.map เป็น filteredBookings.map */}
+                    {filteredBookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-gray-50 transition">
+                        {/* ... (ข้อมูล td คงเดิม) ... */}
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language)}</div>
@@ -409,28 +461,27 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         <td className="px-6 py-4 text-sm text-gray-900">{new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${
-                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             booking.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
+                            }`}>
                             {booking.status?.toUpperCase()}
                           </span>
                         </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <button onClick={() => setSelectedBooking(booking)} className="text-[#00A699] hover:text-[#008c81] transition p-1" title="ดูรายละเอียด">
-                                <Eye className="w-5 h-5" />
-                              </button>
-                              <button onClick={() => handleDeleteBooking(booking.id)} className="text-red-500 hover:text-red-600 transition p-1" title="ลบการจอง">
-                                 <Trash2 className="w-5 h-5" />
-                              </button>
-                            </div>
-                          </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setSelectedBooking(booking)} className="text-[#00A699] hover:text-[#008c81] transition p-1" title="ดูรายละเอียด">
+                              <Eye className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => handleDeleteBooking(booking.id)} className="text-red-500 hover:text-red-600 transition p-1" title="ลบการจอง">
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
-                    {bookingsList.length === 0 && (
+                    {filteredBookings.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="text-center py-6 text-gray-500">ไม่มีข้อมูลการจอง</td>
+                        <td colSpan={7} className="text-center py-6 text-gray-500">ไม่มีข้อมูลการจองที่ค้นหา</td>
                       </tr>
                     )}
                   </tbody>
@@ -443,13 +494,29 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         {/* ================= PAYMENTS TAB ================= */}
         {activeTab === 'payments' && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{t.payment.title}</h2>
-              <p className="text-gray-600 mt-1">{t.payment.desc}</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{t.payment.title}</h2>
+                <p className="text-gray-600 mt-1">{t.payment.desc}</p>
+              </div>
+              {/* 🟢 เพิ่มช่องค้นหาหน้า Payments */}
+              <div className="relative w-full md:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="ค้นหารหัส/ชื่อทัวร์..."
+                  className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699]"
+                  value={paymentSearch}
+                  onChange={(e) => setPaymentSearch(e.target.value)}
+                />
+              </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {bookingsList.filter(b => b.status === 'pending').map((booking) => (
+              {/* 🟢 เปลี่ยนจาก bookingsList.filter... เป็น filteredPayments.map */}
+              {filteredPayments.map((booking) => (
                 <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg">
+                  {/* ... (โค้ดด้านใน card นี้คงเดิม) ... */}
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-sm text-gray-600 mb-1">{t.table.id}</div>
@@ -457,6 +524,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </div>
                     <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg text-xs font-semibold">Pending</span>
                   </div>
+                  {/* ... โค้ดส่วนอื่นๆ ใน card เหมือนเดิม ... */}
                   <div className="mb-4">
                     <div className="font-medium text-gray-900 mb-1">{getLang(booking, 'tourName', language)}</div>
                     <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
@@ -486,11 +554,12 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
                 </div>
               ))}
-              {bookingsList.filter(b => b.status === 'pending').length === 0 && (
+              {/* 🟢 เปลี่ยนเป็น filteredPayments */}
+              {filteredPayments.length === 0 && (
                 <div className="col-span-2 bg-white rounded-3xl p-12 text-center shadow-lg">
                   <div className="text-6xl mb-4">✓</div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{t.payment.caughtUp}</h3>
-                  <p className="text-gray-600">{t.payment.noPending}</p>
+                  <p className="text-gray-600">ไม่พบรายการ หรือ ตรวจสอบครบหมดแล้ว</p>
                 </div>
               )}
             </div>
@@ -498,31 +567,47 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         )}
 
         {/* ================= TOURS TAB ================= */}
+        {/* ================= TOURS TAB ================= */}
         {activeTab === 'tours' && (
           <div className="space-y-6">
             {!isAddingTour ? (
               <>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">{t.tours.title}</h2>
                     <p className="text-gray-600 mt-1">{t.tours.desc}</p>
                   </div>
-                  <button 
-                    onClick={() => { 
-                      setIsAddingTour(true); 
-                      setEditingTourId(null); 
-                      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` }); 
-                    }} 
-                    className="flex items-center gap-2 bg-[#00A699] hover:bg-[#008c81] text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg"
-                  >
-                    <Plus className="w-5 h-5" />
-                    {t.quickActions.addTour}
-                  </button>
+
+                  <div className="flex gap-3 w-full md:w-auto">
+                    {/* 🟢 เพิ่มช่องค้นหาหน้า Tours */}
+                    <div className="relative flex-1 md:w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="ค้นหาชื่อทัวร์..."
+                        className="pl-10 pr-4 py-3 w-full border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699]"
+                        value={tourSearch}
+                        onChange={(e) => setTourSearch(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsAddingTour(true);
+                        setEditingTourId(null);
+                        setTourForm({ ...initialTourForm, id: `T-${Date.now()}` });
+                      }}
+                      className="flex items-center gap-2 bg-[#00A699] hover:bg-[#008c81] text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg whitespace-nowrap"
+                    >
+                      <Plus className="w-5 h-5" />
+                      {t.quickActions.addTour}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-3xl shadow-lg overflow-hidden border">
                   <div className="overflow-x-auto">
                     <table className="w-full">
+                      {/* ... (thead คงเดิม) ... */}
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.name}</th>
@@ -534,15 +619,17 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {allTours.map((tour) => (
+                        {/* 🟢 เปลี่ยนจาก allTours.map เป็น filteredTours.map */}
+                        {filteredTours.map((tour) => (
                           <tr key={tour.id} className="hover:bg-gray-50 transition">
+                            {/* ... (ข้อมูล td คงเดิมทั้งหมด) ... */}
                             <td className="px-6 py-4">
                               <div className="font-medium text-gray-900">{getLang(tour, 'name', language)}</div>
                               <div className="text-sm text-gray-600">{tour.id}</div>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-900">
-                              {typeof tour.province === 'object' && tour.province !== null 
-                                ? getLang(tour.province, 'name', language) 
+                              {typeof tour.province === 'object' && tour.province !== null
+                                ? getLang(tour.province, 'name', language)
                                 : getLang(tour, 'province', language)}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-900">
@@ -563,8 +650,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
-                                <button 
-                                  onClick={() => handleDeleteTour(tour.id)} 
+                                <button
+                                  onClick={() => handleDeleteTour(tour.id)}
                                   className="text-red-500 hover:text-red-600 transition p-2"
                                 >
                                   <Trash2 className="w-5 h-5" />
@@ -573,6 +660,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                             </td>
                           </tr>
                         ))}
+                        {filteredTours.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center py-6 text-gray-500">ไม่พบทัวร์ที่ค้นหา</td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -582,93 +674,93 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               /* ฟอร์มเพิ่ม/แก้ไขทัวร์ */
               <div className="bg-white rounded-3xl shadow-xl p-8 border animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-center mb-8 border-b pb-4">
-                   <h2 className="text-2xl font-bold">
-                     {editingTourId 
-                       ? (language === 'th' ? 'แก้ไขข้อมูลทัวร์' : 'Edit Tour Info') 
-                       : (language === 'th' ? 'ข้อมูลทัวร์และสถานที่ (สร้างใหม่)' : 'New Tour & Location Info')}
-                   </h2>
-                   <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                      <button onClick={() => setFormLang('en')} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'en' ? 'bg-white text-[#00A699] shadow' : ''}`}>EN</button>
-                      <button onClick={() => setFormLang('th')} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'th' ? 'bg-white text-[#00A699] shadow' : ''}`}>TH</button>
-                   </div>
+                  <h2 className="text-2xl font-bold">
+                    {editingTourId
+                      ? (language === 'th' ? 'แก้ไขข้อมูลทัวร์' : 'Edit Tour Info')
+                      : (language === 'th' ? 'ข้อมูลทัวร์และสถานที่ (สร้างใหม่)' : 'New Tour & Location Info')}
+                  </h2>
+                  <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                    <button onClick={() => setFormLang('en')} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'en' ? 'bg-white text-[#00A699] shadow' : ''}`}>EN</button>
+                    <button onClick={() => setFormLang('th')} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'th' ? 'bg-white text-[#00A699] shadow' : ''}`}>TH</button>
+                  </div>
                 </div>
 
                 <div className="space-y-10">
                   <div className="bg-[#00A699]/5 p-6 rounded-2xl border-2 border-dashed border-[#00A699]/20">
-                     <div className="flex justify-between items-center mb-4">
-                        <label className="font-bold flex items-center gap-2"><MapPin size={18}/> {language === 'th' ? 'ระบุจังหวัด' : 'Specify Province'}</label>
-                        <button onClick={() => setCreateNewProvince(!createNewProvince)} className="text-xs font-bold text-[#00A699] hover:underline">
-                           {createNewProvince ? (language === 'th' ? 'เลือกจังหวัดที่มีอยู่' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
-                        </button>
-                     </div>
+                    <div className="flex justify-between items-center mb-4">
+                      <label className="font-bold flex items-center gap-2"><MapPin size={18} /> {language === 'th' ? 'ระบุจังหวัด' : 'Specify Province'}</label>
+                      <button onClick={() => setCreateNewProvince(!createNewProvince)} className="text-xs font-bold text-[#00A699] hover:underline">
+                        {createNewProvince ? (language === 'th' ? 'เลือกจังหวัดที่มีอยู่' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
+                      </button>
+                    </div>
 
-                     {!createNewProvince ? (
-                        <select className="w-full p-4 bg-white border rounded-xl font-bold" value={tourForm.provinceId || ''} onChange={handleSelectProvince}>
-                           <option value="">-- {language === 'th' ? 'กรุณาเลือกจังหวัด' : 'Select Province'} --</option>
-                           {allProvinces.map(p => <option key={p.id} value={p.id}>{getLang(p, 'name', language)}</option>)}
-                        </select>
-                     ) : (
-                        <div className="grid grid-cols-2 gap-4">
-                           <input placeholder="Province ID (e.g., hat-yai)" className="p-4 border rounded-xl" onChange={e => setTourForm({...tourForm, provinceId: e.target.value})}/>
-                           <input placeholder="Province Name (TH/EN)" className="p-4 border rounded-xl" onChange={e => setTourForm({...tourForm, province: e.target.value})}/>
-                        </div>
-                     )}
+                    {!createNewProvince ? (
+                      <select className="w-full p-4 bg-white border rounded-xl font-bold" value={tourForm.provinceId || ''} onChange={handleSelectProvince}>
+                        <option value="">-- {language === 'th' ? 'กรุณาเลือกจังหวัด' : 'Select Province'} --</option>
+                        {allProvinces.map(p => <option key={p.id} value={p.id}>{getLang(p, 'name', language)}</option>)}
+                      </select>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4">
+                        <input placeholder="Province ID (e.g., hat-yai)" className="p-4 border rounded-xl" onChange={e => setTourForm({ ...tourForm, provinceId: e.target.value })} />
+                        <input placeholder="Province Name (TH/EN)" className="p-4 border rounded-xl" onChange={e => setTourForm({ ...tourForm, province: e.target.value })} />
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     <div className="space-y-4">
-                        <label className="block font-bold">รหัสทัวร์ (ID)</label>
-                        <input className={`w-full p-4 border rounded-2xl ${editingTourId ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`} 
-                          placeholder="เช่น cm-003" value={tourForm.id || ''} disabled={!!editingTourId}
-                          onChange={e => setTourForm({...tourForm, id: e.target.value})}/>
-                     
-                        <label className="block font-bold">ชื่อทัวร์ ({formLang.toUpperCase()})</label>
-                        <input className="w-full p-4 bg-gray-50 border rounded-2xl" value={formLang === 'en' ? (tourForm.name || '') : (tourForm.name_th || '')}
-                          onChange={e => setTourForm({...tourForm, [formLang === 'en' ? 'name' : 'name_th']: e.target.value})}/>
-                        
-                        <label className="block font-bold">รายละเอียด (Description) ({formLang.toUpperCase()})</label>
-                        <textarea className="w-full p-4 bg-gray-50 border rounded-2xl" value={formLang === 'en' ? (tourForm.description || '') : (tourForm.description_th || '')}
-                          onChange={e => setTourForm({...tourForm, [formLang === 'en' ? 'description' : 'description_th']: e.target.value})}/>
+                    <div className="space-y-4">
+                      <label className="block font-bold">รหัสทัวร์ (ID)</label>
+                      <input className={`w-full p-4 border rounded-2xl ${editingTourId ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`}
+                        placeholder="เช่น cm-003" value={tourForm.id || ''} disabled={!!editingTourId}
+                        onChange={e => setTourForm({ ...tourForm, id: e.target.value })} />
 
-                        <label className="block font-bold">ราคาพื้นฐาน</label>
-                        <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold text-[#00A699]" placeholder="0" value={tourForm.price || ''}
-                          onChange={e => setTourForm({...tourForm, price: Number(e.target.value)})}/>
-                     </div>
-                     <div className="space-y-4">
-                        <label className="block font-bold">รูปภาพหลัก (URL)</label>
-                        <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="https://..." value={tourForm.image || ''} 
-                          onChange={e => setTourForm({...tourForm, image: e.target.value})}/>
-                        
-                        <label className="block font-bold">ระยะเวลา</label>
-                        <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="1 Day" value={tourForm.duration || ''} 
-                          onChange={e => setTourForm({...tourForm, duration_th: e.target.value, duration: e.target.value})}/>
-                     </div>
+                      <label className="block font-bold">ชื่อทัวร์ ({formLang.toUpperCase()})</label>
+                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" value={formLang === 'en' ? (tourForm.name || '') : (tourForm.name_th || '')}
+                        onChange={e => setTourForm({ ...tourForm, [formLang === 'en' ? 'name' : 'name_th']: e.target.value })} />
+
+                      <label className="block font-bold">รายละเอียด (Description) ({formLang.toUpperCase()})</label>
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl" value={formLang === 'en' ? (tourForm.description || '') : (tourForm.description_th || '')}
+                        onChange={e => setTourForm({ ...tourForm, [formLang === 'en' ? 'description' : 'description_th']: e.target.value })} />
+
+                      <label className="block font-bold">ราคาพื้นฐาน</label>
+                      <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold text-[#00A699]" placeholder="0" value={tourForm.price || ''}
+                        onChange={e => setTourForm({ ...tourForm, price: Number(e.target.value) })} />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block font-bold">รูปภาพหลัก (URL)</label>
+                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="https://..." value={tourForm.image || ''}
+                        onChange={e => setTourForm({ ...tourForm, image: e.target.value })} />
+
+                      <label className="block font-bold">ระยะเวลา</label>
+                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="1 Day" value={tourForm.duration || ''}
+                        onChange={e => setTourForm({ ...tourForm, duration_th: e.target.value, duration: e.target.value })} />
+                    </div>
                   </div>
 
                   <div className="border-t pt-8">
-                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold flex items-center gap-2"><ListChecks /> {tourT.itinerary}</h3>
-                        <button onClick={handleAddDay} className="text-[#00A699] font-bold text-sm">+ เพิ่มวันเดินทาง</button>
-                     </div>
-                     <div className="space-y-4">
-                        {tourForm.itinerary?.map((day, idx) => (
-                           <div key={idx} className="p-6 bg-gray-50 rounded-2xl border relative">
-                              <span className="absolute -top-3 left-4 bg-[#00A699] text-white px-3 py-1 rounded-lg text-xs font-bold uppercase">DAY {day.day}</span>
-                              <input className="w-full p-3 bg-white border rounded-xl font-bold mb-3" placeholder="Day Title (TH/EN)" value={day.title || ''}
-                                onChange={e => {
-                                   const updated = [...(tourForm.itinerary || [])];
-                                   updated[idx] = {...updated[idx], title: e.target.value, title_th: e.target.value};
-                                   setTourForm({...tourForm, itinerary: updated});
-                                }}/>
-                              <textarea className="w-full p-3 bg-white border rounded-xl text-sm" placeholder="กิจกรรมรายวัน (ใช้เครื่องหมาย , แยกกิจกรรม)" value={day.activities?.join(',') || ''}
-                                onChange={e => {
-                                   const updated = [...(tourForm.itinerary || [])];
-                                   updated[idx] = {...updated[idx], activities: e.target.value.split(','), activities_th: e.target.value.split(',')};
-                                   setTourForm({...tourForm, itinerary: updated});
-                                }}/>
-                           </div>
-                        ))}
-                     </div>
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-bold flex items-center gap-2"><ListChecks /> {tourT.itinerary}</h3>
+                      <button onClick={handleAddDay} className="text-[#00A699] font-bold text-sm">+ เพิ่มวันเดินทาง</button>
+                    </div>
+                    <div className="space-y-4">
+                      {tourForm.itinerary?.map((day, idx) => (
+                        <div key={idx} className="p-6 bg-gray-50 rounded-2xl border relative">
+                          <span className="absolute -top-3 left-4 bg-[#00A699] text-white px-3 py-1 rounded-lg text-xs font-bold uppercase">DAY {day.day}</span>
+                          <input className="w-full p-3 bg-white border rounded-xl font-bold mb-3" placeholder="Day Title (TH/EN)" value={day.title || ''}
+                            onChange={e => {
+                              const updated = [...(tourForm.itinerary || [])];
+                              updated[idx] = { ...updated[idx], title: e.target.value, title_th: e.target.value };
+                              setTourForm({ ...tourForm, itinerary: updated });
+                            }} />
+                          <textarea className="w-full p-3 bg-white border rounded-xl text-sm" placeholder="กิจกรรมรายวัน (ใช้เครื่องหมาย , แยกกิจกรรม)" value={day.activities?.join(',') || ''}
+                            onChange={e => {
+                              const updated = [...(tourForm.itinerary || [])];
+                              updated[idx] = { ...updated[idx], activities: e.target.value.split(','), activities_th: e.target.value.split(',') };
+                              setTourForm({ ...tourForm, itinerary: updated });
+                            }} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex gap-4 pt-10 border-t">
@@ -704,10 +796,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">{t.table.status}</div>
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${
-                    selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                     selectedBooking.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
+                    }`}>
                     {selectedBooking.status?.charAt(0).toUpperCase() + selectedBooking.status?.slice(1)}
                   </span>
                 </div>

@@ -1,35 +1,35 @@
 version: '3.8'
 
 services:
+  # 1. ส่วนของ Backend (App ของเรา)
   backend:
-    build: ./backend
+    build: ./backend     # สร้างจาก Dockerfile ที่คุณมีอยู่
     ports:
-      - "3000:3000"
+      - "3000:3000"      # เปิด Port 3000 ให้หน้าเว็บคุยได้
     environment:
-      - DB_HOST=db
+      - DB_HOST=db       # บอกให้วิ่งไปหา Database ชื่อ db
       - DB_PORT=5432
-      # แก้ให้ตรงกับ .env ของคุณ
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=1234
-      - DB_NAME=postgres
+      - DB_USERNAME=admin
+      - DB_PASSWORD=password123
+      - DB_NAME=tour_db
       - JWT_SECRET=secretKey
     depends_on:
-      - db
+      - db               # รอให้ Database รันเสร็จก่อนค่อยรัน App
     networks:
       - app-network
 
+  # 2. ส่วนของ Database (PostgreSQL)
   db:
     image: postgres:15-alpine
     restart: always
     environment:
-      # แก้ให้ตรงกับที่ Backend เรียกใช้
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=1234
-      - POSTGRES_DB=postgres
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=tour_db
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data # เก็บข้อมูลไว้ถาวร (ปิดคอมข้อมูลไม่หาย)
     networks:
       - app-network
 
