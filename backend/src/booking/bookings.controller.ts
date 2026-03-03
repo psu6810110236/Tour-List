@@ -12,7 +12,7 @@ export class BookingsController {
 
   @Patch(':id/status')
   async updateStatus(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Body('status') status: string
   ) {
     return this.bookingsService.updateStatus(id, status);
