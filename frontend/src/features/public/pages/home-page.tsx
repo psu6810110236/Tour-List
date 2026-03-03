@@ -184,43 +184,45 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
       </div>
 
-      {/* ================= STATS SECTION ================= */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-16 sm:-mt-20">
-        <div className="bg-white rounded-3xl shadow-2xl shadow-black/10 p-8 md:p-10">
-          {/* ใช้ grid และ divide เพื่อสร้างเส้นแบ่งระหว่างคอลัมน์ */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 md:divide-x-2 divide-gray-100">
-            
-            {/* Stat 1: ทัวร์ยอดนิยม */}
-            <div className="flex flex-col items-center justify-center text-center px-4 group">
-              <div className="w-14 h-14 bg-[#00A699]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:-translate-y-1 transition-transform duration-300">
-                <Map className="w-7 h-7 text-[#00A699]" />
-              </div>
-              <div className="text-4xl font-extrabold text-gray-900 mb-2">83+</div>
-              <div className="text-sm font-bold text-gray-500 tracking-wide">{language === 'th' ? 'ทัวร์ยอดนิยม' : 'Popular Tours'}</div>
-            </div>
+      {/* ================= STATS SECTION (Clean & Centered Layout) ================= */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-8 md:-mt-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
 
-            {/* Stat 2: จังหวัดทั่วไทย */}
-            <div className="flex flex-col items-center justify-center text-center px-4 group">
-              <div className="w-14 h-14 bg-[#00A699]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:-translate-y-1 transition-transform duration-300">
-                <MapPin className="w-7 h-7 text-[#00A699]" />
-              </div>
-              <div className="text-4xl font-extrabold text-gray-900 mb-2">77</div>
-              <div className="text-sm font-bold text-gray-500 tracking-wide">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</div>
+          {/* Card 1: ซ้าย */}
+          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-xl shadow-gray-200/50 border border-gray-100 transform hover:-translate-y-2 transition duration-300 flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
+              <Map className="w-8 h-8" />
             </div>
-
-            {/* Stat 3: คะแนนรีวิว */}
-            <div className="flex flex-col items-center justify-center text-center px-4 group">
-              <div className="w-14 h-14 bg-yellow-100 rounded-2xl flex items-center justify-center mb-4 group-hover:-translate-y-1 transition-transform duration-300">
-                <Star className="w-7 h-7 text-yellow-500 fill-yellow-500" />
-              </div>
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-4xl font-extrabold text-gray-900">4.8</span>
-                <span className="text-xl font-bold text-gray-400">/5</span>
-              </div>
-              <div className="text-sm font-bold text-gray-500 tracking-wide">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</div>
-            </div>
-
+            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">83+</div>
+            <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'ทัวร์ยอดนิยม' : 'Popular Tours'}</h3>
+            <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'แพ็กเกจที่คัดสรรมาอย่างดี' : 'Carefully curated packages'}</p>
           </div>
+
+          {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย และเน้นสีแบรนด์ที่ตัวเลข) */}
+          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-2xl shadow-gray-300/60 border border-gray-100 md:-mt-6 transform hover:-translate-y-2 transition duration-300 flex flex-col items-center text-center relative z-10">
+            {/* 🟢 ไฮไลต์ที่ไอคอนแทน: พื้นหลังสีเขียวทึบ ไอคอนสีขาว พร้อมเงาเรืองแสง */}
+            <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
+              <MapPin className="w-8 h-8" />
+            </div>
+            {/* 🟢 กลับมาใช้เลขสีดำให้คุมโทนกับเพื่อนๆ */}
+            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">77</div>
+            <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</h3>
+            <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'ครอบคลุมทุกจุดหมายปลายทาง' : 'Covering all destinations'}</p>
+          </div>
+
+          {/* Card 3: ขวา */}
+          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-xl shadow-gray-200/50 border border-gray-100 transform hover:-translate-y-2 transition duration-300 flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center text-yellow-500 mb-4">
+              <Star className="w-8 h-8 fill-yellow-500" />
+            </div>
+            <div className="flex items-baseline gap-1 mb-2">
+              <span className="text-4xl lg:text-5xl font-black text-gray-900">4.8</span>
+              <span className="text-xl font-bold text-gray-400">/5</span>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</h3>
+            <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'จากนักท่องเที่ยวตัวจริง' : 'From verified travelers'}</p>
+          </div>
+
         </div>
       </div>
 
