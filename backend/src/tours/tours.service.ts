@@ -22,7 +22,7 @@ export class ToursService {
       query.andWhere('tour.provinceId = :provinceId', { provinceId: filters.provinceId });
     }
     // กรองตามราคาต่ำสุด
-    if (filters.minPrice) {
+    if (filters.minPrice && !isNaN(Number(filters.minPrice))) {
       query.andWhere('tour.price >= :minPrice', { minPrice: Number(filters.minPrice) });
     }
     // กรองตามราคาสูงสุด
@@ -43,7 +43,9 @@ export class ToursService {
   }
 
   async findOne(id: string) {
-    return this.tourRepository.findOne({ where: { id: Number(id) }, relations: ['province'] });
+    const tour = await this.tourRepository.findOne({ where: { id: Number(id) }, relations: ['province'] });
+    if (!tour) throw new NotFoundException(`ไม่พบทัวร์รหัส ${id}`);
+    return tour;
   }
 
   async findAllProvinces() {
@@ -57,6 +59,9 @@ export class ToursService {
 
   async createTour(tourData: Partial<Tour>) {
     const newTour = this.tourRepository.create(tourData);
+    const savedTour = await this.tourRepository.save(newTour); // บันทึก Tour ก่อน
+    
+    // ถ้าบันทึก Tour สำเร็จ ค่อยมาอัปเดต Province
     if (tourData.provinceId) {
       const province = await this.provinceRepository.findOne({ where: { id: tourData.provinceId }});
       if (province) {
@@ -64,12 +69,13 @@ export class ToursService {
         await this.provinceRepository.save(province);
       }
     }
-    return await this.tourRepository.save(newTour);
+    return savedTour;
   }
 
   // 🟢 1. เพิ่มฟังก์ชันสำหรับอัปเดตข้อมูลทัวร์
   async updateTour(id: string, tourData: Partial<Tour>) {
-    await this.tourRepository.update(Number(id), tourData);
+    const result = await this.tourRepository.update(Number(id), tourData);
+    if (result.affected === 0) throw new NotFoundException(`ไม่พบทัวร์รหัส ${id} ที่ต้องการแก้ไข`);
     return this.tourRepository.findOne({ where: { id: Number(id) } });
   }
 
