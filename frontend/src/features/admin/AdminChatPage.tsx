@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { MessageSquare, Send, Image as ImageIcon, ArrowLeft, LogOut } from 'lucide-react'; // เพิ่มไอคอน
+import { MessageSquare, Send, Image as ImageIcon, ArrowLeft} from 'lucide-react'; // เพิ่มไอคอน
 import { useAuth } from '../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom'; // เพิ่ม Hook สำหรับเปลี่ยนหน้า
 
