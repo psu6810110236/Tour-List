@@ -9,7 +9,6 @@ interface Contact {
   fullName: string;
   email: string;
 }
-
 interface Message {
   id: string;
   content: string;

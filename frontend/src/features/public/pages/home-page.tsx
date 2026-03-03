@@ -5,8 +5,10 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios"; // ✅ เพิ่ม axios สำหรับดึงข้อมูลทัวร์
 import {
   Search,
+  Map,
   MapPin,
   ArrowRight,
+  Star,
   TrendingUp
 } from "lucide-react";
 
@@ -182,20 +184,42 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 md:-mt-16 relative z-20">
-        <div className="bg-white rounded-3xl shadow-xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 border border-gray-100">
-          <div className="text-center group transition duration-300">
-            <div className="text-4xl md:text-5xl font-bold text-[#00A699] mb-1">83+</div>
-            <p className="text-gray-500 font-medium text-sm md:text-base">{language === 'th' ? 'ทัวร์ยอดนิยม' : 'Amazing Tours'}</p>
-          </div>
-          <div className="text-center md:border-l md:border-r border-gray-100 group transition duration-300 py-4 md:py-0">
-            <div className="text-4xl md:text-5xl font-bold text-[#007AFF] mb-1">77</div>
-            <p className="text-gray-500 font-medium text-sm md:text-base">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</p>
-          </div>
-          <div className="text-center group transition duration-300">
-            <div className="text-4xl md:text-5xl font-bold text-[#FF6B4A] mb-1">4.8★</div>
-            <p className="text-gray-500 font-medium text-sm md:text-base">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</p>
+      {/* ================= STATS SECTION ================= */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-16 sm:-mt-20">
+        <div className="bg-white rounded-3xl shadow-2xl shadow-black/10 p-8 md:p-10">
+          {/* ใช้ grid และ divide เพื่อสร้างเส้นแบ่งระหว่างคอลัมน์ */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 md:divide-x-2 divide-gray-100">
+            
+            {/* Stat 1: ทัวร์ยอดนิยม */}
+            <div className="flex flex-col items-center justify-center text-center px-4 group">
+              <div className="w-14 h-14 bg-[#00A699]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:-translate-y-1 transition-transform duration-300">
+                <Map className="w-7 h-7 text-[#00A699]" />
+              </div>
+              <div className="text-4xl font-extrabold text-gray-900 mb-2">83+</div>
+              <div className="text-sm font-bold text-gray-500 tracking-wide">{language === 'th' ? 'ทัวร์ยอดนิยม' : 'Popular Tours'}</div>
+            </div>
+
+            {/* Stat 2: จังหวัดทั่วไทย */}
+            <div className="flex flex-col items-center justify-center text-center px-4 group">
+              <div className="w-14 h-14 bg-[#00A699]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:-translate-y-1 transition-transform duration-300">
+                <MapPin className="w-7 h-7 text-[#00A699]" />
+              </div>
+              <div className="text-4xl font-extrabold text-gray-900 mb-2">77</div>
+              <div className="text-sm font-bold text-gray-500 tracking-wide">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</div>
+            </div>
+
+            {/* Stat 3: คะแนนรีวิว */}
+            <div className="flex flex-col items-center justify-center text-center px-4 group">
+              <div className="w-14 h-14 bg-yellow-100 rounded-2xl flex items-center justify-center mb-4 group-hover:-translate-y-1 transition-transform duration-300">
+                <Star className="w-7 h-7 text-yellow-500 fill-yellow-500" />
+              </div>
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-extrabold text-gray-900">4.8</span>
+                <span className="text-xl font-bold text-gray-400">/5</span>
+              </div>
+              <div className="text-sm font-bold text-gray-500 tracking-wide">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</div>
+            </div>
+
           </div>
         </div>
       </div>
