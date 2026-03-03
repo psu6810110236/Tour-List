@@ -22,7 +22,7 @@ export class ToursService {
       query.andWhere('tour.provinceId = :provinceId', { provinceId: filters.provinceId });
     }
     // กรองตามราคาต่ำสุด
-    if (filters.minPrice) {
+    if (filters.minPrice && !isNaN(Number(filters.minPrice))) {
       query.andWhere('tour.price >= :minPrice', { minPrice: Number(filters.minPrice) });
     }
     // กรองตามราคาสูงสุด
