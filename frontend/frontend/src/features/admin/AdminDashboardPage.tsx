@@ -41,21 +41,17 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
   const [bookingsList, setBookingsList] = useState<Booking[]>([]);
-  
   // --- เพิ่มส่วนนี้ใต้ state ของ bookingsList ---
   const [bookingSearch, setBookingSearch] = useState('');
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
   const [paymentSearch, setPaymentSearch] = useState('');
   const [tourSearch, setTourSearch] = useState('');
-  
+  // เพิ่ม state ต่อจากที่มีอยู่
   // 🟢 State สำหรับฟอร์มเพิ่ม/แก้ไขทัวร์
   const [isAddingTour, setIsAddingTour] = useState(false);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
-
-  // ✅ State สำหรับโหลดตอนกด Reset DB
-  const [resetLoading, setResetLoading] = useState(false);
 
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
@@ -91,6 +87,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     fetchAdminData();
   }, []);
 
+  // ... (ฟังก์ชัน handleEditClick, handleSaveTour, handleDeleteTour, handleSelectProvince, handleAddDay, stats, handleApproveBooking, handleRejectBooking, handleDeleteBooking ทั้งหมดคงเดิม ไม่แตะต้อง) ...
   const handleEditClick = (tour: Tour) => {
     setEditingTourId(tour.id);
     const currentProvinceId = typeof tour.province === 'object' && tour.province !== null
@@ -186,7 +183,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       alert("เกิดข้อผิดพลาดในการอนุมัติ");
     }
   };
-
   const handleRejectBooking = async (bookingId: string) => {
     try {
       await bookingService.updateBookingStatus(bookingId, 'rejected');
@@ -198,7 +194,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       alert("เกิดข้อผิดพลาดในการปฏิเสธ");
     }
   };
-
   const handleDeleteBooking = async (bookingId: string) => {
     const isConfirm = window.confirm(
       language === 'th' ? `คุณแน่ใจหรือไม่ว่าต้องการลบการจองรหัส ${bookingId} ถาวร?` : `Are you sure you want to permanently delete booking ${bookingId}?`
@@ -214,37 +209,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       }
     }
   };
-
-  // ✅ ฟังก์ชันสำหรับยิง API Reset Data
-  const handleResetData = async (mode: 'clean' | 'mock') => {
-    const confirmMessage = mode === 'clean' 
-      ? '⚠️ คำเตือน: คุณแน่ใจหรือไม่ที่จะล้างข้อมูลทั้งหมด? (ข้อมูลการจอง ทัวร์ และจังหวัดจะหายไป)' 
-      : 'คุณแน่ใจหรือไม่ที่จะใส่ข้อมูลจำลอง (Mock Data)?';
-
-    if (!window.confirm(confirmMessage)) return;
-
-    setResetLoading(true);
-    try {
-      const response = await fetch('http://localhost:3000/admin/reset-db', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
-      });
-
-      if (response.ok) {
-        alert(language === 'th' ? 'ดำเนินการสำเร็จ!' : 'Operation Successful!');
-        window.location.reload(); 
-      } else {
-        alert('เกิดข้อผิดพลาดในการรีเซ็ตข้อมูล');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ Backend ได้ กรุณาตรวจสอบว่ารัน API อยู่หรือไม่');
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
   // 1. กรองรายการจอง
   const filteredBookings = bookingsList.filter(b => {
     const searchLower = (bookingSearch || '').toLowerCase();
@@ -359,6 +323,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'overview' && (
+          // ... (เนื้อหา Overview คงเดิม) ...
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white rounded-2xl p-6 shadow-lg">
@@ -435,35 +400,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 )}
               </div>
             </div>
-
-            {/* ✅ เพิ่มส่วน Danger Zone (Reset DB) สำหรับแอดมิน */}
-            <div className="mt-8 p-6 bg-red-50 border border-red-200 rounded-3xl shadow-sm">
-              <h3 className="text-xl font-bold text-red-700 flex items-center gap-2 mb-2">
-                <Trash2 className="w-6 h-6" /> Danger Zone (จัดการฐานข้อมูล)
-              </h3>
-              <p className="text-sm text-red-600 mb-6">
-                ส่วนนี้ใช้สำหรับทดสอบระบบเท่านั้น การล้างข้อมูลจะทำให้ข้อมูลทั้งหมดหายไปอย่างถาวร
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button 
-                  onClick={() => handleResetData('clean')} 
-                  disabled={resetLoading}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  {resetLoading ? 'กำลังดำเนินการ...' : 'ล้างข้อมูลทั้งหมด (Clean Data)'}
-                </button>
-                <button 
-                  onClick={() => handleResetData('mock')} 
-                  disabled={resetLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Package className="w-5 h-5" />
-                  {resetLoading ? 'กำลังดำเนินการ...' : 'ใส่ข้อมูลจำลอง (Mock Data)'}
-                </button>
-              </div>
-            </div>
-
           </div>
         )}
 
@@ -473,12 +409,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             <div className="flex flex-col md:flex-row justify-between gap-4">
               <h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings}</h2>
               <div className="flex gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                {/* 🟢 แก้ไขช่องค้นหาแท็บการจอง */}
+                <div className="relative group w-full md:w-auto">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">{/*บังคับให้ไอคอนอยู่กึ่งกลางแนวตั้งเป๊ะๆ 100%*/}
+                    <Search className="w-5 h-5 text-gray-400 group-focus-within:text-[#00A699] transition-colors" />
+                  </div>
                   <input
                     type="text"
                     placeholder="ค้นหาชื่อลูกค้า หรือชื่อทัวร์..."
-                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699]"
+                    className="block w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all duration-200 shadow-sm"
                     value={bookingSearch}
                     onChange={(e) => setBookingSearch(e.target.value)}
                   />
@@ -500,6 +439,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
+                    {/* ... (ส่วน th ของตารางคงเดิม) ... */}
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.id}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.tour}</th>
@@ -511,8 +451,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
+                    {/* 🟢 เปลี่ยนจาก bookingsList.map เป็น filteredBookings.map */}
                     {filteredBookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-gray-50 transition">
+                        {/* ... (ข้อมูล td คงเดิม) ... */}
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language)}</div>
@@ -560,12 +502,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 <h2 className="text-2xl font-bold text-gray-900">{t.payment.title}</h2>
                 <p className="text-gray-600 mt-1">{t.payment.desc}</p>
               </div>
-              <div className="relative w-full md:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              {/* 🟢 แก้ไขช่องค้นหาแท็บการชำระเงิน */}
+              <div className="relative group w-full md:w-auto">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Search className="w-5 h-5 text-gray-400 group-focus-within:text-[#00A699] transition-colors" />
+                </div>
                 <input
                   type="text"
                   placeholder="ค้นหารหัส/ชื่อทัวร์..."
-                  className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699]"
+                  className="block w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all duration-200 shadow-sm"
                   value={paymentSearch}
                   onChange={(e) => setPaymentSearch(e.target.value)}
                 />
@@ -573,8 +518,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 🟢 เปลี่ยนจาก bookingsList.filter... เป็น filteredPayments.map */}
               {filteredPayments.map((booking) => (
                 <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg">
+                  {/* ... (โค้ดด้านใน card นี้คงเดิม) ... */}
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-sm text-gray-600 mb-1">{t.table.id}</div>
@@ -582,6 +529,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </div>
                     <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg text-xs font-semibold">Pending</span>
                   </div>
+                  {/* ... โค้ดส่วนอื่นๆ ใน card เหมือนเดิม ... */}
                   <div className="mb-4">
                     <div className="font-medium text-gray-900 mb-1">{getLang(booking, 'tourName', language)}</div>
                     <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
@@ -611,6 +559,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
                 </div>
               ))}
+              {/* 🟢 เปลี่ยนเป็น filteredPayments */}
               {filteredPayments.length === 0 && (
                 <div className="col-span-2 bg-white rounded-3xl p-12 text-center shadow-lg">
                   <div className="text-6xl mb-4">✓</div>
@@ -623,6 +572,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         )}
 
         {/* ================= TOURS TAB ================= */}
+        {/* ================= TOURS TAB ================= */}
         {activeTab === 'tours' && (
           <div className="space-y-6">
             {!isAddingTour ? (
@@ -634,12 +584,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
 
                   <div className="flex gap-3 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    {/* 🟢 แก้ไขช่องค้นหาแท็บทัวร์ */}
+                    <div className="relative group flex-1 md:w-64">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Search className="w-5 h-5 text-gray-400 group-focus-within:text-[#00A699] transition-colors" />
+                      </div>
                       <input
                         type="text"
                         placeholder="ค้นหาชื่อทัวร์..."
-                        className="pl-10 pr-4 py-3 w-full border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699]"
+                        className="block w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all duration-200 shadow-sm"
                         value={tourSearch}
                         onChange={(e) => setTourSearch(e.target.value)}
                       />
@@ -661,6 +614,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 <div className="bg-white rounded-3xl shadow-lg overflow-hidden border">
                   <div className="overflow-x-auto">
                     <table className="w-full">
+                      {/* ... (thead คงเดิม) ... */}
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.name}</th>
@@ -672,8 +626,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
+                        {/* 🟢 เปลี่ยนจาก allTours.map เป็น filteredTours.map */}
                         {filteredTours.map((tour) => (
                           <tr key={tour.id} className="hover:bg-gray-50 transition">
+                            {/* ... (ข้อมูล td คงเดิมทั้งหมด) ... */}
                             <td className="px-6 py-4">
                               <div className="font-medium text-gray-900">{getLang(tour, 'name', language)}</div>
                               <div className="text-sm text-gray-600">{tour.id}</div>
@@ -722,6 +678,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
               </>
             ) : (
+              /* ฟอร์มเพิ่ม/แก้ไขทัวร์ */
               <div className="bg-white rounded-3xl shadow-xl p-8 border animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-center mb-8 border-b pb-4">
                   <h2 className="text-2xl font-bold">
