@@ -67,5 +67,7 @@ export interface Booking {
   
   // Optional relations
   tour?: Tour;
-  user?: any; // ถ้ายังไม่ได้ทำ Interface User ใช้ any ไปก่อนชั่วคราว
+  user?: any;
+  
+  province?: any;// ถ้ายังไม่ได้ทำ Interface User ใช้ any ไปก่อนชั่วคราว
 }

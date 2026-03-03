@@ -6,7 +6,7 @@ import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
 
 // --- Icons ---
-import { Construction, ArrowLeft, CalendarDays, Ticket, UserCircle } from 'lucide-react';
+import { Construction, Ticket, UserCircle } from 'lucide-react';
 
 // --- Import Pages & Components ---
 import Login from './features/auth/Login';
@@ -18,11 +18,15 @@ import TourDetailPage from './features/public/pages/TourDetailPage';
 import AdminChatPage from './features/admin/AdminChatPage';
 import { AdminDashboard as AdminDashboardPage } from './features/admin/AdminDashboardPage';
 import AllProvincesPage from './pages/AllProvincesPage';
+import { BookingPage } from './components/ui/booking-page';
+import { PaymentPage } from './components/ui/payment-page';
+import { PaymentConfirmation } from './components/ui/payment-confirmation';
 
 // Service & Types
 import { tourService } from './services/api';
 import type { Province } from './data/mockData';
 
+// --- UI Helper Components ---
 const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, desc: string, icon: any }) => (
   <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 bg-gray-50/50">
     <div className="bg-white p-10 md:p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 max-w-md w-full text-center border border-gray-100 relative overflow-hidden animate-in fade-in zoom-in duration-500">
@@ -34,15 +38,6 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
       <p className="text-gray-500 mb-10 leading-relaxed text-sm">{desc}</p>
     </div>
   </div>
-);
-
-// ✅ แก้ไข: รับค่า language เข้ามาเพื่อเปลี่ยนภาษา
-const BookingPage = ({ language }: { language: 'th' | 'en' }) => (
-  <WorkInProgressTemplate 
-    title={language === 'th' ? "หน้าจองทัวร์" : "Booking Page"} 
-    desc={language === 'th' ? "ระบบการจองทัวร์กำลังอยู่ระหว่างการพัฒนา กรุณาติดตามเร็วๆ นี้" : "The booking system is currently under development. Stay tuned!"} 
-    icon={CalendarDays} 
-  />
 );
 
 const BookingsHistoryPage = ({ language }: { language: 'th' | 'en' }) => (
@@ -61,18 +56,14 @@ const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
   />
 );
 
-// ============================================================================
-// 🔒 Helper Components
-// ============================================================================
-
-// 1. PrivateRoute: สำหรับ User ที่ Login แล้วเท่านั้น
+// --- PrivateRoute Helper ---
 const PrivateRoute = () => {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-[#00A699]">กำลังตรวจสอบสิทธิ์...</div>;
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
-// 2. ProvinceRouteWrapper: โหลดข้อมูลจังหวัดก่อนแสดงผล
+// --- Province Wrapper ---
 const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -109,24 +100,25 @@ const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
   );
 };
 
-// ============================================================================
-// 📱 Main App Content
-// ============================================================================
-
 function AppContent() {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'th' | 'en'>('th');
+  const [bookingData, setBookingData] = useState<any>(null);
 
-  // Logic: การแสดงผล Navbar และ ChatWidget
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('bookingData');
+      if (stored) setBookingData(JSON.parse(stored));
+    } catch (e) {
+      console.warn('Failed to parse bookingData from sessionStorage', e);
+    }
+  }, []);
+
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
   const isAdminRoute = location.pathname.startsWith('/admin');
-
-  // ✅ Navbar: แสดงทุกหน้า ยกเว้นหน้า Login/Register และหน้า Admin Dashboard
   const showNavbar = !isAuthPage && !isAdminRoute;
-
-  // ✅ ChatWidget: แสดงเฉพาะ User ทั่วไป
   const showChatWidget = !isAuthPage && !isAdminRoute && user?.role?.toUpperCase() !== 'ADMIN';
 
   const getCurrentPage = () => {
@@ -137,9 +129,26 @@ function AppContent() {
     return '';
   };
 
-  const handleNavigate = (pageId: string) => {
+  const handleNavigate = (pageId: string, data?: any) => {
+    if (pageId === 'payment') {
+      setBookingData(data);
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      navigate('/payment');
+      return;
+    }
+    if (pageId === 'payment-confirmation') {
+      setBookingData(data);
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      navigate('/payment-confirmation');
+      return;
+    }
+    if (pageId === 'home') {
+      try { sessionStorage.removeItem('bookingData'); } catch {};
+      setBookingData(null);
+      navigate('/');
+      return;
+    }
     switch (pageId) {
-      case 'home': navigate('/'); break;
       case 'provinces': navigate('/provinces'); break;
       case 'bookings': navigate('/my-bookings'); break;
       case 'dashboard': navigate('/profile'); break;
@@ -151,7 +160,6 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* 1. Navbar (User) */}
       {showNavbar && (
         <Navigation
           currentPage={getCurrentPage()}
@@ -165,10 +173,8 @@ function AppContent() {
         />
       )}
 
-      {/* 2. Routes (ใช้ flex-1 ดันให้ความสูงเต็มจอพอดี) */}
       <main className="flex-1">
         <Routes>
-          {/* Public */}
           <Route path="/" element={<HomePage language={language} />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -178,10 +184,12 @@ function AppContent() {
 
           {/* Private (User) */}
           <Route element={<PrivateRoute />}>
-            {/* ✅ แก้ไข: ส่ง language ลงไปให้หน้า Mock Pages ด้วย */}
-            <Route path="/booking" element={<BookingPage language={language} />} />
+            <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
+            <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/my-bookings" element={<BookingsHistoryPage language={language} />} />
             <Route path="/profile" element={<UserProfile language={language} />} />
+            <Route path="/payment" element={<PaymentPage bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
+            <Route path="/payment-confirmation" element={<PaymentConfirmation bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
           </Route>
 
           {/* Admin Only */}
@@ -190,29 +198,17 @@ function AppContent() {
             <Route path="/admin/chat" element={<AdminChatPage />} />
           </Route>
 
-          {/* 404 Page (ดีไซน์ใหม่) */}
+          {/* 404 Page */}
           <Route path="*" element={
-            <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 bg-gray-50/50">
-              <div className="bg-white p-10 md:p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 max-w-md w-full text-center border border-gray-100 relative overflow-hidden animate-in fade-in zoom-in duration-500">
-                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-red-500/10 to-orange-50 -z-10"></div>
-                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border-4 border-red-500/10 relative z-10">
-                  <Construction className="w-12 h-12 text-red-500" />
-                </div>
-                <h2 className="text-3xl font-extrabold text-gray-900 mb-4 tracking-tight">404</h2>
-                <p className="text-gray-500 mb-10 leading-relaxed text-sm">
-                  {language === 'th' ? 'ขออภัย ไม่พบหน้าที่คุณค้นหา หรือหน้านี้กำลังอยู่ระหว่างการปรับปรุง' : 'Sorry, the page you are looking for does not exist or is under construction.'}
-                </p>
-                <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-3 bg-[#00A699] hover:bg-[#008c81] text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg hover:shadow-[#00A699]/30 active:scale-95">
-                  <ArrowLeft className="w-5 h-5" />
-                  {language === 'th' ? 'กลับสู่หน้าหลัก' : 'Back to Home'}
-                </button>
-              </div>
-            </div>
+            <WorkInProgressTemplate 
+              title="404" 
+              desc={language === 'th' ? 'ขออภัย ไม่พบหน้าที่คุณค้นหา หรือหน้านี้กำลังอยู่ระหว่างการปรับปรุง' : 'Sorry, the page you are looking for does not exist or is under construction.'} 
+              icon={Construction} 
+            />
           } />
         </Routes>
       </main>
 
-      {/* 3. ChatWidget (User Only) */}
       {showChatWidget && <ChatWidget />}
     </div>
   );

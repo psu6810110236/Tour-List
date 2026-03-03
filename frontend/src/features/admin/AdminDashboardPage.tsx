@@ -12,12 +12,12 @@ import {
   LogOut,
   Eye,
   Search,
-  Filter,
   Plus,
   Edit,
   Trash2,
-  MessageSquare, // ✅ 1. เพิ่ม icon MessageSquare
-  ListChecks
+  MessageSquare,
+  ListChecks,
+  AlertCircle
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
 import type { Province } from '../../data/mockData';
@@ -25,7 +25,7 @@ import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 import type { Booking, Tour } from '../../types';
 
-// ✅ นำเข้า API Service สำหรับเชื่อม Backend
+// API Service
 import { tourService, bookingService } from '../../services/api';
 
 interface AdminDashboardProps {
@@ -37,21 +37,40 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'tours'>('overview');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
-  // 🟢 State สำหรับจัดการข้อมูลจริงจาก Backend
+  // ข้อมูลจาก Backend
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
   const [bookingsList, setBookingsList] = useState<Booking[]>([]);
-  // --- เพิ่มส่วนนี้ใต้ state ของ bookingsList ---
+
+  // 🟢 1. State สำหรับตัวกรอง "แท็บการจอง"
   const [bookingSearch, setBookingSearch] = useState('');
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
+  const [bookingProvinceFilter, setBookingProvinceFilter] = useState('all');
+  const [bookingSort, setBookingSort] = useState('newest');
+
+  // 🟢 2. State สำหรับตัวกรอง "แท็บชำระเงิน"
   const [paymentSearch, setPaymentSearch] = useState('');
+  const [paymentSort, setPaymentSort] = useState('oldest');
+
+  // 🟢 3. State สำหรับตัวกรอง "แท็บทัวร์"
   const [tourSearch, setTourSearch] = useState('');
-  // เพิ่ม state ต่อจากที่มีอยู่
-  // 🟢 State สำหรับฟอร์มเพิ่ม/แก้ไขทัวร์
+  const [tourProvinceFilter, setTourProvinceFilter] = useState('all');
+  const [tourPriceSort, setTourPriceSort] = useState('default');
+
+  // State ฟอร์มเพิ่ม/แก้ไขทัวร์
   const [isAddingTour, setIsAddingTour] = useState(false);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
+
+  // State สำหรับ Popup
+  const [popup, setPopup] = useState<{
+    isOpen: boolean;
+    type: 'alert' | 'confirm';
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ isOpen: false, type: 'alert', title: '', message: '' });
 
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
@@ -87,12 +106,13 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     fetchAdminData();
   }, []);
 
-  // ... (ฟังก์ชัน handleEditClick, handleSaveTour, handleDeleteTour, handleSelectProvince, handleAddDay, stats, handleApproveBooking, handleRejectBooking, handleDeleteBooking ทั้งหมดคงเดิม ไม่แตะต้อง) ...
+  const showAlert = (title: string, message: string) => { setPopup({ isOpen: true, type: 'alert', title, message }); };
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => { setPopup({ isOpen: true, type: 'confirm', title, message, onConfirm }); };
+  const closePopup = () => setPopup(prev => ({ ...prev, isOpen: false }));
+
   const handleEditClick = (tour: Tour) => {
     setEditingTourId(tour.id);
-    const currentProvinceId = typeof tour.province === 'object' && tour.province !== null
-      ? (tour.province as any).id
-      : tour.provinceId || tour.province;
+    const currentProvinceId = typeof tour.province === 'object' && tour.province !== null ? (tour.province as any).id : tour.provinceId || tour.province;
     setTourForm({ ...tour, provinceId: currentProvinceId });
     setIsAddingTour(true);
     setCreateNewProvince(false);
@@ -100,69 +120,45 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
   const handleSaveTour = async () => {
     if (!(tourForm.name || tourForm.name_th) || !tourForm.provinceId) {
-      return alert("กรุณากรอกชื่อทัวร์และเลือกจังหวัด");
+      return showAlert(language === 'th' ? "ข้อมูลไม่ครบ" : "Incomplete Data", language === 'th' ? "กรุณากรอกชื่อทัวร์และเลือกจังหวัด" : "Please enter tour name and select province.");
     }
     try {
       if (createNewProvince) {
-        const newProv = {
-          id: tourForm.provinceId!,
-          name: String(tourForm.province || ''),
-          name_th: String(tourForm.province || ''),
-          tourCount: 0,
-          image: tourForm.image || '',
-          description: '',
-          description_th: '',
-        };
+        const newProv = { id: tourForm.provinceId!, name: String(tourForm.province || ''), name_th: String(tourForm.province || ''), tourCount: 0, image: tourForm.image || '', description: '', description_th: '' };
         await tourService.createProvince(newProv);
       }
       if (editingTourId) {
         await tourService.updateTour(editingTourId, tourForm);
-        alert(language === 'th' ? "อัปเดตทัวร์สำเร็จ!" : "Tour Updated Successfully!");
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "อัปเดตทัวร์สำเร็จ!" : "Tour updated successfully!");
       } else {
         const newTour = { ...tourForm, rating: 5.0, reviewCount: 0 };
         delete newTour.id;
         await tourService.createTour(newTour);
-        alert(language === 'th' ? "สร้างทัวร์สำเร็จ!" : "Tour Created Successfully!");
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "สร้างทัวร์สำเร็จ!" : "Tour created successfully!");
       }
-      setIsAddingTour(false);
-      setEditingTourId(null);
-      fetchAdminData();
-      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` });
-      setCreateNewProvince(false);
+      setIsAddingTour(false); setEditingTourId(null); fetchAdminData();
+      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` }); setCreateNewProvince(false);
     } catch (error) {
-      console.error("Error saving tour:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล ลองตรวจสอบ Console");
+      showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการบันทึกข้อมูล" : "Error saving data");
     }
   };
 
-  const handleDeleteTour = async (id: string) => {
-    const isConfirm = window.confirm(
-      language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบทัวร์นี้?" : "Are you sure you want to delete this tour?"
-    );
-    if (isConfirm) {
+  const handleDeleteTour = (id: string) => {
+    showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบทัวร์นี้แบบถาวร?" : "Are you sure you want to permanently delete this tour?", async () => {
       try {
-        await tourService.deleteTour(id);
-        alert(language === 'th' ? "ลบทัวร์สำเร็จ!" : "Tour Deleted Successfully!");
-        fetchAdminData();
-      } catch (error) {
-        console.error("Error deleting tour:", error);
-        alert(language === 'th' ? "เกิดข้อผิดพลาดในการลบทัวร์" : "Failed to delete tour");
-      }
-    }
+        await tourService.deleteTour(id); fetchAdminData();
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully."); closePopup();
+      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Failed to delete tour."); closePopup(); }
+    });
   };
 
   const handleSelectProvince = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = allProvinces.find(p => p.id === e.target.value);
-    if (selected) {
-      setTourForm({ ...tourForm, provinceId: selected.id, province: selected.name });
-    }
+    if (selected) { setTourForm({ ...tourForm, provinceId: selected.id, province: selected.name }); }
   };
 
   const handleAddDay = () => {
-    setTourForm(prev => ({
-      ...prev,
-      itinerary: [...(prev.itinerary || []), { day: (prev.itinerary?.length || 0) + 1, title: '', title_th: '', activities: [], activities_th: [] }]
-    }));
+    setTourForm(prev => ({ ...prev, itinerary: [...(prev.itinerary || []), { day: (prev.itinerary?.length || 0) + 1, title: '', title_th: '', activities: [], activities_th: [] }] }));
   };
 
   const stats = {
@@ -172,77 +168,102 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     totalRevenue: bookingsList.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.totalPrice, 0)
   };
 
-  const handleApproveBooking = async (bookingId: string) => {
-    try {
-      await bookingService.updateBookingStatus(bookingId, 'approved');
-      alert(language === 'th' ? `อนุมัติการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} approved!`);
-      fetchAdminData();
-      setSelectedBooking(null);
-    } catch (error) {
-      console.error("Error approving booking:", error);
-      alert("เกิดข้อผิดพลาดในการอนุมัติ");
-    }
-  };
-  const handleRejectBooking = async (bookingId: string) => {
-    try {
-      await bookingService.updateBookingStatus(bookingId, 'rejected');
-      alert(language === 'th' ? `ปฏิเสธการจอง ${bookingId} แล้ว!` : `Booking ${bookingId} rejected!`);
-      fetchAdminData();
-      setSelectedBooking(null);
-    } catch (error) {
-      console.error("Error rejecting booking:", error);
-      alert("เกิดข้อผิดพลาดในการปฏิเสธ");
-    }
-  };
-  const handleDeleteBooking = async (bookingId: string) => {
-    const isConfirm = window.confirm(
-      language === 'th' ? `คุณแน่ใจหรือไม่ว่าต้องการลบการจองรหัส ${bookingId} ถาวร?` : `Are you sure you want to permanently delete booking ${bookingId}?`
-    );
-    if (isConfirm) {
+  const handleApproveBooking = (bookingId: string) => {
+    showConfirm(language === 'th' ? "ยืนยันการอนุมัติ" : "Confirm Approval", language === 'th' ? `คุณต้องการอนุมัติการจอง ${bookingId} ใช่หรือไม่?` : `Approve booking ${bookingId}?`, async () => {
       try {
-        await bookingService.deleteBooking(bookingId);
-        alert(language === 'th' ? "ลบการจองสำเร็จ!" : "Booking deleted successfully!");
-        fetchAdminData();
-      } catch (error) {
-        console.error("Error deleting booking:", error);
-        alert(language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking");
-      }
-    }
+        await bookingService.updateBookingStatus(bookingId, 'approved'); fetchAdminData(); setSelectedBooking(null);
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "อนุมัติการจองเรียบร้อยแล้ว" : "Booking approved successfully."); closePopup();
+      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการอนุมัติ" : "Error approving booking."); closePopup(); }
+    });
   };
+
+  const handleRejectBooking = (bookingId: string) => {
+    showConfirm(language === 'th' ? "ยืนยันการปฏิเสธ" : "Confirm Rejection", language === 'th' ? `คุณต้องการปฏิเสธการจอง ${bookingId} ใช่หรือไม่?` : `Reject booking ${bookingId}?`, async () => {
+      try {
+        await bookingService.updateBookingStatus(bookingId, 'rejected'); fetchAdminData(); setSelectedBooking(null);
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธการจองเรียบร้อยแล้ว" : "Booking rejected successfully."); closePopup();
+      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการปฏิเสธ" : "Error rejecting booking."); closePopup(); }
+    });
+  };
+
+  const handleDeleteBooking = (bookingId: string) => {
+    showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? `ต้องการลบการจอง ${bookingId} ถาวรใช่หรือไม่?` : `Permanently delete booking ${bookingId}?`, async () => {
+      try {
+        await bookingService.deleteBooking(bookingId); fetchAdminData();
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบการจองเรียบร้อยแล้ว" : "Booking deleted successfully."); closePopup();
+      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking."); closePopup(); }
+    });
+  };
+
+  // ==========================================
+  // 🔍 ระบบกรองข้อมูล (Filters)
+  // ==========================================
+
   // 1. กรองรายการจอง
-  const filteredBookings = bookingsList.filter(b => {
-    const searchLower = (bookingSearch || '').toLowerCase();
+  const filteredBookings = bookingsList
+    .filter(b => {
+      const searchLower = (bookingSearch || '').toLowerCase();
+      const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
+      const matchesSearch = String(b.id || '').toLowerCase().includes(searchLower) || String(tourName).toLowerCase().includes(searchLower);
+      const matchesStatus = bookingStatusFilter === 'all' || b.status === bookingStatusFilter;
+      
+      const relatedTour = b.tour || allTours.find(t => t.id === b.tourId);
+      const bProv = relatedTour?.province || b.province;
+      const bProvId = typeof bProv === 'object' && bProv !== null ? (bProv as any).id : (relatedTour?.provinceId || bProv || '');
+      
+      const matchesProvince = bookingProvinceFilter === 'all' || String(bProvId).toLowerCase() === bookingProvinceFilter.toLowerCase();
 
-    // ดึงค่า tourName หรือ tourNameSnapshot (รองรับทั้งชื่อจาก Mock Data และ Backend)
-    const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
+      return matchesSearch && matchesStatus && matchesProvince;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.bookingDate || (a as any).createdAt || 0).getTime();
+      const dateB = new Date(b.bookingDate || (b as any).createdAt || 0).getTime();
 
-    const matchesSearch =
-      String(b.id || '').toLowerCase().includes(searchLower) ||
-      String(tourName).toLowerCase().includes(searchLower);
+      if (bookingSort === 'newest') return dateB - dateA;
+      if (bookingSort === 'oldest') return dateA - dateB;
+      if (bookingSort === 'travelDate') {
+        const tDateA = new Date(a.travelDate || (a as any).date || 0).getTime();
+        const tDateB = new Date(b.travelDate || (b as any).date || 0).getTime();
+        return tDateA - tDateB;
+      }
+      return 0;
+    });
 
-    const matchesStatus = bookingStatusFilter === 'all' || b.status === bookingStatusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  // 2. กรองการชำระเงิน (เฉพาะที่ pending)
+  // 2. กรองการชำระเงิน
   const filteredPayments = bookingsList
     .filter(b => b.status === 'pending')
     .filter(b => {
       const searchLower = (paymentSearch || '').toLowerCase();
       const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
+      return String(b.id || '').toLowerCase().includes(searchLower) || String(tourName).toLowerCase().includes(searchLower);
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.bookingDate || (a as any).createdAt || 0).getTime();
+      const dateB = new Date(b.bookingDate || (b as any).createdAt || 0).getTime();
 
-      return String(b.id || '').toLowerCase().includes(searchLower) ||
-        String(tourName).toLowerCase().includes(searchLower);
+      if (paymentSort === 'oldest') return dateA - dateB;
+      if (paymentSort === 'newest') return dateB - dateA;
+      if (paymentSort === 'amountDesc') return (b.totalPrice || 0) - (a.totalPrice || 0);
+      return 0;
     });
 
   // 3. กรองทัวร์
-  const filteredTours = allTours.filter(t => {
-    const searchLower = (tourSearch || '').toLowerCase();
-    const tourName = getLang(t, 'name', language) || '';
+  const filteredTours = allTours
+    .filter(t => {
+      const searchLower = (tourSearch || '').toLowerCase();
+      const tourName = getLang(t, 'name', language) || '';
+      const matchesSearch = String(tourName).toLowerCase().includes(searchLower) || String(t.id || '').toLowerCase().includes(searchLower);
+      
+      const currentProvinceId = typeof t.province === 'object' && t.province !== null ? (t.province as any).id : t.provinceId || t.province;
+      const matchesProvince = tourProvinceFilter === 'all' || currentProvinceId === tourProvinceFilter;
 
-    return String(tourName).toLowerCase().includes(searchLower) ||
-      String(t.id || '').toLowerCase().includes(searchLower);
-  });
+      return matchesSearch && matchesProvince;
+    })
+    .sort((a, b) => {
+      if (tourPriceSort === 'asc') return (a.price || 0) - (b.price || 0);
+      if (tourPriceSort === 'desc') return (b.price || 0) - (a.price || 0);
+      return 0;
+    });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -305,7 +326,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               </button>
             ))}
 
-            {/* ✅ 2. เพิ่มปุ่ม Chat System ตรงนี้ */}
             <button
               onClick={() => onNavigate('admin/chat')}
               className="flex items-center gap-2 px-6 py-4 font-medium border-b-2 border-transparent text-gray-600 hover:text-[#00A699] transition whitespace-nowrap"
@@ -323,8 +343,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'overview' && (
-          // ... (เนื้อหา Overview คงเดิม) ...
-          <div className="space-y-8">
+          <div className="space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white rounded-2xl p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
@@ -383,7 +402,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         {booking.status === 'rejected' && <XCircle className="w-5 h-5 text-red-600" />}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{getLang(booking, 'tourName', language)}</div>
+                        <div className="font-semibold text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
                         <div className="text-sm text-gray-600">{booking.id} • {getLang(booking, 'province', language)}</div>
                       </div>
                     </div>
@@ -396,7 +415,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
                 ))}
                 {bookingsList.length === 0 && (
-                  <div className="text-center text-gray-500 py-4">ไม่มีรายการจองล่าสุด</div>
+                  <div className="text-center text-gray-500 py-4">{language === 'th' ? 'ไม่มีรายการจองล่าสุด' : 'No recent bookings'}</div>
                 )}
               </div>
             </div>
@@ -405,33 +424,57 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
         {/* ================= BOOKINGS TAB ================= */}
         {activeTab === 'bookings' && (
-          <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between gap-4">
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col xl:flex-row justify-between gap-4">
               <h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings}</h2>
-              <div className="flex gap-3">
-                {/* 🟢 แก้ไขช่องค้นหาแท็บการจอง */}
-                <div className="relative group w-full md:w-auto">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">{/*บังคับให้ไอคอนอยู่กึ่งกลางแนวตั้งเป๊ะๆ 100%*/}
+              <div className="flex flex-col md:flex-row gap-3">
+                
+                {/* 🟢 ตัวกรองจังหวัด (การจอง) */}
+                <select
+                  className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
+                  value={bookingProvinceFilter}
+                  onChange={(e) => setBookingProvinceFilter(e.target.value)}
+                >
+                  <option value="all">{language === 'th' ? 'ทุกจังหวัด' : 'All Provinces'}</option>
+                  {allProvinces.map(p => (
+                    <option key={p.id} value={p.id}>{getLang(p, 'name', language)}</option>
+                  ))}
+                </select>
+
+                {/* 🟢 ตัวเรียงลำดับ (การจอง) */}
+                <select
+                  className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
+                  value={bookingSort}
+                  onChange={(e) => setBookingSort(e.target.value)}
+                >
+                  <option value="newest">{language === 'th' ? 'เวลาจอง: ล่าสุด' : 'Booking Time: Newest'}</option>
+                  <option value="oldest">{language === 'th' ? 'เวลาจอง: เก่าสุด' : 'Booking Time: Oldest'}</option>
+                  <option value="travelDate">{language === 'th' ? 'ใกล้วันเดินทาง' : 'Upcoming Travel Date'}</option>
+                </select>
+
+                <select
+                  className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
+                  value={bookingStatusFilter}
+                  onChange={(e) => setBookingStatusFilter(e.target.value)}
+                >
+                  <option value="all">{language === 'th' ? 'ทุกสถานะ' : 'All Statuses'}</option>
+                  <option value="pending">{language === 'th' ? 'รอดำเนินการ (Pending)' : 'Pending'}</option>
+                  <option value="approved">{language === 'th' ? 'ยืนยันแล้ว (Approved)' : 'Approved'}</option>
+                  <option value="rejected">{language === 'th' ? 'ยกเลิก (Rejected)' : 'Rejected'}</option>
+                </select>
+
+                <div className="relative group w-full md:w-64">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <Search className="w-5 h-5 text-gray-400 group-focus-within:text-[#00A699] transition-colors" />
                   </div>
                   <input
                     type="text"
-                    placeholder="ค้นหาชื่อลูกค้า หรือชื่อทัวร์..."
+                    placeholder={language === 'th' ? "ค้นหาชื่อลูกค้า หรือชื่อทัวร์..." : "Search customer or tour name..."}
                     className="block w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all duration-200 shadow-sm"
                     value={bookingSearch}
                     onChange={(e) => setBookingSearch(e.target.value)}
                   />
                 </div>
-                <select
-                  className="border border-gray-200 rounded-xl px-4 py-2 bg-white outline-none focus:ring-2 focus:ring-[#00A699]"
-                  value={bookingStatusFilter}
-                  onChange={(e) => setBookingStatusFilter(e.target.value)}
-                >
-                  <option value="all">ทุกสถานะ</option>
-                  <option value="pending">รอดำเนินการ (Pending)</option>
-                  <option value="approved">ยืนยันแล้ว (Approved)</option>
-                  <option value="rejected">ยกเลิก (Rejected)</option>
-                </select>
               </div>
             </div>
 
@@ -439,29 +482,30 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
-                    {/* ... (ส่วน th ของตารางคงเดิม) ... */}
                     <tr>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.id}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.tour}</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.customer}</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.date}</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{language === 'th' ? 'วันที่เดินทาง' : 'Travel Date'}</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{language === 'th' ? 'วันที่จอง' : 'Booking Date'}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.amount}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.status}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.actions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {/* 🟢 เปลี่ยนจาก bookingsList.map เป็น filteredBookings.map */}
                     {filteredBookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-gray-50 transition">
-                        {/* ... (ข้อมูล td คงเดิม) ... */}
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language)}</div>
+                          <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
                           <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">User #{booking.userId?.slice(-3)}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {new Date((booking as any).travelDate || (booking as any).date || 0).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {new Date(booking.bookingDate || (booking as any).createdAt || 0).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}
+                        </td>
                         <td className="px-6 py-4 text-sm font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -484,7 +528,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     ))}
                     {filteredBookings.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="text-center py-6 text-gray-500">ไม่มีข้อมูลการจองที่ค้นหา</td>
+                        <td colSpan={7} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบข้อมูลการจองที่ค้นหา' : 'No bookings found'}</td>
                       </tr>
                     )}
                   </tbody>
@@ -496,32 +540,43 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
         {/* ================= PAYMENTS TAB ================= */}
         {activeTab === 'payments' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{t.payment.title}</h2>
                 <p className="text-gray-600 mt-1">{t.payment.desc}</p>
               </div>
-              {/* 🟢 แก้ไขช่องค้นหาแท็บการชำระเงิน */}
-              <div className="relative group w-full md:w-auto">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Search className="w-5 h-5 text-gray-400 group-focus-within:text-[#00A699] transition-colors" />
+              <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                
+                {/* 🟢 ตัวเรียงลำดับ (การชำระเงิน) */}
+                <select
+                  className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
+                  value={paymentSort}
+                  onChange={(e) => setPaymentSort(e.target.value)}
+                >
+                  <option value="oldest">{language === 'th' ? 'เรียงตาม: รอนานที่สุด' : 'Sort: Oldest First'}</option>
+                  <option value="newest">{language === 'th' ? 'เรียงตาม: ล่าสุด' : 'Sort: Newest First'}</option>
+                  <option value="amountDesc">{language === 'th' ? 'เรียงตาม: ยอดเงินสูงสุด' : 'Sort: Highest Amount'}</option>
+                </select>
+
+                <div className="relative group w-full md:w-64">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Search className="w-5 h-5 text-gray-400 group-focus-within:text-[#00A699] transition-colors" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={language === 'th' ? "ค้นหารหัส/ชื่อทัวร์..." : "Search ID/Tour name..."}
+                    className="block w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all duration-200 shadow-sm"
+                    value={paymentSearch}
+                    onChange={(e) => setPaymentSearch(e.target.value)}
+                  />
                 </div>
-                <input
-                  type="text"
-                  placeholder="ค้นหารหัส/ชื่อทัวร์..."
-                  className="block w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all duration-200 shadow-sm"
-                  value={paymentSearch}
-                  onChange={(e) => setPaymentSearch(e.target.value)}
-                />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 🟢 เปลี่ยนจาก bookingsList.filter... เป็น filteredPayments.map */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPayments.map((booking) => (
                 <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg">
-                  {/* ... (โค้ดด้านใน card นี้คงเดิม) ... */}
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="text-sm text-gray-600 mb-1">{t.table.id}</div>
@@ -529,9 +584,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </div>
                     <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg text-xs font-semibold">Pending</span>
                   </div>
-                  {/* ... โค้ดส่วนอื่นๆ ใน card เหมือนเดิม ... */}
                   <div className="mb-4">
-                    <div className="font-medium text-gray-900 mb-1">{getLang(booking, 'tourName', language)}</div>
+                    <div className="font-medium text-gray-900 mb-1">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
                     <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
                   </div>
                   <div className="bg-gray-100 rounded-2xl p-6 mb-4 text-center">
@@ -559,12 +613,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
                 </div>
               ))}
-              {/* 🟢 เปลี่ยนเป็น filteredPayments */}
               {filteredPayments.length === 0 && (
-                <div className="col-span-2 bg-white rounded-3xl p-12 text-center shadow-lg">
+                <div className="col-span-full bg-white rounded-3xl p-12 text-center shadow-lg border">
                   <div className="text-6xl mb-4">✓</div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{t.payment.caughtUp}</h3>
-                  <p className="text-gray-600">ไม่พบรายการ หรือ ตรวจสอบครบหมดแล้ว</p>
+                  <p className="text-gray-600">{language === 'th' ? 'ไม่พบรายการ หรือ ตรวจสอบครบหมดแล้ว' : 'All caught up! No pending payments.'}</p>
                 </div>
               )}
             </div>
@@ -572,26 +625,48 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         )}
 
         {/* ================= TOURS TAB ================= */}
-        {/* ================= TOURS TAB ================= */}
         {activeTab === 'tours' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-in fade-in duration-500">
             {!isAddingTour ? (
               <>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">{t.tours.title}</h2>
                     <p className="text-gray-600 mt-1">{t.tours.desc}</p>
                   </div>
 
-                  <div className="flex gap-3 w-full md:w-auto">
-                    {/* 🟢 แก้ไขช่องค้นหาแท็บทัวร์ */}
-                    <div className="relative group flex-1 md:w-64">
+                  <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+                    
+                    {/* 🟢 ตัวกรองจังหวัด (ทัวร์) */}
+                    <select
+                      className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
+                      value={tourProvinceFilter}
+                      onChange={(e) => setTourProvinceFilter(e.target.value)}
+                    >
+                      <option value="all">{language === 'th' ? 'ทุกจังหวัด' : 'All Provinces'}</option>
+                      {allProvinces.map(p => (
+                        <option key={p.id} value={p.id}>{getLang(p, 'name', language)}</option>
+                      ))}
+                    </select>
+
+                    {/* 🟢 ตัวเรียงลำดับ (ทัวร์) */}
+                    <select
+                      className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
+                      value={tourPriceSort}
+                      onChange={(e) => setTourPriceSort(e.target.value)}
+                    >
+                      <option value="default">{language === 'th' ? 'เรียงตาม: ล่าสุด' : 'Sort: Default'}</option>
+                      <option value="asc">{language === 'th' ? 'ราคา: ต่ำไปสูง' : 'Price: Low to High'}</option>
+                      <option value="desc">{language === 'th' ? 'ราคา: สูงไปต่ำ' : 'Price: High to Low'}</option>
+                    </select>
+
+                    <div className="relative group w-full md:w-64">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                         <Search className="w-5 h-5 text-gray-400 group-focus-within:text-[#00A699] transition-colors" />
                       </div>
-                     <input
+                      <input
                         type="text"
-                        placeholder="ค้นหาชื่อทัวร์..."
+                        placeholder={language === 'th' ? "ค้นหาชื่อทัวร์/รหัส..." : "Search tour name/ID..."}
                         className="block w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all duration-200 shadow-sm"
                         value={tourSearch}
                         onChange={(e) => setTourSearch(e.target.value)}
@@ -603,7 +678,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         setEditingTourId(null);
                         setTourForm({ ...initialTourForm, id: `T-${Date.now()}` });
                       }}
-                      className="flex items-center gap-2 bg-[#00A699] hover:bg-[#008c81] text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg whitespace-nowrap"
+                      className="flex items-center justify-center gap-2 bg-[#00A699] hover:bg-[#008c81] text-white px-6 py-2.5 rounded-xl font-semibold transition shadow-lg whitespace-nowrap"
                     >
                       <Plus className="w-5 h-5" />
                       {t.quickActions.addTour}
@@ -614,25 +689,22 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 <div className="bg-white rounded-3xl shadow-lg overflow-hidden border">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      {/* ... (thead คงเดิม) ... */}
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
+                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{language === 'th' ? 'รหัส' : 'ID'}</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.name}</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.province}</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.duration}</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.price}</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.rating}</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.actions}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {/* 🟢 เปลี่ยนจาก allTours.map เป็น filteredTours.map */}
                         {filteredTours.map((tour) => (
                           <tr key={tour.id} className="hover:bg-gray-50 transition">
-                            {/* ... (ข้อมูล td คงเดิมทั้งหมด) ... */}
+                            <td className="px-6 py-4 text-sm font-bold text-[#00A699]">{tour.id}</td>
                             <td className="px-6 py-4">
                               <div className="font-medium text-gray-900">{getLang(tour, 'name', language)}</div>
-                              <div className="text-sm text-gray-600">{tour.id}</div>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-900">
                               {typeof tour.province === 'object' && tour.province !== null
@@ -657,10 +729,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
-                                <button
-                                  onClick={() => handleDeleteTour(tour.id)}
-                                  className="text-red-500 hover:text-red-600 transition p-2"
-                                >
+                                <button onClick={() => handleDeleteTour(tour.id)} className="text-red-500 hover:text-red-600 transition p-2">
                                   <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
@@ -669,7 +738,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         ))}
                         {filteredTours.length === 0 && (
                           <tr>
-                            <td colSpan={6} className="text-center py-6 text-gray-500">ไม่พบทัวร์ที่ค้นหา</td>
+                            <td colSpan={7} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบทัวร์ที่ค้นหา' : 'No tours found'}</td>
                           </tr>
                         )}
                       </tbody>
@@ -678,7 +747,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
               </>
             ) : (
-              /* ฟอร์มเพิ่ม/แก้ไขทัวร์ */
+              /* ================= ฟอร์มเพิ่ม/แก้ไขทัวร์ ================= */
               <div className="bg-white rounded-3xl shadow-xl p-8 border animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-center mb-8 border-b pb-4">
                   <h2 className="text-2xl font-bold">
@@ -716,29 +785,29 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
-                      <label className="block font-bold">รหัสทัวร์ (ID)</label>
+                      <label className="block font-bold">{language === 'th' ? 'รหัสทัวร์ (ID)' : 'Tour ID'}</label>
                       <input className={`w-full p-4 border rounded-2xl ${editingTourId ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-50'}`}
                         placeholder="เช่น cm-003" value={tourForm.id || ''} disabled={!!editingTourId}
                         onChange={e => setTourForm({ ...tourForm, id: e.target.value })} />
 
-                      <label className="block font-bold">ชื่อทัวร์ ({formLang.toUpperCase()})</label>
+                      <label className="block font-bold">{language === 'th' ? 'ชื่อทัวร์' : 'Tour Name'} ({formLang.toUpperCase()})</label>
                       <input className="w-full p-4 bg-gray-50 border rounded-2xl" value={formLang === 'en' ? (tourForm.name || '') : (tourForm.name_th || '')}
                         onChange={e => setTourForm({ ...tourForm, [formLang === 'en' ? 'name' : 'name_th']: e.target.value })} />
 
-                      <label className="block font-bold">รายละเอียด (Description) ({formLang.toUpperCase()})</label>
-                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl" value={formLang === 'en' ? (tourForm.description || '') : (tourForm.description_th || '')}
+                      <label className="block font-bold">{language === 'th' ? 'รายละเอียด' : 'Description'} ({formLang.toUpperCase()})</label>
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32" value={formLang === 'en' ? (tourForm.description || '') : (tourForm.description_th || '')}
                         onChange={e => setTourForm({ ...tourForm, [formLang === 'en' ? 'description' : 'description_th']: e.target.value })} />
 
-                      <label className="block font-bold">ราคาพื้นฐาน</label>
+                      <label className="block font-bold">{language === 'th' ? 'ราคาพื้นฐาน' : 'Base Price'}</label>
                       <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold text-[#00A699]" placeholder="0" value={tourForm.price || ''}
                         onChange={e => setTourForm({ ...tourForm, price: Number(e.target.value) })} />
                     </div>
                     <div className="space-y-4">
-                      <label className="block font-bold">รูปภาพหลัก (URL)</label>
+                      <label className="block font-bold">{language === 'th' ? 'รูปภาพหลัก' : 'Main Image'} (URL)</label>
                       <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="https://..." value={tourForm.image || ''}
                         onChange={e => setTourForm({ ...tourForm, image: e.target.value })} />
 
-                      <label className="block font-bold">ระยะเวลา</label>
+                      <label className="block font-bold">{language === 'th' ? 'ระยะเวลา' : 'Duration'}</label>
                       <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="1 Day" value={tourForm.duration || ''}
                         onChange={e => setTourForm({ ...tourForm, duration_th: e.target.value, duration: e.target.value })} />
                     </div>
@@ -747,7 +816,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   <div className="border-t pt-8">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-bold flex items-center gap-2"><ListChecks /> {tourT.itinerary}</h3>
-                      <button onClick={handleAddDay} className="text-[#00A699] font-bold text-sm">+ เพิ่มวันเดินทาง</button>
+                      <button onClick={handleAddDay} className="text-[#00A699] font-bold text-sm">{language === 'th' ? '+ เพิ่มวันเดินทาง' : '+ Add Day'}</button>
                     </div>
                     <div className="space-y-4">
                       {tourForm.itinerary?.map((day, idx) => (
@@ -759,7 +828,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                               updated[idx] = { ...updated[idx], title: e.target.value, title_th: e.target.value };
                               setTourForm({ ...tourForm, itinerary: updated });
                             }} />
-                          <textarea className="w-full p-3 bg-white border rounded-xl text-sm" placeholder="กิจกรรมรายวัน (ใช้เครื่องหมาย , แยกกิจกรรม)" value={day.activities?.join(',') || ''}
+                          <textarea className="w-full p-3 bg-white border rounded-xl text-sm" placeholder={language === 'th' ? "กิจกรรมรายวัน (ใช้เครื่องหมาย , แยกกิจกรรม)" : "Daily activities (comma separated)"} value={day.activities?.join(',') || ''}
                             onChange={e => {
                               const updated = [...(tourForm.itinerary || [])];
                               updated[idx] = { ...updated[idx], activities: e.target.value.split(','), activities_th: e.target.value.split(',') };
@@ -785,10 +854,12 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         )}
       </div>
 
-      {/* Booking Detail Modal */}
+      {/* ================= MODALS ================= */}
+
+      {/* 1. Modal ดูรายละเอียดการจอง */}
       {selectedBooking && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">{t.modal.title}</h2>
               <button onClick={() => setSelectedBooking(null)} className="text-gray-400 hover:text-gray-600 transition">
@@ -811,7 +882,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">{t.tours.name}</div>
-                  <div className="font-medium text-gray-900">{getLang(selectedBooking, 'tourName', language)}</div>
+                  <div className="font-medium text-gray-900">{getLang(selectedBooking, 'tourName', language) || getLang(selectedBooking, 'tourNameSnapshot', language)}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">{t.tours.province}</div>
@@ -819,7 +890,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">{common.selectDate}</div>
-                  <div className="font-medium text-gray-900">{new Date(selectedBooking.date).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</div>
+                  <div className="font-medium text-gray-900">{new Date(selectedBooking.date || selectedBooking.travelDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-600 mb-1">{common.travelers}</div>
@@ -848,6 +919,43 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         </div>
       )}
+
+      {/* 2. Custom Popup Modal (Alert / Confirm) */}
+      {popup.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${
+              popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'
+            }`}>
+              {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> : <CheckCircle className="w-10 h-10" />}
+            </div>
+            <h3 className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">{popup.title}</h3>
+            <p className="text-gray-500 mb-8 leading-relaxed text-sm">{popup.message}</p>
+            <div className="flex gap-3">
+              {popup.type === 'confirm' && (
+                <button onClick={closePopup} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl font-bold active:scale-95 transition">
+                  {language === 'th' ? 'ยกเลิก' : 'Cancel'}
+                </button>
+              )}
+              <button 
+                onClick={() => {
+                  if (popup.type === 'confirm' && popup.onConfirm) {
+                    popup.onConfirm();
+                  } else {
+                    closePopup();
+                  }
+                }} 
+                className={`flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg ${
+                  popup.type === 'confirm' ? 'bg-[#FF6B4A] hover:bg-[#ff5232] shadow-orange-200' : 'bg-[#00A699] hover:bg-[#008c81] shadow-[#00A699]/30'
+                }`}
+              >
+                {popup.type === 'confirm' ? (language === 'th' ? 'ยืนยัน' : 'Confirm') : (language === 'th' ? 'ตกลง' : 'OK')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
