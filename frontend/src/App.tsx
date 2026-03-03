@@ -19,11 +19,14 @@ import AllProvincesPage from './pages/AllProvincesPage';
 // Service & Types
 import { tourService } from './services/api';
 import type { Province } from './data/mockData';
+import { BookingPage } from './components/ui/booking-page';
+import { PaymentPage } from './components/ui/payment-page';
+import { PaymentConfirmation } from './components/ui/payment-confirmation';
 
-// --- Mock Pages ---
-const BookingPage = () => <div className="p-10 pt-24 text-center"><h1>📅 หน้าจองทัวร์ (Booking)</h1><p>ระบบจองจะอยู่ที่นี่</p></div>;
-const BookingsHistoryPage = () => <div className="p-10 pt-24 text-center"><h1>🎫 ประวัติการจอง (My Bookings)</h1><p>รายการที่จองแล้วจะขึ้นหน้านี้</p></div>;
-const UserProfile = () => <div className="p-10 pt-24 text-center"><h1>👤 โปรไฟล์ผู้ใช้ (Profile)</h1><p>แก้ไขข้อมูลส่วนตัว</p></div>;
+// Placeholder components - replace with actual imports
+const BookingsHistoryPage = () => <div className="p-20 text-center">Bookings History</div>;
+const UserProfile = () => <div className="p-20 text-center">User Profile</div>;
+
 
 // --- Helper Components ---
 
@@ -78,6 +81,16 @@ function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'th' | 'en'>('th');
+  const [bookingData, setBookingData] = useState<any>(null);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('bookingData');
+      if (stored) setBookingData(JSON.parse(stored));
+    } catch (e) {
+      console.warn('Failed to parse bookingData from sessionStorage', e);
+    }
+  }, []);
 
   // Logic: การแสดงผล Navbar และ ChatWidget
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
@@ -97,9 +110,26 @@ function AppContent() {
     return '';
   };
 
-  const handleNavigate = (pageId: string) => {
+  const handleNavigate = (pageId: string, data?: any) => {
+    if (pageId === 'payment') {
+      setBookingData(data); // เก็บข้อมูลก่อนไปหน้าจ่ายเงิน
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      navigate('/payment');
+      return;
+    }
+    if (pageId === 'payment-confirmation') {
+      setBookingData(data);
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      navigate('/payment-confirmation');
+      return;
+    }
+    if (pageId === 'home') {
+      try { sessionStorage.removeItem('bookingData'); } catch {};
+      setBookingData(null);
+      navigate('/');
+      return;
+    }
     switch (pageId) {
-      case 'home': navigate('/'); break;
       case 'provinces': navigate('/provinces'); break;
       case 'bookings': navigate('/my-bookings'); break;
       case 'dashboard': navigate('/profile'); break;
@@ -137,11 +167,20 @@ function AppContent() {
 
         {/* Private (User) */}
         <Route element={<PrivateRoute />}>
-          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
+          <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
           <Route path="/my-bookings" element={<BookingsHistoryPage />} />
           <Route path="/profile" element={<UserProfile />} />
         </Route>
 
+        {/* Payment Pages */}
+        <Route path="/payment" element={<PaymentPage bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
+        <Route path="/payment-confirmation" element={<PaymentConfirmation bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
+
+        <Route path="/admin/dashboard" element={<AdminDashboardPage onNavigate={handleNavigate} language={language} />} />
+        <Route path="/admin/chat" element={<AdminChatPage />} />
+
+        
         {/* Admin Only */}
         <Route element={<AdminRoute />}>
           <Route
