@@ -30,6 +30,7 @@ export const tourService = {
 
 export const bookingService = {
   getAllBookings: () => api.get<Booking[]>('/bookings'), 
+  createBooking: (data: Partial<Booking>) => api.post('/bookings', data),
   updateBookingStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
 };
