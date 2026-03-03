@@ -57,6 +57,9 @@ export class ToursService {
 
   async createTour(tourData: Partial<Tour>) {
     const newTour = this.tourRepository.create(tourData);
+    const savedTour = await this.tourRepository.save(newTour); // บันทึก Tour ก่อน
+    
+    // ถ้าบันทึก Tour สำเร็จ ค่อยมาอัปเดต Province
     if (tourData.provinceId) {
       const province = await this.provinceRepository.findOne({ where: { id: tourData.provinceId }});
       if (province) {
@@ -64,7 +67,7 @@ export class ToursService {
         await this.provinceRepository.save(province);
       }
     }
-    return await this.tourRepository.save(newTour);
+    return savedTour;
   }
 
   // 🟢 1. เพิ่มฟังก์ชันสำหรับอัปเดตข้อมูลทัวร์
