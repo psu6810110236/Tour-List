@@ -43,7 +43,9 @@ export class ToursService {
   }
 
   async findOne(id: string) {
-    return this.tourRepository.findOne({ where: { id: Number(id) }, relations: ['province'] });
+    const tour = await this.tourRepository.findOne({ where: { id: Number(id) }, relations: ['province'] });
+    if (!tour) throw new NotFoundException(`ไม่พบทัวร์รหัส ${id}`);
+    return tour;
   }
 
   async findAllProvinces() {
@@ -72,7 +74,8 @@ export class ToursService {
 
   // 🟢 1. เพิ่มฟังก์ชันสำหรับอัปเดตข้อมูลทัวร์
   async updateTour(id: string, tourData: Partial<Tour>) {
-    await this.tourRepository.update(Number(id), tourData);
+    const result = await this.tourRepository.update(Number(id), tourData);
+    if (result.affected === 0) throw new NotFoundException(`ไม่พบทัวร์รหัส ${id} ที่ต้องการแก้ไข`);
     return this.tourRepository.findOne({ where: { id: Number(id) } });
   }
 
