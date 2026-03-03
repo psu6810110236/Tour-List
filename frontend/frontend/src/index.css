@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    /* ใช้ Gradient แบบในรูปต้นฉบับ */
+    background: linear-gradient(135deg, #00A699 0%, #007AFF 100%);
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* สร้าง Class พิเศษสำหรับพื้นหลังแบบในรูป */
+.bg-main-gradient {
+  background: linear-gradient(135deg, #00A699 0%, #007AFF 100%);
+}
