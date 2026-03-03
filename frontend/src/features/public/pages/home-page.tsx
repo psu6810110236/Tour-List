@@ -184,12 +184,13 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
       </div>
 
-      {/* ================= STATS SECTION (Clean & Centered Layout) ================= */}
+      {/* ================= STATS SECTION (Glowing Layout) ================= */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-8 md:-mt-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
 
           {/* Card 1: ซ้าย */}
-          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-xl shadow-gray-200/50 border border-gray-100 transform hover:-translate-y-2 transition duration-300 flex flex-col items-center text-center">
+          {/* 🟢 เพิ่มเอฟเฟกต์เรืองแสงสีฟ้าอ่อนรอบทิศทาง และสว่างขึ้นเมื่อเอาเมาส์ชี้ */}
+          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
             </div>
@@ -198,20 +199,19 @@ export default function HomePage({ language }: HomePageProps) {
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'แพ็กเกจที่คัดสรรมาอย่างดี' : 'Carefully curated packages'}</p>
           </div>
 
-          {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย และเน้นสีแบรนด์ที่ตัวเลข) */}
-          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-2xl shadow-gray-300/60 border border-gray-100 md:-mt-6 transform hover:-translate-y-2 transition duration-300 flex flex-col items-center text-center relative z-10">
-            {/* 🟢 ไฮไลต์ที่ไอคอนแทน: พื้นหลังสีเขียวทึบ ไอคอนสีขาว พร้อมเงาเรืองแสง */}
+          {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย) */}
+          {/* 🟢 กล่องกลางจะเรืองแสงสว่างกว่าเพื่อนเล็กน้อย เพื่อให้ดูโดดเด่น */}
+          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_35px_rgba(56,189,248,0.4)] hover:shadow-[0_0_50px_rgba(56,189,248,0.7)] border border-sky-200 md:-mt-6 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center relative z-10">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
               <MapPin className="w-8 h-8" />
             </div>
-            {/* 🟢 กลับมาใช้เลขสีดำให้คุมโทนกับเพื่อนๆ */}
             <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">77</div>
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</h3>
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'ครอบคลุมทุกจุดหมายปลายทาง' : 'Covering all destinations'}</p>
           </div>
 
           {/* Card 3: ขวา */}
-          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-xl shadow-gray-200/50 border border-gray-100 transform hover:-translate-y-2 transition duration-300 flex flex-col items-center text-center">
+          <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center text-yellow-500 mb-4">
               <Star className="w-8 h-8 fill-yellow-500" />
             </div>
@@ -225,7 +225,6 @@ export default function HomePage({ language }: HomePageProps) {
 
         </div>
       </div>
-
       {/* Province Selection */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">

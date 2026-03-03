@@ -58,23 +58,49 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.email} className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#00A699] outline-none transition-all" required />
+                {/* 🟢 แก้ไขตรงนี้: ใช้กรอบ Flex ครอบไอคอนไว้ */}
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="text-gray-400 w-5 h-5" />
+                </div>
+                <input 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  placeholder={t.email} 
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#00A699] outline-none transition-all" 
+                  required 
+                />
               </div>
             </div>
+            
 
+            {/* 🔵 ช่อง Password */}
             <div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t.password} className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#00A699] outline-none transition-all" required />
+                {/* 🟢 แก้ไขตรงนี้: ใช้กรอบ Flex ครอบไอคอนไว้ */}
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="text-gray-400 w-5 h-5" />
+                </div>
+                <input 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  placeholder={t.password} 
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-[#00A699] outline-none transition-all" 
+                  required 
+                />
               </div>
               <div className="text-right mt-2">
-                <button type="button" className="text-xs text-[#00A699] font-semibold tracking-wide uppercase">{language === 'th' ? 'ลืมรหัสผ่าน?' : 'Forgot Password?'}</button>
+                <button type="button" className="text-xs text-[#00A699] font-semibold tracking-wide uppercase">
+                  {language === 'th' ? 'ลืมรหัสผ่าน?' : 'Forgot Password?'}
+                </button>
               </div>
             </div>
-
-            <button type="submit" className="w-full bg-[#FF6B4A] hover:bg-[#ff5232] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 transition-all transform hover:scale-[1.02]">
-              {t.loginBtn}
+            <button 
+              type="submit" 
+              className="w-full mt-6 bg-[#FF6B4A] hover:bg-[#ff5232] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-[#FF6B4A]/30 hover:shadow-[#FF6B4A]/50 transition-all active:scale-95"
+            >
+              {language === 'th' ? 'เข้าสู่ระบบ' : 'Login'}
             </button>
           </form>
 
