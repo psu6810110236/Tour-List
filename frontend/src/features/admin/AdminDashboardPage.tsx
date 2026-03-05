@@ -812,7 +812,44 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         onChange={e => setTourForm({ ...tourForm, duration_th: e.target.value, duration: e.target.value })} />
                     </div>
                   </div>
+                  {/* 🟢 ส่วนที่เพิ่มใหม่: จุดเด่น สิ่งที่รวม และสิ่งที่ไม่รวม */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t">
+                    <div className="space-y-4">
+                      <label className="block font-bold text-[#00A699]">{language === 'th' ? 'จุดเด่น (Highlights)' : 'Highlights'} ({formLang.toUpperCase()})</label>
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                        placeholder={language === 'th' ? "เช่น ดำน้ำดูปะการัง, ชมวิวภูเขา (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Snorkeling, Mountain View (comma separated)"}
+                        value={formLang === 'en' ? (tourForm.highlights?.join(',') || '') : (tourForm.highlights_th?.join(',') || '')}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const arr = val ? val.split(',') : [];
+                          setTourForm({ ...tourForm, [formLang === 'en' ? 'highlights' : 'highlights_th']: arr });
+                        }} />
+                    </div>
 
+                    <div className="space-y-4">
+                      <label className="block font-bold text-green-600">{language === 'th' ? 'สิ่งที่รวม (Included)' : 'Included'} ({formLang.toUpperCase()})</label>
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                        placeholder={language === 'th' ? "เช่น รถรับส่ง, อาหารกลางวัน (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Transfer, Lunch (comma separated)"}
+                        value={formLang === 'en' ? (tourForm.included?.join(',') || '') : (tourForm.included_th?.join(',') || '')}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const arr = val ? val.split(',') : [];
+                          setTourForm({ ...tourForm, [formLang === 'en' ? 'included' : 'included_th']: arr });
+                        }} />
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="block font-bold text-red-600">{language === 'th' ? 'สิ่งที่ไม่รวม (Not Included)' : 'Not Included'} ({formLang.toUpperCase()})</label>
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                        placeholder={language === 'th' ? "เช่น ค่าใช้จ่ายส่วนตัว, ทิปไกด์ (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Personal expenses, Guide tips (comma separated)"}
+                        value={formLang === 'en' ? (tourForm.notIncluded?.join(',') || '') : (tourForm.notIncluded_th?.join(',') || '')}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const arr = val ? val.split(',') : [];
+                          setTourForm({ ...tourForm, [formLang === 'en' ? 'notIncluded' : 'notIncluded_th']: arr });
+                        }} />
+                    </div>
+                  </div>
                   <div className="border-t pt-8">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-bold flex items-center gap-2"><ListChecks /> {tourT.itinerary}</h3>
