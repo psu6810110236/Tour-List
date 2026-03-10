@@ -24,6 +24,8 @@ export const tourService = {
     api.get<Tour[]>('/tours/search', { params }), // บอกว่า return เป็น Array ของ Tour
     
   getProvinces: () => api.get<Province[]>('/tours/provinces'),
+
+  getProvinceById: (id: string) => api.get<Province>(`/tours/provinces/${id}`),
   
   getById: (id: string) => api.get<Tour>(`/tours/${id}`),
   
