@@ -62,23 +62,19 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
 
-  // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
   useEffect(() => {
     if (!id) return;
 
     const fetchTourDetail = async () => {
       setLoading(true);
       setError(null);
-      try {
-        // ยิง API ไปที่ Backend NestJS ของเรา
-        const response = await fetch(`http://localhost:3000/api/tours/${id}`);
+      
+      try { 
         
-        if (!response.ok) {
-           throw new Error('ไม่พบข้อมูลทัวร์นี้ หรือเซิร์ฟเวอร์มีปัญหา');
-        }
+        const response = await tourService.getById(id);
+        
+        setTour(response.data as unknown as TourDetail);
 
-        const data: TourDetail = await response.json();
-        setTour(data);
       } catch (err: unknown) { 
         console.error("Error fetching tour details:", err);
         if (err instanceof Error) {
