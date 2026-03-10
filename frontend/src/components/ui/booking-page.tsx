@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertTriangle, X, CheckCircle } from "lucide-react";
 import type { Tour } from "../../types/index"; 
-import {  translations } from "../../data/translations";
-import type{ Language } from "../../data/translations";
+import { translations } from "../../data/translations";
+import type { Language } from "../../data/translations";
+import { tourService } from "../../services/api";
 
 interface BookingPageProps {
   tour?: Tour | null;
@@ -11,8 +12,6 @@ interface BookingPageProps {
   language: Language;
   onAddToCart?: (item: any) => void;
 }
-
-import { tourService } from "../../services/api";
 
 export function BookingPage({ tour, onNavigate, language, onAddToCart }: BookingPageProps) {
   const t = translations[language].booking;
@@ -24,6 +23,28 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const [selectedDate, setSelectedDate] = useState("2026-03-15");
   const [travelers, setTravelers] = useState(2);
   const [contactInfo, setContactInfo] = useState({ fullName: "", email: "", phone: "", specialRequests: "" });
+
+  // --- ระบบ Pop-up Modal ที่เพิ่มเข้ามาใหม่ ---
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "warning" | "error" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "warning",
+  });
+
+  const showAlert = (title: string, message: string, type: "warning" | "error" | "success") => {
+    setModalConfig({ isOpen: true, title, message, type });
+  };
+
+  const closeModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
+  // --------------------------------------
 
   const totalPrice = (localTour?.price || 0) * travelers;
 
@@ -50,7 +71,12 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
 
   const validateForm = () => {
     if (!contactInfo.fullName || !contactInfo.email || !contactInfo.phone) {
-      alert(language === "th" ? "กรุณากรอกข้อมูลผู้ติดต่อให้ครบถ้วน" : "Please fill in all contact information");
+      // เปลี่ยนจาก alert() เป็น showAlert()
+      showAlert(
+        language === "th" ? "กรุณากรอกข้อมูลให้ครบถ้วน" : "Incomplete Information",
+        language === "th" ? "กรุณากรอกข้อมูลผู้ติดต่อให้ครบถ้วนก่อนดำเนินการต่อ" : "Please fill in all contact information before proceeding.",
+        "warning"
+      );
       return false;
     }
     return true;
@@ -72,7 +98,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   if (!localTour) return <div className="min-h-screen flex items-center justify-center">{language === 'th' ? 'ไม่พบข้อมูลทัวร์' : 'Tour not found'}</div>;
 
   return (
-    <div className="min-h-screen bg-[#F7F9FA] pb-28 font-sans">
+    <div className="min-h-screen bg-[#F7F9FA] pb-28 font-sans relative">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -209,6 +235,38 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
           </div>
         </div>
       </div>
+
+      {/* --- ส่วนที่เพิ่มใหม่: UI Pop-up Modal (แทรกเพิ่มโดยไม่แก้ UI เดิม) --- */}
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+            <div className="p-8 text-center relative">
+              <button onClick={closeModal} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className={`mx-auto flex items-center justify-center h-20 w-20 rounded-full mb-6 ${
+                modalConfig.type === 'warning' ? 'bg-orange-50 text-orange-500' : 
+                modalConfig.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-teal-50 text-[#00A699]'
+              }`}>
+                {modalConfig.type === 'warning' && <AlertTriangle className="h-10 w-10" />}
+                {modalConfig.type === 'error' && <X className="h-10 w-10" />}
+                {modalConfig.type === 'success' && <CheckCircle className="h-10 w-10" />}
+              </div>
+              
+              <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">{modalConfig.title}</h3>
+              <p className="text-gray-500 font-medium leading-relaxed mb-8">{modalConfig.message}</p>
+              
+              <button
+                onClick={closeModal}
+                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-black transition-all active:scale-[0.97] shadow-lg shadow-gray-200"
+              >
+                {language === "th" ? "รับทราบ" : "Got it"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
