@@ -206,11 +206,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
       const matchesSearch = String(b.id || '').toLowerCase().includes(searchLower) || String(tourName).toLowerCase().includes(searchLower);
       const matchesStatus = bookingStatusFilter === 'all' || b.status === bookingStatusFilter;
-      
+
       const relatedTour = b.tour || allTours.find(t => t.id === b.tourId);
       const bProv = relatedTour?.province || b.province;
       const bProvId = typeof bProv === 'object' && bProv !== null ? (bProv as any).id : (relatedTour?.provinceId || bProv || '');
-      
+
       const matchesProvince = bookingProvinceFilter === 'all' || String(bProvId).toLowerCase() === bookingProvinceFilter.toLowerCase();
 
       return matchesSearch && matchesStatus && matchesProvince;
@@ -253,7 +253,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       const searchLower = (tourSearch || '').toLowerCase();
       const tourName = getLang(t, 'name', language) || '';
       const matchesSearch = String(tourName).toLowerCase().includes(searchLower) || String(t.id || '').toLowerCase().includes(searchLower);
-      
+
       const currentProvinceId = typeof t.province === 'object' && t.province !== null ? (t.province as any).id : t.provinceId || t.province;
       const matchesProvince = tourProvinceFilter === 'all' || currentProvinceId === tourProvinceFilter;
 
@@ -268,26 +268,30 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Admin Header */}
-      <div className="bg-gradient-to-r from-[#1e293b] to-[#0f172a] text-white">
+      <div className="bg-white border-b border-gray-200 text-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-18 h-18 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden">
+              {/* ส่วนของโลโก้ (ปรับพื้นหลังนิดหน่อยให้ดูมีมิติบนพื้นขาว) */}
+              <div className="w-18 h-18 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center p-1 overflow-hidden">
                 <img
                   src={LOGO_URL}
                   alt="RoamHub Tour Logo"
-                  className="w-16 h-16 object-contain"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div>
+                {/* สีตัวอักษร Title จะใช้ text-gray-900 จาก parent อัตโนมัติ */}
                 <h1 className="text-2xl font-bold">{t.title}</h1>
-                <p className="text-white/80 text-sm">{t.subtitle}</p>
+                {/* เปลี่ยนสี Subtitle เป็นสีเทาแทนสีขาว */}
+                <p className="text-gray-500 text-sm">{t.subtitle}</p>
               </div>
             </div>
 
+            {/* ปุ่ม Logout เปลี่ยนเป็นโทนสีเทาเพื่อให้ตัดกับพื้นหลังสีขาว */}
             <button
               onClick={() => onNavigate('home')}
-              className="flex items-center gap-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 px-4 py-2 rounded-xl transition"
+              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition"
             >
               <LogOut className="w-5 h-5" />
               <span>{t.exit}</span>
@@ -428,7 +432,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             <div className="flex flex-col xl:flex-row justify-between gap-4">
               <h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings}</h2>
               <div className="flex flex-col md:flex-row gap-3">
-                
+
                 {/* 🟢 ตัวกรองจังหวัด (การจอง) */}
                 <select
                   className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
@@ -547,7 +551,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 <p className="text-gray-600 mt-1">{t.payment.desc}</p>
               </div>
               <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                
+
                 {/* 🟢 ตัวเรียงลำดับ (การชำระเงิน) */}
                 <select
                   className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
@@ -636,7 +640,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
 
                   <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
-                    
+
                     {/* 🟢 ตัวกรองจังหวัด (ทัวร์) */}
                     <select
                       className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
@@ -816,7 +820,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t">
                     <div className="space-y-4">
                       <label className="block font-bold text-[#00A699]">{language === 'th' ? 'จุดเด่น (Highlights)' : 'Highlights'} ({formLang.toUpperCase()})</label>
-                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed"
                         placeholder={language === 'th' ? "เช่น ดำน้ำดูปะการัง, ชมวิวภูเขา (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Snorkeling, Mountain View (comma separated)"}
                         value={formLang === 'en' ? (tourForm.highlights?.join(',') || '') : (tourForm.highlights_th?.join(',') || '')}
                         onChange={e => {
@@ -828,7 +832,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
                     <div className="space-y-4">
                       <label className="block font-bold text-green-600">{language === 'th' ? 'สิ่งที่รวม (Included)' : 'Included'} ({formLang.toUpperCase()})</label>
-                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed"
                         placeholder={language === 'th' ? "เช่น รถรับส่ง, อาหารกลางวัน (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Transfer, Lunch (comma separated)"}
                         value={formLang === 'en' ? (tourForm.included?.join(',') || '') : (tourForm.included_th?.join(',') || '')}
                         onChange={e => {
@@ -840,7 +844,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
                     <div className="space-y-4">
                       <label className="block font-bold text-red-600">{language === 'th' ? 'สิ่งที่ไม่รวม (Not Included)' : 'Not Included'} ({formLang.toUpperCase()})</label>
-                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed"
                         placeholder={language === 'th' ? "เช่น ค่าใช้จ่ายส่วนตัว, ทิปไกด์ (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Personal expenses, Guide tips (comma separated)"}
                         value={formLang === 'en' ? (tourForm.notIncluded?.join(',') || '') : (tourForm.notIncluded_th?.join(',') || '')}
                         onChange={e => {
@@ -961,9 +965,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       {popup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
-            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${
-              popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'
-            }`}>
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'
+              }`}>
               {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> : <CheckCircle className="w-10 h-10" />}
             </div>
             <h3 className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">{popup.title}</h3>
@@ -974,17 +977,16 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   {language === 'th' ? 'ยกเลิก' : 'Cancel'}
                 </button>
               )}
-              <button 
+              <button
                 onClick={() => {
                   if (popup.type === 'confirm' && popup.onConfirm) {
                     popup.onConfirm();
                   } else {
                     closePopup();
                   }
-                }} 
-                className={`flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg ${
-                  popup.type === 'confirm' ? 'bg-[#FF6B4A] hover:bg-[#ff5232] shadow-orange-200' : 'bg-[#00A699] hover:bg-[#008c81] shadow-[#00A699]/30'
-                }`}
+                }}
+                className={`flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg ${popup.type === 'confirm' ? 'bg-[#FF6B4A] hover:bg-[#ff5232] shadow-orange-200' : 'bg-[#00A699] hover:bg-[#008c81] shadow-[#00A699]/30'
+                  }`}
               >
                 {popup.type === 'confirm' ? (language === 'th' ? 'ยืนยัน' : 'Confirm') : (language === 'th' ? 'ตกลง' : 'OK')}
               </button>

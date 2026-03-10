@@ -12,37 +12,52 @@ export class BookingsService {
     private bookingRepository: Repository<Booking>,
   ) {}
 
-  // ดึงข้อมูลการจองทั้งหมด
   async findAll() {
-    return this.bookingRepository.find();
+    return this.bookingRepository.find({
+      relations: ['tour', 'user'],
+      order: { bookingDate: 'DESC' }
+    });
   }
 
-  // อัปเดตสถานะ (อนุมัติ/ปฏิเสธ)
+  // 🟢 ดึงข้อมูลของตัวเอง + ดึงข้อมูล Tour มาด้วย
+  async findMyBookings(userId: string) {
+    return this.bookingRepository.find({
+      where: { user: { id: userId } }, // ใช้ relation user.id
+      relations: ['tour', 'tour.province'], 
+      order: { bookingDate: 'DESC' },
+    });
+  }
+
+  async createBooking(userId: string, bookingData: Partial<Booking>) {
+    const bookingId = `BKG-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`;
+
+    const newBooking = this.bookingRepository.create({
+      ...bookingData,
+      id: bookingId,
+      status: 'PENDING',
+      user: { id: userId } as any, // 🟢 ผูก User เข้ากับ Booking
+      bookingDate: new Date(),
+    });
+    
+    return this.bookingRepository.save(newBooking);
+  }
+
   async updateStatus(id: string, status: string) {
-    // ป้องกันการใส่ Status แปลกๆ เข้า Database
-    if (!VALID_STATUSES.includes(status.toUpperCase())) {
+    const upperStatus = status.toUpperCase();
+    if (!VALID_STATUSES.includes(upperStatus)) {
       throw new BadRequestException(`สถานะ ${status} ไม่ถูกต้อง`);
     }
 
     const booking = await this.bookingRepository.findOne({ where: { id } });
-
-    if (!booking) {
-      throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
-    }
-    booking.status = status.toUpperCase();
+    if (!booking) throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
+    
+    booking.status = upperStatus;
     return this.bookingRepository.save(booking);
   }
-// ฟังก์ชันสร้างการจอง
-async createBooking(bookingData: Partial<Booking>) {
-    const newBooking = this.bookingRepository.create(bookingData);
-    return this.bookingRepository.save(newBooking);
-  }
-// ฟังก์ชันลบการจอง
+
   async deleteBooking(id: string) {
     const booking = await this.bookingRepository.findOne({ where: { id } });
-    if (!booking) {
-      throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
-    }
+    if (!booking) throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
     return this.bookingRepository.remove(booking);
   }
 }
