@@ -62,6 +62,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
 
+// 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
   useEffect(() => {
     if (!id) return;
 
@@ -69,10 +70,12 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
       setLoading(true);
       setError(null);
       
-      try { 
+      try { // <--- ต้องมีคำว่า try นำหน้าเสมอเมื่อใช้คู่กับ catch
         
         const response = await tourService.getById(id);
         
+        // 🟢 ใช้ 'as unknown as TourDetail' เพื่อบอก TypeScript ว่า
+        // เรารู้ว่า Type มันคืออะไร ให้แปลงเป็น TourDetail ซะ จะได้ไม่ Error
         setTour(response.data as unknown as TourDetail);
 
       } catch (err: unknown) { 
