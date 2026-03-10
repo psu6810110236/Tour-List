@@ -34,8 +34,11 @@ export class BookingsService {
     const newBooking = this.bookingRepository.create({
       ...bookingData,
       id: bookingId,
-      status: 'PENDING',
-      user: { id: userId } as any, // 🟢 ผูก User เข้ากับ Booking
+      status: 'PENDING', 
+      // 🟢 ตรวจสอบว่าถ้ามีสลิปแนบมา ให้เปลี่ยนสถานะการจ่ายเงินเป็น "รอตรวจสอบ"
+      paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',
+      user: { id: userId }, 
+      tour: { id: bookingData.tourId }, // 🟢 สำคัญ: ต้องผูก relation ของ Tour ให้ครบ
       bookingDate: new Date(),
     });
     

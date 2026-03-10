@@ -42,7 +42,7 @@ export class Booking {
   userId: string;
 
   @Column()
-  tourId: string;
+  tourId: number;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
