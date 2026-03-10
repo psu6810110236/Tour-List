@@ -43,11 +43,13 @@ export class Tour {
   @Column('int', { default: 10 })
   maxCapacity: number;
 
-  // 🌟 [เพิ่มใหม่] ประเภททริป (One Day / Multiple Days)
   @Column({ nullable: true })
   tripType: string;
 
-  // 🌟 [เพิ่มใหม่] วันที่เปิดรับจอง (เก็บเป็น Array ของวันที่ YYYY-MM-DD)
+  // 🌟 [เพิ่มใหม่] จำนวนวันเดินทางของทริปนี้
+  @Column('int', { default: 1 })
+  tripDays: number;
+
   @Column('json', { nullable: true })
   availableDates: string[];
 

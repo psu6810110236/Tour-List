@@ -9,7 +9,6 @@ export interface Province {
   description_th: string;
 }
 
-// กิจกรรมในแต่ละวัน (Itinerary)
 export interface ItineraryItem {
   day: number;
   title: string;
@@ -18,7 +17,6 @@ export interface ItineraryItem {
   activities_th: string[];
 }
 
-// ข้อมูลทัวร์ (ตรงกับ Backend Tour Entity)
 export interface Tour {
   id: string;
   name: string;
@@ -32,11 +30,12 @@ export interface Tour {
   vehicleType?: string;
   maxCapacity?: number;
 
-  // 🌟 [เพิ่มใหม่]
   tripType?: string;
+  // 🌟 [เพิ่มใหม่]
+  tripDays?: number;
   availableDates?: string[];
 
-  image: string; // URL รูปภาพหลัก
+  image: string; 
   rating?: number;
   reviewCount?: number;
   
@@ -53,7 +52,6 @@ export interface Tour {
   itinerary: ItineraryItem[];
 }
 
-// ข้อมูลการจอง (Booking)
 export interface Booking {
   id: string;
   userId: string;
