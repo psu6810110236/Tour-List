@@ -1,10 +1,11 @@
 import { Entity, PrimaryColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
+import { PrimaryGeneratedColumn } from 'typeorm'
 import { User } from './user.entity';
 import { Tour } from './tour.entity';
 
 @Entity()
 export class Booking {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @CreateDateColumn()
