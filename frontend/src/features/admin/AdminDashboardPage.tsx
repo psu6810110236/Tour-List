@@ -92,7 +92,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       const [toursRes, provRes, bookingsRes] = await Promise.all([
         tourService.search({}),
         tourService.getProvinces(),
-        bookingService.getAllBookings()
+        bookingService.getMyBookings()
       ]);
       setAllTours(toursRes.data);
       setAllProvinces(provRes.data);

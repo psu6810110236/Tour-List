@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
+import { api } from "../../services/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -19,13 +20,15 @@ export default function Login() {
     e.preventDefault();
     setError("");
     try {
-      const response = await fetch("http://localhost:3000/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!response.ok) throw new Error("Login failed");
-      const data = await response.json();
+      // เรียกใช้ api.post แทน fetch
+      const response = await api.post("/auth/login", { email, password });
+      
+      // Axios จะเก็บข้อมูลไว้ใน response.data
+      const data = response.data;
+      
+      // บันทึก Token ลง LocalStorage ด้วยเพื่อให้อนาคต api.ts ดึงไปใช้ได้ (สัมพันธ์กับข้อ 3)
+      localStorage.setItem('access_token', data.access_token);
+      
       login(data.access_token, data.user);
       navigate("/");
     } catch (err) {

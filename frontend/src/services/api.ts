@@ -12,9 +12,9 @@ export const api = axios.create({
   },
 });
 
-// 2. เพิ่ม Interceptor เพื่อส่ง Token ไปกับ "ทุก Request" โดยอัตโนมัติ
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  // ดึง token สมมติว่าเก็บไว้ใน localStorage ตอน login
+  const token = localStorage.getItem('access_token'); 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

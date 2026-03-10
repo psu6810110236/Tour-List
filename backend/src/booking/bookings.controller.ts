@@ -2,6 +2,8 @@ import { Controller, Get, Patch, Param, Body, Post, Delete, UseGuards, Request }
 import { BookingsService } from './bookings.service';
 import { AuthGuard } from '@nestjs/passport';
 
+
+@UseGuards(AuthGuard('jwt'))
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
