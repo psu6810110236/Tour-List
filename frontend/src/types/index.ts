@@ -30,6 +30,8 @@ export interface Tour {
   price: number;
   duration: string;
   duration_th: string;
+  vehicleType?: string;
+  maxCapacity?: number;
   image: string; // URL รูปภาพหลัก
   rating?: number;
   reviewCount?: number;

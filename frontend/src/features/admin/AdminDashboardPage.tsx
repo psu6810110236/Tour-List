@@ -73,9 +73,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     onConfirm?: () => void;
   }>({ isOpen: false, type: 'alert', title: '', message: '' });
 
+  // 🌟 [เพิ่มใหม่] ใส่ค่า Default สำหรับยานพาหนะและจำนวนคน
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
     provinceId: '', province: '', price: 0, duration: '', duration_th: '', image: '',
+    vehicleType: 'รถตู้ VIP', maxCapacity: 10,
     highlights: [], highlights_th: [], itinerary: [{ day: 1, title: '', title_th: '', activities: [], activities_th: [] }],
     included: [], included_th: [], notIncluded: [], notIncluded_th: []
   };
@@ -111,11 +113,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const showConfirm = (title: string, message: string, onConfirm: () => void) => { setPopup({ isOpen: true, type: 'confirm', title, message, onConfirm }); };
   const closePopup = () => setPopup(prev => ({ ...prev, isOpen: false }));
 
-  // ==========================================
-  // 🟢 ฟังก์ชันจัดการสถานะ
-  // ==========================================
-
-  // 1.1 อนุมัติการจอง (ที่นั่ง)
   const handleApproveBooking = (bookingId: string) => {
     showConfirm(language === 'th' ? "ยืนยันการอนุมัติที่นั่ง" : "Confirm Seat Approval", language === 'th' ? `คุณต้องการอนุมัติที่นั่งให้การจอง ${bookingId} ใช่หรือไม่?` : `Approve seats for booking ${bookingId}?`, async () => {
       try {
@@ -130,10 +127,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
   };
 
-  // 1.2 ปฏิเสธการจอง (ที่นั่ง) -> 🟢 ปฏิเสธสลิปไปด้วยพร้อมกัน
   const handleRejectBooking = (bookingId: string) => {
     const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธการจอง (เช่น ทัวร์เต็ม):" : "Please enter rejection reason (e.g., Tour is full):");
-    if (reason === null) return; // กด Cancel ให้ยกเลิก
+    if (reason === null) return;
 
     showConfirm(language === 'th' ? "ยืนยันการปฏิเสธการจอง" : "Confirm Rejection", language === 'th' ? `คุณต้องการปฏิเสธการจอง ${bookingId} ใช่หรือไม่?` : `Reject booking ${bookingId}?`, async () => {
       try {
@@ -150,7 +146,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
   };
 
-  // 2.1 อนุมัติสลิปโอนเงิน
   const handleApprovePayment = (bookingId: string) => {
     showConfirm(language === 'th' ? "ยืนยันยอดชำระเงิน" : "Confirm Payment", language === 'th' ? `สลิปถูกต้อง อนุมัติยอดเงินสำหรับ ${bookingId} ใช่หรือไม่?` : `Slip is valid, approve payment?`, async () => {
       try {
@@ -165,7 +160,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
   };
 
-  // 2.2 ปฏิเสธสลิปโอนเงิน -> 🟢 ปฏิเสธการจองที่นั่งไปด้วยพร้อมกัน
   const handleRejectPayment = (bookingId: string) => {
     const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธสลิป (เช่น ยอดเงินไม่ตรง):" : "Please enter rejection reason (e.g., Invalid amount):");
     if (reason === null) return;
@@ -194,9 +188,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
   };
 
-  // ==========================================
-  // ฟังก์ชันทัวร์ (Tours)
-  // ==========================================
   const handleEditClick = (tour: Tour) => {
     setEditingTourId(tour.id);
     const currentProvinceId = typeof tour.province === 'object' && tour.province !== null ? (tour.province as any).id : tour.provinceId || tour.province;
@@ -256,11 +247,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     totalRevenue: bookingsList.filter(b => b.status?.toLowerCase() === 'approved' && b.paymentStatus?.toLowerCase() === 'completed').reduce((sum, b) => sum + (b.totalPrice || 0), 0)
   };
 
-  // ==========================================
-  // 🔍 ระบบกรองข้อมูล (Filters)
-  // ==========================================
-
-  // 1. กรองรายการจอง (แท็บ Bookings)
   const filteredBookings = bookingsList
     .filter(b => {
       const searchLower = (bookingSearch || '').toLowerCase();
@@ -291,7 +277,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       return 0;
     });
 
-  // 2. กรองการชำระเงิน (แท็บ Payments)
   const filteredPayments = bookingsList
     .filter(b => b.paymentStatus?.toLowerCase() === 'verifying')
     .filter(b => {
@@ -309,7 +294,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       return 0;
     });
 
-  // 3. กรองทัวร์
   const filteredTours = allTours
     .filter(t => {
       const searchLower = (tourSearch || '').toLowerCase();
@@ -329,7 +313,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Admin Header */}
       <div className="bg-white border-b border-gray-200 text-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -358,7 +341,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-1 overflow-x-auto no-scrollbar">
@@ -405,10 +387,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'overview' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -491,7 +470,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
 
-        {/* ================= BOOKINGS TAB ================= */}
         {activeTab === 'bookings' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col xl:flex-row justify-between gap-4">
@@ -609,7 +587,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
 
-        {/* ================= PAYMENTS TAB ================= */}
         {activeTab === 'payments' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -693,7 +670,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
 
-        {/* ================= TOURS TAB ================= */}
         {activeTab === 'tours' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             {!isAddingTour ? (
@@ -814,7 +790,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
               </>
             ) : (
-              /* ================= ฟอร์มเพิ่ม/แก้ไขทัวร์ ================= */
               <div className="bg-white rounded-3xl shadow-xl p-8 border animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-center mb-8 border-b pb-4">
                   <h2 className="text-2xl font-bold">
@@ -868,6 +843,25 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       <label className="block font-bold">{language === 'th' ? 'ราคาพื้นฐาน' : 'Base Price'}</label>
                       <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold text-[#00A699]" placeholder="0" value={tourForm.price || ''}
                         onChange={e => setTourForm({ ...tourForm, price: Number(e.target.value) })} />
+
+                      {/* 🌟 [เพิ่มใหม่] ช่องกรอกข้อมูลยานพาหนะและจำนวนคน */}
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <label className="block font-bold text-orange-600">{language === 'th' ? 'ประเภทยานพาหนะ' : 'Vehicle Type'}</label>
+                          <input className="w-full p-4 bg-gray-50 border rounded-2xl" 
+                            placeholder="เช่น รถตู้ VIP, สปีดโบ๊ท" 
+                            value={tourForm.vehicleType || ''} 
+                            onChange={e => setTourForm({ ...tourForm, vehicleType: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-orange-600">{language === 'th' ? 'รับจำนวนสูงสุด (คน)' : 'Max Capacity'}</label>
+                          <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold" 
+                            placeholder="10" 
+                            value={tourForm.maxCapacity || ''} 
+                            onChange={e => setTourForm({ ...tourForm, maxCapacity: Number(e.target.value) })} />
+                        </div>
+                      </div>
+
                     </div>
                     <div className="space-y-4">
                       <label className="block font-bold">{language === 'th' ? 'รูปภาพหลัก' : 'Main Image'} (URL)</label>
@@ -957,9 +951,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         )}
       </div>
 
-      {/* ================= MODALS ================= */}
-
-      {/* 1. Modal ดูรายละเอียดและกดอนุมัติของ Admin */}
       {selectedBooking && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
@@ -973,7 +964,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               </button>
             </div>
 
-            {/* แสดงสถานะปัจจุบันแบบแยกส่วน */}
             <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-100">
               <div>
                 <span className="text-xs text-gray-500 block mb-1">สถานะที่นั่ง (Booking Status)</span>
@@ -999,7 +989,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             </div>
 
             <div className="space-y-4">
-              {/* 🟢 ส่วนที่ 1: การจัดการที่นั่ง (Booking Approval) */}
               {selectedBooking.status?.toLowerCase() === 'pending' && (
                 <div className="bg-orange-50 border border-orange-200 p-5 rounded-2xl">
                   <h4 className="font-bold text-orange-900 mb-3 flex items-center gap-2"><Calendar className="w-5 h-5" /> 1. อนุมัติที่นั่งว่าง (Seat Approval)</h4>
@@ -1011,7 +1000,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
               )}
 
-              {/* 🟢 ส่วนที่ 2: การจัดการสลิปเงิน (Payment Approval) */}
               {selectedBooking.paymentStatus?.toLowerCase() === 'verifying' && (
                 <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl">
                   <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5" /> 2. ตรวจสอบสลิปเงิน (Payment Verification)</h4>
@@ -1031,7 +1019,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               )}
             </div>
 
-            {/* แสดงข้อความเมื่อทำรายการเสร็จสิ้นแล้วทั้งคู่ */}
             {selectedBooking.status?.toLowerCase() === 'approved' && selectedBooking.paymentStatus?.toLowerCase() === 'completed' && (
               <div className="mt-6 bg-green-50 border border-green-200 p-4 rounded-2xl flex items-center gap-3 text-green-800">
                 <CheckCircle className="w-8 h-8 text-green-500" />
@@ -1045,7 +1032,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         </div>
       )}
 
-      {/* 2. Custom Popup Modal (Alert / Confirm) */}
       {popup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
