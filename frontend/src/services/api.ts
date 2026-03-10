@@ -10,6 +10,15 @@ export const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  // ดึง token สมมติว่าเก็บไว้ใน localStorage ตอน login
+  const token = localStorage.getItem('access_token'); 
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const tourService = {
   search: (params: { provinceId?: string; minPrice?: string; maxPrice?: string; startDate?: string; sort?: string }) =>
     api.get<Tour[]>('/tours/search', { params }), // บอกว่า return เป็น Array ของ Tour
