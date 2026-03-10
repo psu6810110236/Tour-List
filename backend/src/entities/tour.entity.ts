@@ -38,6 +38,12 @@ export class Tour {
   @Column({ nullable: true })
   duration_th: string;
 
+  @Column({ nullable: true })
+  vehicleType: string;
+
+  @Column('int', { default: 10 })
+  maxCapacity: number;
+
   @Column()
   image: string;
 
