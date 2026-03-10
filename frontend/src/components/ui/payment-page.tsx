@@ -70,7 +70,7 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
       const bookingPromises = items.map(async (item: any) => {
         const payload = {
           userId: user.id,
-          tourId: item.tour.id,
+          tourId: Number(item.tour.id),
           travelDate: item.date,
           travelers: item.travelers,
           totalPrice: item.totalPrice,

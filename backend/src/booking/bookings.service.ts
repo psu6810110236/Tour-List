@@ -21,12 +21,13 @@ export class BookingsService {
 
   // 🟢 ดึงข้อมูลของตัวเอง + ดึงข้อมูล Tour มาด้วย
   async findMyBookings(userId: string) {
-    return this.bookingRepository.find({
-      where: { user: { id: userId } }, // ใช้ relation user.id
-      relations: ['tour', 'tour.province'], 
-      order: { bookingDate: 'DESC' },
-    });
-  }
+  return this.bookingRepository.find({
+    // 🟢 เปลี่ยนจาก { user: { id: userId } } เป็น userId ตรงๆ
+    where: { userId: userId }, 
+    relations: ['tour', 'tour.province'], 
+    order: { bookingDate: 'DESC' },
+  });
+}
 
   async createBooking(userId: string, bookingData: Partial<Booking>) {
     const bookingId = `BKG-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`;
@@ -37,6 +38,7 @@ export class BookingsService {
       status: 'PENDING', 
       // 🟢 ตรวจสอบว่าถ้ามีสลิปแนบมา ให้เปลี่ยนสถานะการจ่ายเงินเป็น "รอตรวจสอบ"
       paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',
+      userId: userId,
       user: { id: userId }, 
       tour: { id: bookingData.tourId }, // 🟢 สำคัญ: ต้องผูก relation ของ Tour ให้ครบ
       bookingDate: new Date(),
