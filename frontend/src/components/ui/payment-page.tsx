@@ -74,8 +74,7 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
           travelDate: item.date,
           travelers: item.travelers,
           totalPrice: item.totalPrice,
-          status: "pending" as const, 
-          paymentStatus: "pending" as const, 
+          // 🟢 แก้จาก slipImage || null เป็น slipImage || undefined
           paymentSlip: slipImage || undefined,
           tourNameSnapshot: item.tour.name,
           tourNameSnapshot_th: item.tour.name_th,
