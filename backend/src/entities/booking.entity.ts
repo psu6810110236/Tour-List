@@ -26,7 +26,7 @@ export class Booking {
   @Column({ default: 'PENDING' }) // pending, completed, failed
   paymentStatus: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   paymentSlip: string;
 
   // Snapshot Data (เก็บข้อมูล ณ วันจอง)
