@@ -20,10 +20,10 @@ export class Booking {
   @Column('float')
   totalPrice: number;
 
-  @Column({ default: 'pending' }) // pending, confirmed, cancelled
+  @Column({ default: 'PENDING' }) // pending, confirmed, cancelled
   status: string;
 
-  @Column({ default: 'pending' }) // pending, completed, failed
+  @Column({ default: 'PENDING' }) // pending, completed, failed
   paymentStatus: string;
 
   @Column({ nullable: true })
