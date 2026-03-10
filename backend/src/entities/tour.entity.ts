@@ -28,7 +28,6 @@ export class Tour {
   @Column('text', { nullable: true })
   description_th: string;
 
-  // ✅ ฟิลด์นี้ใช้สำหรับทำ Filter Price (ราคา) มีอยู่แล้ว
   @Column('float')
   price: number;
 
@@ -44,6 +43,14 @@ export class Tour {
   @Column('int', { default: 10 })
   maxCapacity: number;
 
+  // 🌟 [เพิ่มใหม่] ประเภททริป (One Day / Multiple Days)
+  @Column({ nullable: true })
+  tripType: string;
+
+  // 🌟 [เพิ่มใหม่] วันที่เปิดรับจอง (เก็บเป็น Array ของวันที่ YYYY-MM-DD)
+  @Column('json', { nullable: true })
+  availableDates: string[];
+
   @Column()
   image: string;
 
@@ -56,7 +63,6 @@ export class Tour {
   @Column({ default: 0 })
   reviewCount: number;
 
-  // ข้อมูลที่เป็นรายการ (Array) เก็บเป็น JSON
   @Column('json')
   highlights: string[];
 
@@ -78,13 +84,10 @@ export class Tour {
   @Column('json', { nullable: true })
   notIncluded_th: string[];
 
-  // 🌟 [เพิ่มใหม่] ฟิลด์นี้ใช้สำหรับทำ Filter Date (วันที่เริ่มทัวร์)
   @Column({ type: 'date', nullable: true })
   startDate: Date; 
 
   // --- Relations ---
-  
-  // ✅ ฟิลด์นี้ใช้สำหรับทำ Filter Province (จังหวัด) มีอยู่แล้ว
   @Column()
   provinceId: string; 
 

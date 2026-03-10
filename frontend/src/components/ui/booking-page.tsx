@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Tour } from "../../types/index"; 
 import { translations } from "../../data/translations";
 import type{ Language } from "../../data/translations";
@@ -21,11 +21,13 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const params = useParams();
   const [localTour, setLocalTour] = useState<Tour | null>(tour || null);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("2026-03-15");
+  
+  // 🌟 [ปรับปรุง] วันที่เริ่มจอง และ ปฏิทิน
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1)); // ค่าเริ่มต้น มี.ค. 2026
+  const [selectedDate, setSelectedDate] = useState(""); 
+  
   const [travelers, setTravelers] = useState(1);
   const [contactInfo, setContactInfo] = useState({ fullName: "", email: "", phone: "", specialRequests: "" });
-
-  // 🌟 State สำหรับเช็คที่นั่ง
   const [availableSeats, setAvailableSeats] = useState<number>(10);
   const [isFull, setIsFull] = useState<boolean>(false);
 
@@ -47,9 +49,18 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     }
   }, [params?.id, localTour]);
 
-  // 🌟 คำนวณยอดที่นั่งคงเหลือทุกครั้งที่เปลี่ยนวัน
+  // ตั้งค่า Default Date เป็นวันแรกที่มีคิวว่าง (ถ้ามีการระบุวัน)
   useEffect(() => {
-    if (!localTour) return;
+    if (localTour?.availableDates && localTour.availableDates.length > 0 && !selectedDate) {
+      setSelectedDate(localTour.availableDates[0]);
+      // ปรับเดือนในปฏิทินให้ตรงกับวันแรกที่ว่าง
+      const [y, m] = localTour.availableDates[0].split('-');
+      setCurrentMonth(new Date(Number(y), Number(m) - 1, 1));
+    }
+  }, [localTour]);
+
+  useEffect(() => {
+    if (!localTour || !selectedDate) return;
     
     const fetchSeats = async () => {
       try {
@@ -91,6 +102,10 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   };
 
   const validateForm = () => {
+    if (!selectedDate) {
+      alert(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date.");
+      return false;
+    }
     if (isFull || travelers <= 0) {
       alert(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date.");
       return false;
@@ -112,7 +127,17 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     onNavigate("payment", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
   };
 
+  // 🌟 [ปรับปรุง] ระบบปฏิทิน Dynamic
   const weekDays = language === "th" ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const monthNames = language === "th" 
+    ? ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
+    : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+
+  const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const startDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay(); // 0 = Sunday
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   if (!localTour) return <div className="min-h-screen flex items-center justify-center">{language === 'th' ? 'ไม่พบข้อมูลทัวร์' : 'Tour not found'}</div>;
@@ -125,7 +150,13 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <ArrowLeft className="w-5 h-5" />
             <span>{t.back}</span>
           </button>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+             <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
+             {/* แสดงประเภททริปให้ลูกค้าเห็น */}
+             <span className="bg-[#00A699]/10 text-[#00A699] px-4 py-1.5 rounded-full text-sm font-bold w-fit border border-[#00A699]/20">
+               {localTour.tripType === 'multiple-days' ? (language === 'th' ? 'ทริปหลายวัน' : 'Multiple Days Trip') : (language === 'th' ? 'ทริปไปเช้าเย็นกลับ' : 'One Day Trip')}
+             </span>
+          </div>
           <p className="text-gray-500 mt-1">{language === "th" && localTour.name_th ? localTour.name_th : localTour.name}</p>
         </div>
       </div>
@@ -133,28 +164,64 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
+            
+            {/* 🌟 [ปรับปรุง] ปฏิทินแสดงผลใหม่ */}
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-teal-50 text-[#00A699] rounded-2xl flex items-center justify-center">
-                  <Calendar className="w-6 h-6" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-teal-50 text-[#00A699] rounded-2xl flex items-center justify-center">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">{t.selectDate}</h2>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">{t.selectDate}</h2>
+                
+                {/* ปุ่มเลื่อนเดือน */}
+                <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100 w-fit">
+                  <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronLeft className="w-5 h-5"/></button>
+                  <div className="font-bold text-gray-900 min-w-[100px] text-center">
+                    {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                  </div>
+                  <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronRight className="w-5 h-5"/></button>
+                </div>
               </div>
-              <div className="border border-gray-100 rounded-2xl p-4 md:p-6 bg-gray-50/50">
-                <div className="grid grid-cols-7 gap-2 text-center mb-2">
+
+              <div className="border border-gray-100 rounded-2xl p-4 md:p-6 bg-gray-50/30">
+                <div className="grid grid-cols-7 gap-2 text-center mb-4">
                   {weekDays.map((day) => <div key={day} className="text-sm font-bold text-gray-400 py-2">{day}</div>)}
                 </div>
                 <div className="grid grid-cols-7 gap-2 text-center">
-                  {[...Array(31)].map((_, i) => {
+                  {/* ช่องว่างสำหรับวันแรกของเดือน */}
+                  {Array.from({ length: startDay }).map((_, i) => (
+                    <div key={`empty-${i}`} className="aspect-square" />
+                  ))}
+                  
+                  {/* แสดงวันที่ในเดือน */}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
-                    const dateStr = `2026-03-${String(day).padStart(2, "0")}`;
+                    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    
                     const isSelected = selectedDate === dateStr;
+                    // เช็คว่ามีกฏการเปิดรอบไหม ถ้ามีก็ให้เช็คใน Array ถ้าไม่มีคือเปิดทุกวัน
+                    const hasRule = localTour.availableDates && localTour.availableDates.length > 0;
+                    const isAvailable = hasRule ? localTour.availableDates!.includes(dateStr) : true;
+
                     return (
-                      <button key={i} onClick={() => setSelectedDate(dateStr)}
-                        className={`aspect-square flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 ${
-                          isSelected ? "bg-[#00A699] text-white shadow-md shadow-teal-200 scale-105" : "hover:bg-gray-100 text-gray-700 hover:text-[#00A699]"
-                        }`}
-                      >{day}</button>
+                      <button 
+                        key={i} 
+                        onClick={() => setSelectedDate(dateStr)}
+                        disabled={!isAvailable}
+                        title={!isAvailable ? (language === 'th' ? 'ไม่มีรอบทัวร์' : 'Not available') : ''}
+                        className={`aspect-square flex flex-col items-center justify-center rounded-2xl text-sm font-semibold transition-all duration-200 relative
+                          ${!isAvailable ? "opacity-30 bg-gray-100 cursor-not-allowed text-gray-400" : 
+                            isSelected ? "bg-[#00A699] text-white shadow-lg shadow-teal-200 scale-105" : 
+                            "bg-white hover:bg-teal-50 text-gray-700 border border-gray-200 hover:border-[#00A699] hover:text-[#00A699]"
+                          }
+                        `}
+                      >
+                        {day}
+                        {/* จุดสีเขียวบอกว่ามีทริป */}
+                        {isAvailable && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#00A699] absolute bottom-2 opacity-50"></span>}
+                      </button>
                     );
                   })}
                 </div>
@@ -177,31 +244,34 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                 </div>
               </div>
 
-              {isFull ? (
+              {isFull && selectedDate ? (
                 <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl flex items-center justify-center gap-2 mb-4 animate-in fade-in">
                   <AlertCircle className="w-5 h-5" />
                   <span className="font-bold">{language === 'th' ? 'ขออภัย ทัวร์สำหรับวันที่เลือกรอบเต็มแล้ว' : 'Sorry, this date is fully booked.'}</span>
                 </div>
               ) : null}
 
-              <div className={`flex items-center justify-between p-4 md:p-6 border rounded-2xl ${isFull ? 'border-red-200 bg-red-50/50 opacity-70' : 'border-gray-100'}`}>
+              <div className={`flex items-center justify-between p-4 md:p-6 border rounded-2xl ${isFull || !selectedDate ? 'border-gray-200 bg-gray-50 opacity-70' : 'border-gray-100'}`}>
                 <div>
                   <div className="font-bold text-gray-900 text-lg">{language === "th" ? "ผู้เดินทาง" : "Travelers"}</div>
                   <div className="text-sm font-medium mt-1 text-[#00A699]">
-                    {language === "th" ? `(เหลือที่ว่าง ${availableSeats} ที่)` : `(${availableSeats} seats left)`}
+                    {selectedDate 
+                      ? (language === "th" ? `(เหลือที่ว่าง ${availableSeats} ที่)` : `(${availableSeats} seats left)`)
+                      : (language === "th" ? "กรุณาเลือกวันที่ก่อน" : "Select a date first")
+                    }
                   </div>
                 </div>
                 <div className="flex items-center gap-5">
                   <button onClick={() => setTravelers(Math.max(1, travelers - 1))} 
-                    disabled={isFull}
-                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-50">
+                    disabled={isFull || !selectedDate}
+                    className="w-10 h-10 bg-white border shadow-sm hover:bg-gray-50 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-50">
                     <Minus className="w-5 h-5" />
                   </button>
-                  <span className="text-xl font-bold w-6 text-center">{travelers}</span>
+                  <span className="text-xl font-bold w-6 text-center">{!selectedDate ? 0 : travelers}</span>
                   <button 
                     onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} 
-                    disabled={travelers >= availableSeats || isFull}
-                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    disabled={travelers >= availableSeats || isFull || !selectedDate}
+                    className="w-10 h-10 bg-white border shadow-sm hover:bg-gray-50 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>
@@ -231,7 +301,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
               <div className="space-y-4 mb-6 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">{language === "th" ? "วันที่เดินทาง:" : "Date:"}</span>
-                  <span className="font-bold text-gray-900">{selectedDate}</span>
+                  <span className="font-bold text-gray-900">{selectedDate || "-"}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">{language === "th" ? "จำนวนผู้เดินทาง:" : "Travelers:"}</span>
@@ -239,7 +309,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                 </div>
                 <div className="pt-4 border-t border-gray-100 flex justify-between items-end">
                   <span className="text-gray-500 font-medium">{t.totalPrice}</span>
-                  <span className="text-2xl font-black text-[#00A699]">฿{totalPrice.toLocaleString()}</span>
+                  <span className="text-2xl font-black text-[#00A699]">฿{selectedDate ? totalPrice.toLocaleString() : 0}</span>
                 </div>
               </div>
             </div>
@@ -251,16 +321,16 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div className="flex flex-col">
             <span className="text-gray-500 text-xs font-medium uppercase tracking-wider">{t.totalPrice}</span>
-            <span className="text-xl md:text-2xl font-black text-[#00A699]">฿{totalPrice.toLocaleString()}</span>
+            <span className="text-xl md:text-2xl font-black text-[#00A699]">฿{selectedDate ? totalPrice.toLocaleString() : 0}</span>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleAddToCart} disabled={isFull} className="px-5 py-3 md:py-4 rounded-2xl border-2 border-teal-50 bg-teal-50 text-[#00A699] font-bold hover:bg-teal-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={handleAddToCart} disabled={isFull || !selectedDate} className="px-5 py-3 md:py-4 rounded-2xl border-2 border-teal-50 bg-teal-50 text-[#00A699] font-bold hover:bg-teal-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
               <ShoppingBag className="w-5 h-5" />
               <span className="hidden sm:inline">Add to Cart</span>
             </button>
-            <button onClick={handleContinue} disabled={isFull} className={`px-6 md:px-8 py-3 md:py-4 text-white rounded-2xl font-bold shadow-lg transition-all flex items-center gap-2 ${isFull ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-[#FF6B4A] hover:bg-[#F25A38] shadow-orange-200/50 active:scale-95'}`}>
-              <span>{isFull ? (language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked') : t.proceedToPayment}</span>
-              {!isFull && <ArrowRight className="w-5 h-5" />}
+            <button onClick={handleContinue} disabled={isFull || !selectedDate} className={`px-6 md:px-8 py-3 md:py-4 text-white rounded-2xl font-bold shadow-lg transition-all flex items-center gap-2 ${isFull || !selectedDate ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-[#FF6B4A] hover:bg-[#F25A38] shadow-orange-200/50 active:scale-95'}`}>
+              <span>{isFull ? (language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked') : !selectedDate ? (language === 'th' ? 'เลือกวันเดินทาง' : 'Select Date') : t.proceedToPayment}</span>
+              {!isFull && selectedDate && <ArrowRight className="w-5 h-5" />}
             </button>
           </div>
         </div>

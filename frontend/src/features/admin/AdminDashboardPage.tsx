@@ -73,11 +73,12 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     onConfirm?: () => void;
   }>({ isOpen: false, type: 'alert', title: '', message: '' });
 
-  // 🌟 [เพิ่มใหม่] ใส่ค่า Default สำหรับยานพาหนะและจำนวนคน
+  // 🌟 [เพิ่มใหม่] ใส่ค่า Default สำหรับ Type และ Dates
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
     provinceId: '', province: '', price: 0, duration: '', duration_th: '', image: '',
     vehicleType: 'รถตู้ VIP', maxCapacity: 10,
+    tripType: 'one-day', availableDates: [], // <-- ฟิลด์ใหม่
     highlights: [], highlights_th: [], itinerary: [{ day: 1, title: '', title_th: '', activities: [], activities_th: [] }],
     included: [], included_th: [], notIncluded: [], notIncluded_th: []
   };
@@ -844,7 +845,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold text-[#00A699]" placeholder="0" value={tourForm.price || ''}
                         onChange={e => setTourForm({ ...tourForm, price: Number(e.target.value) })} />
 
-                      {/* 🌟 [เพิ่มใหม่] ช่องกรอกข้อมูลยานพาหนะและจำนวนคน */}
                       <div className="grid grid-cols-2 gap-4 mt-4">
                         <div>
                           <label className="block font-bold text-orange-600">{language === 'th' ? 'ประเภทยานพาหนะ' : 'Vehicle Type'}</label>
@@ -859,6 +859,30 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                             placeholder="10" 
                             value={tourForm.maxCapacity || ''} 
                             onChange={e => setTourForm({ ...tourForm, maxCapacity: Number(e.target.value) })} />
+                        </div>
+                      </div>
+
+                      {/* 🌟 [เพิ่มใหม่] เลือกประเภททริป และ วันที่เปิดรอบ */}
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <label className="block font-bold text-blue-600">{language === 'th' ? 'ประเภททริป' : 'Trip Type'}</label>
+                          <select className="w-full p-4 bg-gray-50 border rounded-2xl font-bold" 
+                            value={tourForm.tripType || 'one-day'} 
+                            onChange={e => setTourForm({ ...tourForm, tripType: e.target.value })}>
+                            <option value="one-day">One Day Trip (ไปเช้าเย็นกลับ)</option>
+                            <option value="multiple-days">Multiple Days (หลายวัน)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-bold text-blue-600">{language === 'th' ? 'วันที่เปิดรอบ (YYYY-MM-DD)' : 'Available Dates'}</label>
+                          <input className="w-full p-4 bg-gray-50 border rounded-2xl" 
+                            placeholder="เช่น 2026-03-15, 2026-03-20" 
+                            value={tourForm.availableDates?.join(', ') || ''} 
+                            onChange={e => {
+                              const val = e.target.value;
+                              setTourForm({ ...tourForm, availableDates: val ? val.split(',').map(v=>v.trim()).filter(v=>v) : [] });
+                            }} />
+                          <p className="text-xs text-gray-400 mt-1">คั่นด้วยลูกน้ำ (,) ถ้าเว้นว่างจะถือว่าเปิดทุกวัน</p>
                         </div>
                       </div>
 
