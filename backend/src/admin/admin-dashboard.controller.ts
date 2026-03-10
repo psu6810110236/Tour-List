@@ -1,36 +1,29 @@
-import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, UseGuards } from '@nestjs/common';
+import { BookingsService } from '../booking/bookings.service';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/roles.guard';
 
-// Mock data for testing without database
-const mockBookings = [
-  {
-    id: 'BK-TEST-001',
-    bookingDate: new Date(),
-    travelDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    travelers: 2,
-    totalPrice: 5000,
-    status: 'PENDING',
-    paymentStatus: 'PENDING',
-    paymentSlip: '/uploads/test-slip.jpg',
-    tourNameSnapshot: 'Bangkok City Tour',
-    tourNameSnapshot_th: 'ทัวร์กรุงเทพมหา',
-    userId: 'user-001',
-    tourId: 'tour-001'
-  }
-];
-
+// ✅ ป้องกันให้เฉพาะคนที่ Login และมี Role เป็น ADMIN เท่านั้นที่เข้าใช้ API นี้ได้
+@UseGuards(AuthGuard('jwt'), RolesGuard) 
 @Controller('admin')
 export class AdminDashboardController {
   
+  // ✅ Inject BookingsService เข้ามาใช้งาน
+  constructor(private readonly bookingsService: BookingsService) {}
+  
   @Get('dashboard/stats')
   async getDashboardStats() {
+    // ดึงข้อมูลการจองทั้งหมดจาก Database
+    const bookings = await this.bookingsService.findAll();
+    
     const stats = {
-      totalBookings: mockBookings.length,
-      pendingBookings: mockBookings.filter(b => b.status === 'PENDING').length,
-      approvedBookings: mockBookings.filter(b => b.status === 'APPROVED').length,
-      rejectedBookings: mockBookings.filter(b => b.status === 'REJECTED').length,
-      totalRevenue: mockBookings
+      totalBookings: bookings.length,
+      pendingBookings: bookings.filter(b => b.status === 'PENDING').length,
+      approvedBookings: bookings.filter(b => b.status === 'APPROVED').length,
+      rejectedBookings: bookings.filter(b => b.status === 'REJECTED' || b.status === 'CANCELLED').length,
+      totalRevenue: bookings
         .filter(b => b.status === 'APPROVED')
-        .reduce((sum, b) => sum + (b.totalPrice || 0), 0),
+        .reduce((sum, b) => sum + (Number(b.totalPrice) || 0), 0),
     };
 
     return stats;
@@ -38,24 +31,17 @@ export class AdminDashboardController {
 
   @Get('bookings')
   async getAllBookings() {
-    return mockBookings;
+    // ดึงรายการทั้งหมดพร้อม relations (ผู้ใช้, ทัวร์)
+    return this.bookingsService.findAll();
   }
 
   @Patch('bookings/:id/approve')
   async approveBooking(@Param('id') id: string) {
-    const booking = mockBookings.find(b => b.id === id);
-    if (booking) {
-      booking.status = 'APPROVED';
-    }
-    return { id, status: 'APPROVED' };
+    return this.bookingsService.updateStatus(id, 'APPROVED');
   }
 
   @Post('bookings/:id/reject')
   async rejectBooking(@Param('id') id: string) {
-    const booking = mockBookings.find(b => b.id === id);
-    if (booking) {
-      booking.status = 'REJECTED';
-    }
-    return { id, status: 'REJECTED' };
+    return this.bookingsService.updateStatus(id, 'REJECTED');
   }
 }

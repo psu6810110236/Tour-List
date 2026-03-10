@@ -2,7 +2,6 @@ import { Controller, Get, Patch, Param, Body, Post, Delete, UseGuards, Request }
 import { BookingsService } from './bookings.service';
 import { AuthGuard } from '@nestjs/passport';
 
-
 @UseGuards(AuthGuard('jwt'))
 @Controller('bookings')
 export class BookingsController {
@@ -16,15 +15,16 @@ export class BookingsController {
   @UseGuards(AuthGuard('jwt'))
   @Get('my')
   async getMyBookings(@Request() req) {
-    // ใช้ req.user.userId ให้ตรงกับ Strategy ของคุณ
-    return this.bookingsService.findMyBookings(req.user.userId);
+    const userId = req.user?.id || req.user?.userId;
+    return this.bookingsService.findMyBookings(userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Post()
   async createBooking(@Body() bookingData: any, @Request() req) {
-    // 🟢 ส่ง userId แยกออกมาเป็น Parameter แรกตาม Service ใหม่
-    return this.bookingsService.createBooking(req.user.userId, bookingData);
+    // 🟢 ดึง ID ให้ชัวร์ที่สุด ไม่ว่า Token จะแนบมาเป็นชื่อไหน
+    const userId = req.user?.id || req.user?.userId || bookingData.userId;
+    return this.bookingsService.createBooking(userId, bookingData);
   }
 
   @Patch(':id/status')

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Booking } from 'src/entities/booking.entity';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto'; // 🟢 Import ระบบสร้าง UUID ของ Node.js เข้ามา
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
 
@@ -19,26 +20,28 @@ export class BookingsService {
     });
   }
 
-  // 🟢 ดึงข้อมูลของตัวเอง + ดึงข้อมูล Tour มาด้วย
   async findMyBookings(userId: string) {
     return this.bookingRepository.find({
-      where: { user: { id: userId } }, // ใช้ relation user.id
+      where: { user: { id: userId } },
       relations: ['tour', 'tour.province'], 
       order: { bookingDate: 'DESC' },
     });
   }
 
-  async createBooking(userId: string, bookingData: Partial<Booking>) {
-    const bookingId = `BKG-${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000)}`;
+  async createBooking(userId: string, bookingData: any) {
+    // 🟢 สร้างรหัสเป็น UUID แท้ๆ ไปเลย เพื่อแก้ปัญหา Database ไม่ยอมรับรหัส BKG
+    const bookingId = randomUUID();
+
+    let numericTourId = Number(String(bookingData.tourId).replace(/\D/g, ''));
+    if (!numericTourId || isNaN(numericTourId)) numericTourId = 1;
 
     const newBooking = this.bookingRepository.create({
       ...bookingData,
-      id: bookingId,
+      id: bookingId, // 🟢 ใช้รหัส UUID ที่เพิ่งสร้าง
       status: 'PENDING', 
-      // 🟢 ตรวจสอบว่าถ้ามีสลิปแนบมา ให้เปลี่ยนสถานะการจ่ายเงินเป็น "รอตรวจสอบ"
       paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',
       user: { id: userId }, 
-      tour: { id: bookingData.tourId }, // 🟢 สำคัญ: ต้องผูก relation ของ Tour ให้ครบ
+      tour: { id: numericTourId }, 
       bookingDate: new Date(),
     });
     

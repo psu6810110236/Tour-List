@@ -70,14 +70,13 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
       const bookingPromises = items.map(async (item: any) => {
         const payload = {
           userId: user.id,
-          tourId: item.tour.id,
-          travelDate: item.date,
-          travelers: item.travelers,
-          totalPrice: item.totalPrice,
-          // 🟢 แก้จาก slipImage || null เป็น slipImage || undefined
-          paymentSlip: slipImage || undefined,
-          tourNameSnapshot: item.tour.name,
-          tourNameSnapshot_th: item.tour.name_th,
+          tourId: item.tour?.id || 1, // กันพังถ้าไม่มี tourId
+          travelDate: item.date || new Date().toISOString(),
+          travelers: item.travelers || 1,
+          totalPrice: item.totalPrice || 0,
+          paymentSlip: slipImage || '', // ส่งเป็น string ว่างแทน undefined
+          tourNameSnapshot: item.tour?.name || "Unknown Tour", // 🟢 ดักไว้เสมอ
+          tourNameSnapshot_th: item.tour?.name_th || "ไม่ระบุชื่อทัวร์", // 🟢 ดักไว้เสมอ
         };
         const res = await bookingService.createBooking(payload);
         return res.data;

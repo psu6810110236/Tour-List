@@ -6,7 +6,7 @@ import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
 
 // --- Icons ---
-import { Construction, Ticket, UserCircle } from 'lucide-react';
+import { Construction, UserCircle } from 'lucide-react';
 
 // --- Import Pages & Components ---
 import Login from './features/auth/Login';

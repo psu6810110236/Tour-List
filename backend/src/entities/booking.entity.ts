@@ -1,11 +1,11 @@
 import { Entity, PrimaryColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
-import { PrimaryGeneratedColumn } from 'typeorm'
 import { User } from './user.entity';
 import { Tour } from './tour.entity';
 
 @Entity()
 export class Booking {
-  @PrimaryGeneratedColumn('uuid')
+  // 🟢 1. เปลี่ยนมาใช้ @PrimaryColumn แบบ varchar เพื่อให้รองรับรหัส BKG-xxx
+  @PrimaryColumn({ type: 'varchar' })
   id: string;
 
   @CreateDateColumn()
@@ -20,23 +20,20 @@ export class Booking {
   @Column('float')
   totalPrice: number;
 
-  @Column({ default: 'PENDING' }) // pending, confirmed, cancelled
+  @Column({ default: 'PENDING' }) 
   status: string;
 
-  @Column({ default: 'PENDING' }) // pending, completed, failed
+  @Column({ default: 'PENDING' }) 
   paymentStatus: string;
 
   @Column({ type: 'text', nullable: true })
   paymentSlip: string;
 
-  // Snapshot Data (เก็บข้อมูล ณ วันจอง)
   @Column()
   tourNameSnapshot: string;
 
   @Column({ nullable: true })
   tourNameSnapshot_th: string;
-
-  // --- Relations ---
 
   @Column()
   userId: string;
@@ -51,6 +48,4 @@ export class Booking {
   @ManyToOne(() => Tour)
   @JoinColumn({ name: 'tourId' })
   tour: Tour;
-  
 }
-

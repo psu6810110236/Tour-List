@@ -95,7 +95,7 @@ export default function Login() {
               </div>
               <div className="text-right mt-2">
                 <button type="button" className="text-xs text-[#00A699] font-semibold tracking-wide uppercase">
-                  {language === 'th' ? 'ลืมรหัสผ่าน?' : 'Forgot Password?'}
+                 
                 </button>
               </div>
             </div>

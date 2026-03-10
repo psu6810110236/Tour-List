@@ -4,7 +4,6 @@ import type { Tour, Province, Booking } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-// 1. สร้าง Instance ของ API
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -13,8 +12,8 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // ดึง token สมมติว่าเก็บไว้ใน localStorage ตอน login
-  const token = localStorage.getItem('access_token'); 
+  // 🟢 แก้จาก access_token เป็น token ให้ตรงกับ AuthContext
+  const token = localStorage.getItem('token'); 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -35,13 +34,11 @@ export const tourService = {
 
 export const bookingService = {
   getAllBookings: () => api.get<Booking[]>('/bookings'),
-
-  // แก้ไขให้ใช้ api instance เพื่อให้ส่ง Token อัตโนมัติ
   getMyBookings: () => api.get<Booking[]>('/bookings/my'),
-
-  createBooking: (data: Partial<Booking>) => api.post('/bookings', data),
+  
+  // 🟢 ส่งข้อมูลไปตรงๆ ได้เลย
+  createBooking: (data: any) => api.post('/bookings', data),
   
   updateBookingStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
-  
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
 };
