@@ -50,7 +50,7 @@ export function MyBookingsPage({
   useEffect(() => {
     const fetchMyBookings = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         if (!token) {
           setLoading(false);
           return;

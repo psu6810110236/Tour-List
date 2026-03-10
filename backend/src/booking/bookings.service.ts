@@ -21,12 +21,13 @@ export class BookingsService {
   }
 
   async findMyBookings(userId: string) {
-    return this.bookingRepository.find({
-      where: { user: { id: userId } },
-      relations: ['tour', 'tour.province'], 
-      order: { bookingDate: 'DESC' },
-    });
-  }
+  return this.bookingRepository.find({
+    // 🟢 เปลี่ยนจาก { user: { id: userId } } เป็น userId ตรงๆ
+    where: { userId: userId }, 
+    relations: ['tour', 'tour.province'], 
+    order: { bookingDate: 'DESC' },
+  });
+}
 
   async createBooking(userId: string, bookingData: any) {
     // 🟢 สร้างรหัสเป็น UUID แท้ๆ ไปเลย เพื่อแก้ปัญหา Database ไม่ยอมรับรหัส BKG
@@ -40,6 +41,7 @@ export class BookingsService {
       id: bookingId, // 🟢 ใช้รหัส UUID ที่เพิ่งสร้าง
       status: 'PENDING', 
       paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',
+      userId: userId,
       user: { id: userId }, 
       tour: { id: numericTourId }, 
       bookingDate: new Date(),

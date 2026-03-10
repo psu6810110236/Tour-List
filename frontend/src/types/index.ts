@@ -52,7 +52,7 @@ export interface Tour {
 export interface Booking {
   id: string;
   userId: string;
-  tourId: string;
+  tourId: number;
   bookingDate: string; // ISO Date String
   travelDate: string;
   travelers: number;
