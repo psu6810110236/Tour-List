@@ -2,9 +2,10 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Booking } from 'src/entities/booking.entity';
 import { Repository } from 'typeorm';
-import { randomUUID } from 'crypto'; // 🟢 Import ระบบสร้าง UUID ของ Node.js เข้ามา
+import { randomUUID } from 'crypto';
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
+const VALID_PAYMENT_STATUSES = ['PENDING', 'VERIFYING', 'COMPLETED', 'FAILED']; 
 
 @Injectable()
 export class BookingsService {
@@ -21,16 +22,14 @@ export class BookingsService {
   }
 
   async findMyBookings(userId: string) {
-  return this.bookingRepository.find({
-    // 🟢 เปลี่ยนจาก { user: { id: userId } } เป็น userId ตรงๆ
-    where: { userId: userId }, 
-    relations: ['tour', 'tour.province'], 
-    order: { bookingDate: 'DESC' },
-  });
-}
+    return this.bookingRepository.find({
+      where: { user: { id: userId } },
+      relations: ['tour', 'tour.province'], 
+      order: { bookingDate: 'DESC' },
+    });
+  }
 
   async createBooking(userId: string, bookingData: any) {
-    // 🟢 สร้างรหัสเป็น UUID แท้ๆ ไปเลย เพื่อแก้ปัญหา Database ไม่ยอมรับรหัส BKG
     const bookingId = randomUUID();
 
     let numericTourId = Number(String(bookingData.tourId).replace(/\D/g, ''));
@@ -38,10 +37,9 @@ export class BookingsService {
 
     const newBooking = this.bookingRepository.create({
       ...bookingData,
-      id: bookingId, // 🟢 ใช้รหัส UUID ที่เพิ่งสร้าง
+      id: bookingId,
       status: 'PENDING', 
       paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',
-      userId: userId,
       user: { id: userId }, 
       tour: { id: numericTourId }, 
       bookingDate: new Date(),
@@ -50,7 +48,8 @@ export class BookingsService {
     return this.bookingRepository.save(newBooking);
   }
 
-  async updateStatus(id: string, status: string) {
+  // 🟢 เซฟ reason
+  async updateStatus(id: string, status: string, reason?: string) {
     const upperStatus = status.toUpperCase();
     if (!VALID_STATUSES.includes(upperStatus)) {
       throw new BadRequestException(`สถานะ ${status} ไม่ถูกต้อง`);
@@ -60,6 +59,24 @@ export class BookingsService {
     if (!booking) throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
     
     booking.status = upperStatus;
+    if (reason) booking.rejectReason = reason;
+
+    return this.bookingRepository.save(booking);
+  }
+
+  // 🟢 เซฟ reason
+  async updatePaymentStatus(id: string, paymentStatus: string, reason?: string) {
+    const upperStatus = paymentStatus.toUpperCase();
+    if (!VALID_PAYMENT_STATUSES.includes(upperStatus)) {
+      throw new BadRequestException(`สถานะชำระเงิน ${paymentStatus} ไม่ถูกต้อง`);
+    }
+
+    const booking = await this.bookingRepository.findOne({ where: { id } });
+    if (!booking) throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
+    
+    booking.paymentStatus = upperStatus;
+    if (reason) booking.rejectReason = reason;
+
     return this.bookingRepository.save(booking);
   }
 

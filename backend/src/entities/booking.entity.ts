@@ -4,7 +4,6 @@ import { Tour } from './tour.entity';
 
 @Entity()
 export class Booking {
-  // 🟢 1. เปลี่ยนมาใช้ @PrimaryColumn แบบ varchar เพื่อให้รองรับรหัส BKG-xxx
   @PrimaryColumn({ type: 'varchar' })
   id: string;
 
@@ -28,6 +27,10 @@ export class Booking {
 
   @Column({ type: 'text', nullable: true })
   paymentSlip: string;
+
+  // 🟢 เพิ่มคอลัมน์เก็บเหตุผลที่ปฏิเสธ
+  @Column({ type: 'text', nullable: true })
+  rejectReason: string;
 
   @Column()
   tourNameSnapshot: string;

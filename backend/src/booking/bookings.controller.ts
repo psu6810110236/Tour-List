@@ -22,14 +22,20 @@ export class BookingsController {
   @UseGuards(AuthGuard('jwt'))
   @Post()
   async createBooking(@Body() bookingData: any, @Request() req) {
-    // 🟢 ดึง ID ให้ชัวร์ที่สุด ไม่ว่า Token จะแนบมาเป็นชื่อไหน
     const userId = req.user?.id || req.user?.userId || bookingData.userId;
     return this.bookingsService.createBooking(userId, bookingData);
   }
 
+  // 🟢 รับ reason เพิ่ม
   @Patch(':id/status')
-  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.bookingsService.updateStatus(id, status);
+  async updateStatus(@Param('id') id: string, @Body('status') status: string, @Body('reason') reason?: string) {
+    return this.bookingsService.updateStatus(id, status, reason);
+  }
+
+  // 🟢 รับ reason เพิ่ม
+  @Patch(':id/payment-status')
+  async updatePaymentStatus(@Param('id') id: string, @Body('paymentStatus') paymentStatus: string, @Body('reason') reason?: string) {
+    return this.bookingsService.updatePaymentStatus(id, paymentStatus, reason);
   }
 
   @Delete(':id')

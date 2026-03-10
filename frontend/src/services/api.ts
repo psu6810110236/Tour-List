@@ -35,10 +35,11 @@ export const tourService = {
 export const bookingService = {
   getAllBookings: () => api.get<Booking[]>('/bookings'),
   getMyBookings: () => api.get<Booking[]>('/bookings/my'),
-  
-  // 🟢 ส่งข้อมูลไปตรงๆ ได้เลย
   createBooking: (data: any) => api.post('/bookings', data),
   
-  updateBookingStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
+  // 🟢 เพิ่มการรับ data (reason) เข้าไป
+  updateBookingStatus: (id: string, status: string, reason?: string) => api.patch(`/bookings/${id}/status`, { status, reason }),
+  updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) => api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
+  
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
 };
