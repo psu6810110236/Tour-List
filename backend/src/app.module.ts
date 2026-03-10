@@ -1,11 +1,3 @@
-if (!global.crypto) {
-  Object.defineProperty(global, 'crypto', {
-    value: require('crypto').webcrypto,
-    writable: true,
-    configurable: true,
-  });
-}
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';

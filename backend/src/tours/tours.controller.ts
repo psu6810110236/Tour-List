@@ -1,6 +1,18 @@
 import { Controller, Get, Post, Delete, Put, Body, Query, Param, NotFoundException } from '@nestjs/common';
 import { ToursService } from './tours.service'; // ตรวจสอบ path ให้ตรงกับไฟล์ของคุณ
 
+export class CreateTourDto {
+  name: string;
+  price: number;
+  // เพิ่มฟิลด์อื่นๆ ตาม Entity ของคุณ
+}
+
+export class CreateProvinceDto {
+  name: string;
+  // เพิ่มฟิลด์อื่นๆ ตาม Entity ของคุณ
+}
+
+
 @Controller('tours')
 export class ToursController {
   constructor(private readonly toursService: ToursService) {}
@@ -8,13 +20,21 @@ export class ToursController {
   @Get('search')
   async search(
     @Query('provinceId') provinceId?: string,
-    @Query('minPrice') minPrice?: number,
-    @Query('maxPrice') maxPrice?: number,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
     @Query('startDate') startDate?: string, // 🟢 1. รับค่า startDate จาก Query URL
     @Query('sort') sort?: string,
   ) {
     // 🟢 2. ส่งค่า startDate เข้าไปใน Service
-    return this.toursService.search({ provinceId, minPrice, maxPrice, startDate, sort });
+    const parsedMin = minPrice ? Number(minPrice) : undefined;
+    const parsedMax = maxPrice ? Number(maxPrice) : undefined;
+    return this.toursService.search({ 
+      provinceId, 
+      minPrice: parsedMin, 
+      maxPrice: parsedMax, 
+      startDate, 
+      sort 
+    });
   }
 
   @Get('provinces')
