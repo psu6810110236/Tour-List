@@ -94,4 +94,20 @@ export class Tour {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  // ประเภททัวร์ (oneday หรือ package)
+  @Column({ type: 'varchar', length: 50, default: 'oneday' })
+  tourType: string;
+
+  // ชื่อที่พัก (nullable = true เพราะ one day trip จะไม่มีที่พัก)
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  accommodation: string;
+
+  // จำนวนรับสูงสุด (Max Capacity)
+  @Column({ type: 'int', default: 10 })
+  maxCapacity: number;
+
+  // จำนวนคนที่จองและจ่ายเงินแล้ว (เพื่อเอาไว้ทำระบบตัดยอด)
+  @Column({ type: 'int', default: 0 })
+  bookedSeats: number;
 }
