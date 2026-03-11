@@ -121,7 +121,11 @@ export function Navigation({
                     {/* ACTIONS */}
                     <div className="flex items-center gap-2 sm:gap-4">
                         {/* CART */}
-                        <button onClick={onOpenCart} title={tCart.title} className="relative p-3 text-gray-600 hover:text-[#00A699] hover:bg-[#00A699]/5 rounded-2xl transition-all border border-transparent hover:border-[#00A699]/20">
+                        <button 
+                            onClick={onOpenCart} 
+                            title={tCart?.title || "ตะกร้าของฉัน"} 
+                            className="relative p-3 text-gray-600 hover:text-[#00A699] hover:bg-[#00A699]/5 rounded-2xl transition-all border border-transparent hover:border-[#00A699]/20"
+                        >
                             <ShoppingBag className="w-6 h-6" />
                             {cartCount > 0 && (
                                 <Badge className="absolute -top-1 -right-1 px-1.5 min-w-[1.25rem] h-5 bg-[#FF6B4A] border-2 border-white flex items-center justify-center text-[10px]">

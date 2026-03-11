@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from './features/auth/context/AuthContext';
 import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
 
+// 🌟 นำเข้า CartProvider และ useCart สำหรับระบบตะกร้า
+import { CartProvider, useCart } from './context/CartContext'; 
+
 // --- Icons ---
 import { Construction, UserCircle } from 'lucide-react';
 
@@ -22,6 +25,10 @@ import { BookingPage } from './components/ui/booking-page';
 import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
 import { MyBookingsPage } from './pages/MyBookingsPage';
+
+// 🌟 1. นำเข้าตัว CartDrawer (หน้าต่างตะกร้าที่จะสไลด์ออกมา)
+import CartDrawer from './components/ui/CartDrawer';
+
 // Service & Types
 import { tourService } from './services/api';
 import type { Province } from './data/mockData';
@@ -39,8 +46,6 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
     </div>
   </div>
 );
-
-
 
 const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
   <WorkInProgressTemplate 
@@ -101,6 +106,10 @@ function AppContent() {
   const [language, setLanguage] = useState<'th' | 'en'>('th');
   const [bookingData, setBookingData] = useState<any>(null);
 
+  // 🌟 ดึงข้อมูลตะกร้ามาใช้งาน
+  const { cartItems, toggleDrawer } = useCart(); 
+  const totalItems = cartItems.length;
+
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem('bookingData');
@@ -160,8 +169,8 @@ function AppContent() {
           onNavigate={handleNavigate}
           userName={user?.fullName || "Guest User"}
           onShowTutorial={() => alert("Tutorial Coming Soon!")}
-          cartCount={0}
-          onOpenCart={() => console.log("Open Cart")}
+          cartCount={totalItems} 
+          onOpenCart={toggleDrawer} 
           language={language}
           onToggleLanguage={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
         />
@@ -182,8 +191,30 @@ function AppContent() {
             <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
             <Route path="/profile" element={<UserProfile language={language} />} />
-            <Route path="/payment" element={<PaymentPage bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
-            <Route path="/payment-confirmation" element={<PaymentConfirmation bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
+            
+            {/* 🌟 จุดที่แก้ไข: ป้องกันหน้าขาวด้วยการทำ Fallback ให้ bookingData และเพิ่มการส่ง cartItems ไปให้หน้า Payment */}
+            <Route 
+              path="/payment" 
+              element={
+                <PaymentPage 
+                  bookingData={bookingData || { isFromCart: true }} // ถ้าไม่มี bookingData จะส่ง { isFromCart: true } ไปแทน กันโค้ดพัง
+                  cartItems={cartItems} // ส่งของในตะกร้าไปด้วย
+                  onNavigate={handleNavigate} 
+                  language={language} 
+                />
+              } 
+            />
+            <Route 
+              path="/payment-confirmation" 
+              element={
+                <PaymentConfirmation 
+                  bookingData={bookingData || { isFromCart: true }} 
+                  cartItems={cartItems} 
+                  onNavigate={handleNavigate} 
+                  language={language} 
+                />
+              } 
+            />
           </Route>
 
           {/* Admin Only */}
@@ -204,6 +235,10 @@ function AppContent() {
       </main>
 
       {showChatWidget && <ChatWidget />}
+
+      {/* 🌟 2. วาง CartDrawer ไว้ตรงนี้ เพื่อให้มันครอบและเด้งออกมาทับทุกหน้าต่าง! */}
+      <CartDrawer />
+      
     </div>
   );
 }
@@ -211,9 +246,12 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      {/* 🌟 ครอบ CartProvider ไว้ระดับบนสุด */}
+      <CartProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </CartProvider>
     </AuthProvider>
   );
 }

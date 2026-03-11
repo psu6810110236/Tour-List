@@ -8,12 +8,13 @@ import { bookingService } from "../../services/api";
 
 interface PaymentPageProps {
   bookingData: any;
+  cartItems?: any[]; // 🌟 เพิ่ม props ให้รับข้อมูลตะกร้าได้
   onNavigate: (page: string, data?: any) => void;
   language: Language;
   onClearCart?: () => void;
 }
 
-export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: PaymentPageProps) {
+export function PaymentPage({ bookingData, cartItems = [], onNavigate, language, onClearCart }: PaymentPageProps) {
   const { user } = useAuth();
   const [localBooking, setLocalBooking] = useState<any>(bookingData || null);
   const [selectedMethod, setSelectedMethod] = useState<"qrcode" | "card">("qrcode");
@@ -21,6 +22,9 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
   const [slipImage, setSlipImage] = useState<string | null>(null);
 
   useEffect(() => {
+    // 🌟 ถ้ามาจากตะกร้าสินค้า (isFromCart เป็น true) หรือมี cartItems ให้ข้ามการเช็ค Session ไปเลย
+    if (bookingData?.isFromCart || cartItems.length > 0) return;
+
     if (!localBooking) {
       try {
         const stored = sessionStorage.getItem('bookingData');
@@ -31,12 +35,22 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
         onNavigate('home');
       }
     }
-  }, [localBooking, onNavigate]);
+  }, [localBooking, onNavigate, bookingData, cartItems]);
 
   const t = translations[language].payment;
   const common = translations[language].booking;
 
-  const items = (localBooking?.items) ? localBooking.items : [localBooking];
+  // 🌟 จัดการรวมข้อมูล (Merge) ไม่ว่าจะมาจากการจองปกติ (localBooking) หรือมาจากตะกร้า (cartItems)
+  let items = [];
+  if (bookingData?.isFromCart || cartItems.length > 0) {
+    // กรณีมาจากตะกร้า
+    items = cartItems; 
+  } else {
+    // กรณีจองแบบด่วน (ปกติ)
+    items = (localBooking?.items) ? localBooking.items : (localBooking ? [localBooking] : []);
+  }
+
+  // คำนวณราคารวม
   const totalPrice = items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,14 +84,14 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
       const bookingPromises = items.map(async (item: any) => {
         const payload = {
           userId: user.id,
-          tourId: Number(item.tour.id),
-          travelDate: item.date,
-          travelers: item.travelers,
+          // 🌟 รองรับกรณีชื่อ property ของตะกร้าต่างจากจองปกติเล็กน้อย
+          tourId: Number(item.tour?.id || item.tourId), 
+          travelDate: item.date || item.travelDate,
+          travelers: item.travelers || item.pax,
           totalPrice: item.totalPrice,
-          // 🟢 แก้จาก slipImage || null เป็น slipImage || undefined
           paymentSlip: slipImage || undefined,
-          tourNameSnapshot: item.tour.name,
-          tourNameSnapshot_th: item.tour.name_th,
+          tourNameSnapshot: item.tour?.name || item.tourName,
+          tourNameSnapshot_th: item.tour?.name_th || item.tourName_th || item.tourName,
         };
         const res = await bookingService.createBooking(payload);
         return res.data;
@@ -89,7 +103,7 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
       
       onNavigate("payment-confirmation", {
         ...results[0],
-        tour: items[0].tour
+        tour: items[0].tour || { name: items[0].tourName } // รองรับข้อมูลจากตะกร้า
       });
       
     } catch (error) {
@@ -99,16 +113,28 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
       if (onClearCart) onClearCart();
       
       onNavigate("payment-confirmation", {
-        id: `BK-TEST-${Date.now().toString().slice(-6)}`, // จำลองรหัสการจอง
-        tour: items[0].tour,
-        travelDate: items[0].date,
-        travelers: items[0].travelers,
+        id: `BK-TEST-${Date.now().toString().slice(-6)}`,
+        tour: items[0].tour || { name: items[0].tourName },
+        travelDate: items[0].date || items[0].travelDate,
+        travelers: items[0].travelers || items[0].pax,
         totalPrice: items[0].totalPrice
       });
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // 🌟 ถ้าไม่มีรายการใดๆ เลย ให้โชว์ข้อความแจ้งเตือน (กันหน้าขาวถ้าคนเข้าผิดลิงก์)
+  if (items.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#F7F9FA] flex flex-col items-center justify-center p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">{language === 'th' ? 'ไม่พบรายการชำระเงิน' : 'No Payment Items Found'}</h2>
+        <button onClick={() => onNavigate("home")} className="bg-[#00A699] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#008c81] transition-colors">
+          {language === 'th' ? 'กลับหน้าหลัก' : 'Back to Home'}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F9FA] py-8 md:py-12 font-sans">
@@ -193,10 +219,18 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
               <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                 {items.map((item: any, index: number) => (
                   <div key={index} className="flex gap-4 mb-4 pb-4 border-b border-gray-50 last:border-0 last:mb-0 last:pb-0">
-                    <img src={item.tour.image} alt={item.tour.name} className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+                    {/* 🌟 ปรับให้ดึงรูปภาพได้ทั้งจากตะกร้าและจองปกติ */}
+                    {item.tour?.image || item.image ? (
+                      <img src={item.tour?.image || item.image} alt={item.tour?.name || item.tourName} className="w-16 h-16 rounded-2xl object-cover shrink-0 bg-gray-100" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-2xl bg-gray-100 shrink-0"></div>
+                    )}
                     <div className="flex-1">
-                      <h3 className="font-bold text-gray-900 text-sm line-clamp-2 leading-tight">{getLang(item.tour, "name", language)}</h3>
-                      <div className="text-xs text-gray-500 mt-1.5">{item.date} • {item.travelers} {language === "en" ? "Pax" : "ท่าน"}</div>
+                      {/* 🌟 ปรับให้ดึงชื่อทัวร์ได้ทั้งสองกรณี */}
+                      <h3 className="font-bold text-gray-900 text-sm line-clamp-2 leading-tight">
+                        {item.tour ? getLang(item.tour, "name", language) : (language === 'th' ? (item.tourName_th || item.tourName) : item.tourName)}
+                      </h3>
+                      <div className="text-xs text-gray-500 mt-1.5">{item.date || item.travelDate} • {item.travelers || item.pax} {language === "en" ? "Pax" : "ท่าน"}</div>
                       <div className="font-black text-[#00A699] text-sm mt-1">฿{item.totalPrice.toLocaleString()}</div>
                     </div>
                   </div>

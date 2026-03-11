@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
 import type { Tour } from "../../types/index"; 
-import {  translations } from "../../data/translations";
-import type{ Language } from "../../data/translations";
+import { translations } from "../../data/translations";
+import type { Language } from "../../data/translations";
+import { useCart } from "../../context/CartContext";
+import { tourService } from "../../services/api";
 
 interface BookingPageProps {
   tour?: Tour | null;
@@ -12,9 +14,10 @@ interface BookingPageProps {
   onAddToCart?: (item: any) => void;
 }
 
-import { tourService } from "../../services/api";
-
 export function BookingPage({ tour, onNavigate, language, onAddToCart }: BookingPageProps) {
+  // --- เพิ่ม useCart เข้ามาตรงนี้ ---
+  const { addToCart } = useCart();
+
   const t = translations[language].booking;
   const tTour = translations[language].tourDetail;
 
@@ -56,8 +59,23 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     return true;
   };
 
+  // --- แก้ไขฟังก์ชัน handleAddToCart ---
   const handleAddToCart = () => {
     if (!validateForm()) return;
+    
+    // จัดรูปแบบข้อมูลสำหรับส่งเข้า Context
+    const cartItem = {
+      id: `cart-${Date.now()}`, 
+      tourName: language === "th" && localTour?.name_th ? localTour.name_th : (localTour?.name || "Unknown Tour"),
+      travelDate: selectedDate,
+      pax: travelers,
+      totalPrice: totalPrice,
+    };
+
+    // ส่งเข้า Global State ของตะกร้า
+    addToCart(cartItem);
+
+    // ทำงานของเดิมเผื่อไว้กรณีที่มีการเรียกใช้ Props ตัวนี้จากไฟล์แม่
     if (onAddToCart) onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
   };
 
