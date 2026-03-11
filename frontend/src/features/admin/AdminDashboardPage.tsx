@@ -842,7 +842,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     <div className="space-y-4">
                       <label className="block font-bold text-orange-600">{language === 'th' ? 'จำนวนรับสูงสุด (คน)' : 'Max Capacity'}</label>
                       <input type="number" className="w-full p-4 bg-orange-50 border border-orange-200 rounded-2xl font-bold" 
-                        value={tourForm.maxCapacity || ''}
+                        value={tourForm.maxCapacity ?? ''}
                         onChange={e => setTourForm({ ...tourForm, maxCapacity: Number(e.target.value) })} />
                     </div>
                   </div>

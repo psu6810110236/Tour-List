@@ -41,8 +41,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   }, [params?.id, localTour]);
 
   // 🟢 คำนวณจำนวนที่นั่งว่าง
-  const maxCapacity = localTour?.maxCapacity || 10;
-  const bookedSeats = localTour?.bookedSeats || 0;
+  const maxCapacity = localTour?.maxCapacity ?? 10;
+  const bookedSeats = localTour?.bookedSeats ?? 0;
   const availableSeats = Math.max(0, maxCapacity - bookedSeats);
   const isFull = availableSeats <= 0;
 
