@@ -70,12 +70,11 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
       const bookingPromises = items.map(async (item: any) => {
         const payload = {
           userId: user.id,
-          tourId: item.tour.id,
+          tourId: Number(item.tour.id),
           travelDate: item.date,
           travelers: item.travelers,
           totalPrice: item.totalPrice,
-          status: "pending" as const, 
-          paymentStatus: "pending" as const, 
+          // 🟢 แก้จาก slipImage || null เป็น slipImage || undefined
           paymentSlip: slipImage || undefined,
           tourNameSnapshot: item.tour.name,
           tourNameSnapshot_th: item.tour.name_th,

@@ -3,8 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Booking } from 'src/entities/booking.entity';
 import { Tour } from 'src/entities/tour.entity';
 import { Repository } from 'typeorm';
+import { randomUUID } from 'crypto';
 
 const VALID_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
+const VALID_PAYMENT_STATUSES = ['PENDING', 'VERIFYING', 'COMPLETED', 'FAILED']; 
 
 @Injectable()
 export class BookingsService {
@@ -16,26 +18,56 @@ export class BookingsService {
     private tourRepository: Repository<Tour>,
   ) {}
 
-  // ดึงข้อมูลการจองทั้งหมด
   async findAll() {
-    return this.bookingRepository.find();
+    return this.bookingRepository.find({
+      relations: ['tour', 'user'],
+      order: { bookingDate: 'DESC' }
+    });
   }
 
-  // อัปเดตสถานะ (อนุมัติ/ปฏิเสธ) พร้อมระบบตัดยอดที่นั่ง
-  async updateStatus(id: string, status: string) {
+  // 🟢 ค้นหาการจองของ User คนนั้นๆ (ของเพื่อน)
+  async findMyBookings(userId: string) {
+    return this.bookingRepository.find({
+      where: { user: { id: userId } },
+      relations: ['tour', 'tour.province'], 
+      order: { bookingDate: 'DESC' },
+    });
+  }
+
+  // 🟢 รวมร่างฟังก์ชันสร้างการจอง (ใช้แบบของเพื่อนที่มี UUID และ userId)
+  async createBooking(userId: string, bookingData: any) {
+    const bookingId = randomUUID();
+
+    // ดึงตัวเลขออกมาจาก tourId
+    let numericTourId = Number(String(bookingData.tourId).replace(/\D/g, ''));
+    if (!numericTourId || isNaN(numericTourId)) numericTourId = 1;
+
+    const newBooking = this.bookingRepository.create({
+      ...bookingData,
+      id: bookingId,
+      status: 'PENDING', 
+      paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',
+      user: { id: userId }, 
+      tour: { id: numericTourId }, 
+      bookingDate: new Date(),
+    });
+    
+    return this.bookingRepository.save(newBooking);
+  }
+
+  // 🟢 รวมร่างฟังก์ชันอัปเดตสถานะ (ได้ทั้งระบบ "ตัดยอด" ของคุณ และ "เซฟ reason" ของเพื่อน)
+  async updateStatus(id: string, status: string, reason?: string) {
     const newStatus = status.toUpperCase();
 
     if (!VALID_STATUSES.includes(newStatus)) {
       throw new BadRequestException(`สถานะ ${status} ไม่ถูกต้อง`);
     }
 
-    // 🟢 แก้ไข: ใช้ as any เพื่อไม่ให้ TypeScript ขีดแดง ไม่ว่า Entity จะเป็น String หรือ Number
     const booking = await this.bookingRepository.findOne({ where: { id: id as any } });
     if (!booking) {
       throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
     }
 
-    // 🟢 แก้ไข: ใช้ as any เช่นเดียวกัน
     const tour = await this.tourRepository.findOne({ where: { id: booking.tourId as any } });
     if (!tour) {
       throw new NotFoundException(`ไม่พบข้อมูลทัวร์ที่เกี่ยวข้องกับการจองนี้`);
@@ -43,7 +75,7 @@ export class BookingsService {
 
     const oldStatus = booking.status ? booking.status.toUpperCase() : '';
 
-    // ตัดยอด
+    // ระบบตัดยอด / คืนยอด
     if (newStatus === 'APPROVED' && oldStatus !== 'APPROVED') {
       if (tour.bookedSeats + booking.travelers > tour.maxCapacity) {
         throw new BadRequestException(
@@ -52,9 +84,7 @@ export class BookingsService {
       }
       tour.bookedSeats += booking.travelers;
       await this.tourRepository.save(tour);
-    }
-    // คืนยอด
-    else if (oldStatus === 'APPROVED' && newStatus !== 'APPROVED') {
+    } else if (oldStatus === 'APPROVED' && newStatus !== 'APPROVED') {
       tour.bookedSeats -= booking.travelers;
       if (tour.bookedSeats < 0) {
         tour.bookedSeats = 0;
@@ -62,19 +92,31 @@ export class BookingsService {
       await this.tourRepository.save(tour);
     }
 
+    // เซฟสถานะ และเหตุผล (ถ้ามี)
     booking.status = newStatus as any;
+    if (reason) (booking as any).rejectReason = reason;
+
     return this.bookingRepository.save(booking);
   }
 
-  // ฟังก์ชันสร้างการจอง
-  async createBooking(bookingData: Partial<Booking>) {
-    const newBooking = this.bookingRepository.create(bookingData);
-    return this.bookingRepository.save(newBooking);
+  // 🟢 อัปเดตสถานะการชำระเงิน (ของเพื่อน)
+  async updatePaymentStatus(id: string, paymentStatus: string, reason?: string) {
+    const upperStatus = paymentStatus.toUpperCase();
+    if (!VALID_PAYMENT_STATUSES.includes(upperStatus)) {
+      throw new BadRequestException(`สถานะชำระเงิน ${paymentStatus} ไม่ถูกต้อง`);
+    }
+
+    const booking = await this.bookingRepository.findOne({ where: { id: id as any } });
+    if (!booking) throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
+    
+    booking.paymentStatus = upperStatus as any;
+    if (reason) (booking as any).rejectReason = reason;
+
+    return this.bookingRepository.save(booking);
   }
 
-  // ฟังก์ชันลบการจอง
+  // 🟢 รวมร่างฟังก์ชันลบการจอง (ใช้แบบของคุณที่มีระบบ "คืนยอดก่อนลบ")
   async deleteBooking(id: string) {
-    // 🟢 แก้ไข: ใช้ as any
     const booking = await this.bookingRepository.findOne({ where: { id: id as any } });
     if (!booking) {
       throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
@@ -82,7 +124,6 @@ export class BookingsService {
     
     // คืนยอดถ้าลบบิลที่เคย APPROVED ไปแล้ว
     if (booking.status && booking.status.toUpperCase() === 'APPROVED') {
-      // 🟢 แก้ไข: ใช้ as any
       const tour = await this.tourRepository.findOne({ where: { id: booking.tourId as any } });
       if (tour) {
         tour.bookedSeats -= booking.travelers;
