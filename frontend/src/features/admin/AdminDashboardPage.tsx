@@ -1038,7 +1038,63 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         </div>
       )}
+      {viewingCustomersForTour && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6 border-b pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{language === 'th' ? 'รายชื่อลูกค้าที่จอง' : 'Customer List'}</h2>
+                <p className="text-[#00A699] font-medium mt-1">{getLang(viewingCustomersForTour, 'name', language)}</p>
+              </div>
+              <button onClick={() => setViewingCustomersForTour(null)} className="text-gray-400 hover:text-gray-600 transition">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-sm text-gray-600">
+                  <tr>
+                    <th className="p-4 rounded-tl-xl">Booking ID</th>
+                    <th className="p-4">วันที่จอง</th>
+                    <th className="p-4">วันที่เดินทาง</th>
+                    <th className="p-4 text-center">จำนวนผู้เดินทาง</th>
+                    <th className="p-4 text-right">สถานะการจ่ายเงิน</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {bookingsList
+                    .filter(b => b.tourId === viewingCustomersForTour.id)
+                    .map(b => (
+                    <tr key={b.id} className="hover:bg-gray-50">
+                      <td className="p-4 font-medium">{b.id}</td>
+                      <td className="p-4">{new Date(b.bookingDate || '').toLocaleDateString('th-TH')}</td>
+                      <td className="p-4">{new Date((b as any).travelDate || '').toLocaleDateString('th-TH')}</td>
+                      <td className="p-4 text-center font-bold text-blue-600">{b.travelers} ท่าน</td>
+                      <td className="p-4 text-right">
+                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                           b.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                         }`}>
+                           {b.status === 'approved' ? 'จ่ายแล้ว (ตัดยอด)' : 'รอชำระเงิน'}
+                         </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {bookingsList.filter(b => b.tourId === viewingCustomersForTour.id).length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-gray-500">
+                        ยังไม่มีลูกค้าจองแพ็กเกจนี้
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
 }
+
