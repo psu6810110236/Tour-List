@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle } from "lucide-react"; // 🟢 เพิ่ม AlertCircle
 import type { Tour } from "../../types/index"; 
-import {  translations } from "../../data/translations";
-import type{ Language } from "../../data/translations";
+import { translations } from "../../data/translations";
+import type { Language } from "../../data/translations";
+import { tourService } from "../../services/api";
 
 interface BookingPageProps {
   tour?: Tour | null;
@@ -11,8 +12,6 @@ interface BookingPageProps {
   language: Language;
   onAddToCart?: (item: any) => void;
 }
-
-import { tourService } from "../../services/api";
 
 export function BookingPage({ tour, onNavigate, language, onAddToCart }: BookingPageProps) {
   const t = translations[language].booking;
@@ -22,10 +21,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const [localTour, setLocalTour] = useState<Tour | null>(tour || null);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState("2026-03-15");
-  const [travelers, setTravelers] = useState(2);
+  const [travelers, setTravelers] = useState(1); // 🟢 ปรับเริ่มต้นเป็น 1
   const [contactInfo, setContactInfo] = useState({ fullName: "", email: "", phone: "", specialRequests: "" });
-
-  const totalPrice = (localTour?.price || 0) * travelers;
 
   useEffect(() => {
     if (!localTour && params?.id) {
@@ -43,6 +40,25 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     }
   }, [params?.id, localTour]);
 
+  // 🟢 คำนวณจำนวนที่นั่งว่าง
+  const maxCapacity = localTour?.maxCapacity || 10;
+  const bookedSeats = localTour?.bookedSeats || 0;
+  const availableSeats = Math.max(0, maxCapacity - bookedSeats);
+  const isFull = availableSeats <= 0;
+
+  // 🟢 Effect จัดการเมื่อที่นั่งเหลือน้อยกว่าที่เลือกไว้ หรือเต็มแล้ว
+  useEffect(() => {
+    if (isFull) {
+      setTravelers(0);
+    } else if (travelers > availableSeats) {
+      setTravelers(availableSeats);
+    } else if (travelers === 0 && !isFull) {
+      setTravelers(1);
+    }
+  }, [availableSeats, isFull, travelers]);
+
+  const totalPrice = (localTour?.price || 0) * travelers;
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setContactInfo((prev) => ({ ...prev, [name]: value }));
@@ -57,12 +73,12 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   };
 
   const handleAddToCart = () => {
-    if (!validateForm()) return;
+    if (isFull || !validateForm()) return;
     if (onAddToCart) onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
   };
 
   const handleContinue = () => {
-    if (!validateForm()) return;
+    if (isFull || !validateForm()) return;
     onNavigate("payment", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
   };
 
@@ -80,8 +96,19 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <ArrowLeft className="w-5 h-5" />
             <span>{t.back}</span>
           </button>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
-          <p className="text-gray-500 mt-1">{language === "th" && localTour.name_th ? localTour.name_th : localTour.name}</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
+              <p className="text-gray-500 mt-1">{language === "th" && localTour.name_th ? localTour.name_th : localTour.name}</p>
+            </div>
+            {/* 🟢 แสดงป้ายสถานะใหญ่ๆ บน Header */}
+            {isFull && (
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100">
+                <AlertCircle className="w-5 h-5" />
+                {language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked'}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -91,7 +118,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-8">
             {/* Date Selection */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
+            <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow ${isFull ? 'opacity-60' : 'hover:shadow-md'}`}>
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-teal-50 text-[#00A699] rounded-2xl flex items-center justify-center">
                   <Calendar className="w-6 h-6" />
@@ -112,10 +139,11 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                     return (
                       <button
                         key={i}
+                        disabled={isFull}
                         onClick={() => setSelectedDate(dateStr)}
                         className={`aspect-square flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 ${
                           isSelected ? "bg-[#00A699] text-white shadow-md shadow-teal-200 scale-105" : "hover:bg-gray-100 text-gray-700 hover:text-[#00A699]"
-                        }`}
+                        } ${isFull ? 'cursor-not-allowed opacity-50' : ''}`}
                       >
                         {day}
                       </button>
@@ -126,12 +154,22 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             </div>
 
             {/* Travelers */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-blue-50 text-[#007AFF] rounded-2xl flex items-center justify-center">
-                  <Users className="w-6 h-6" />
+            <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow ${isFull ? 'opacity-60' : 'hover:shadow-md'}`}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-50 text-[#007AFF] rounded-2xl flex items-center justify-center">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{t.travelers}</h2>
+                    {/* 🟢 แสดงจำนวนที่นั่งว่าง */}
+                    {!isFull && (
+                      <div className={`text-sm font-semibold mt-1 ${availableSeats <= 3 ? 'text-orange-500' : 'text-green-500'}`}>
+                        {language === 'th' ? `ว่าง ${availableSeats} ที่นั่ง` : `${availableSeats} seats left`}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">{t.travelers}</h2>
               </div>
               <div className="flex items-center justify-between p-4 md:p-6 border border-gray-100 rounded-2xl">
                 <div>
@@ -139,11 +177,19 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                   <div className="text-sm text-gray-500 mt-1">฿{(localTour.price || 0).toLocaleString()} {tTour.perPerson}</div>
                 </div>
                 <div className="flex items-center gap-5">
-                  <button onClick={() => setTravelers(Math.max(1, travelers - 1))} className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors">
+                  <button 
+                    onClick={() => setTravelers(Math.max(1, travelers - 1))} 
+                    disabled={travelers <= 1 || isFull}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
+                  >
                     <Minus className="w-5 h-5" />
                   </button>
-                  <span className="text-xl font-bold w-6 text-center">{travelers}</span>
-                  <button onClick={() => setTravelers(travelers + 1)} className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors">
+                  <span className="text-xl font-bold w-6 text-center text-gray-900">{travelers}</span>
+                  <button 
+                    onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} 
+                    disabled={travelers >= availableSeats || isFull}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
+                  >
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>
@@ -151,15 +197,15 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             </div>
 
             {/* Contact Info */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
+            <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow ${isFull ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'}`}>
               <h2 className="text-xl font-bold text-gray-900 mb-6">{t.personalInfo}</h2>
               <div className="space-y-4">
-                <input name="fullName" type="text" placeholder={t.fullName} value={contactInfo.fullName} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required />
+                <input name="fullName" type="text" placeholder={t.fullName} value={contactInfo.fullName} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required disabled={isFull} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input name="email" type="email" placeholder={t.email} value={contactInfo.email} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required />
-                  <input name="phone" type="tel" placeholder={t.phone} value={contactInfo.phone} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required />
+                  <input name="email" type="email" placeholder={t.email} value={contactInfo.email} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required disabled={isFull} />
+                  <input name="phone" type="tel" placeholder={t.phone} value={contactInfo.phone} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required disabled={isFull} />
                 </div>
-                <textarea name="specialRequests" placeholder={language === "th" ? "คำขอพิเศษ (ไม่บังคับ)" : "Special Requests (Optional)"} value={contactInfo.specialRequests} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all resize-none" rows={3} />
+                <textarea name="specialRequests" placeholder={language === "th" ? "คำขอพิเศษ (ไม่บังคับ)" : "Special Requests (Optional)"} value={contactInfo.specialRequests} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all resize-none" rows={3} disabled={isFull} />
               </div>
             </div>
           </div>
@@ -198,13 +244,29 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <span className="text-xl md:text-2xl font-black text-[#00A699]">฿{totalPrice.toLocaleString()}</span>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleAddToCart} className="px-5 py-3 md:py-4 rounded-2xl border-2 border-teal-50 bg-teal-50 text-[#00A699] font-bold hover:bg-teal-100 transition-colors flex items-center gap-2">
+            {/* 🟢 ซ่อนหรือปิดการทำงานของปุ่มถ้าทัวร์เต็ม */}
+            <button 
+              onClick={handleAddToCart} 
+              disabled={isFull}
+              className={`px-5 py-3 md:py-4 rounded-2xl border-2 font-bold flex items-center gap-2 transition-colors ${
+                isFull ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'border-teal-50 bg-teal-50 text-[#00A699] hover:bg-teal-100'
+              }`}
+            >
               <ShoppingBag className="w-5 h-5" />
               <span className="hidden sm:inline">Add to Cart</span>
             </button>
-            <button onClick={handleContinue} className="px-6 md:px-8 py-3 md:py-4 bg-[#FF6B4A] hover:bg-[#F25A38] text-white rounded-2xl font-bold shadow-lg shadow-orange-200/50 transition-all active:scale-95 flex items-center gap-2">
-              <span>{t.proceedToPayment}</span>
-              <ArrowRight className="w-5 h-5" />
+
+            <button 
+              onClick={handleContinue} 
+              disabled={isFull}
+              className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center gap-2 transition-all ${
+                isFull 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
+                  : 'bg-[#FF6B4A] hover:bg-[#F25A38] text-white shadow-lg shadow-orange-200/50 active:scale-95'
+              }`}
+            >
+              <span>{isFull ? (language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked') : t.proceedToPayment}</span>
+              {!isFull && <ArrowRight className="w-5 h-5" />}
             </button>
           </div>
         </div>
