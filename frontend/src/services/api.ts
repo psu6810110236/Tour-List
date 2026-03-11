@@ -33,4 +33,5 @@ export const bookingService = {
   createBooking: (data: Partial<Booking>) => api.post('/bookings', data),
   updateBookingStatus: (id: string, status: string) => api.patch(`/bookings/${id}/status`, { status }),
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
+  deleteProvince: (id: string) => axios.delete(`http://localhost:3000/provinces/${id}`),
 };

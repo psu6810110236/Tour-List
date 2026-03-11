@@ -17,6 +17,7 @@ import {
   Trash2,
   MessageSquare,
   ListChecks,
+  Image as ImageIcon,
   AlertCircle
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
@@ -32,6 +33,7 @@ interface AdminDashboardProps {
   onNavigate: (page: string, data?: any) => void;
   language: Language;
 }
+
 
 export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'tours'>('overview');
@@ -248,7 +250,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
 
   // 3. กรองทัวร์
-  const filteredTours = allTours
+  const filteredTours = allTours 
     .filter(t => {
       const searchLower = (tourSearch || '').toLowerCase();
       const tourName = getLang(t, 'name', language) || '';
@@ -812,6 +814,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         onChange={e => setTourForm({ ...tourForm, duration_th: e.target.value, duration: e.target.value })} />
                     </div>
                   </div>
+
+                  
                   {/* 🟢 ส่วนที่เพิ่มใหม่: จุดเด่น สิ่งที่รวม และสิ่งที่ไม่รวม */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t">
                     <div className="space-y-4">
@@ -890,6 +894,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
       </div>
+      
 
       {/* ================= MODALS ================= */}
 
