@@ -33,6 +33,10 @@ export interface Tour {
   image: string; // URL รูปภาพหลัก
   rating?: number;
   reviewCount?: number;
+  tourType?: 'oneday' | 'package'; 
+  accommodation?: string;
+  maxCapacity?: number;
+  bookedSeats?: number;
   
   // Relations (บางครั้ง backend ส่งมาแค่ ID หรือส่งมาทั้ง Object)
   provinceId: string;

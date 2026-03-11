@@ -18,7 +18,8 @@ import {
   MessageSquare,
   ListChecks,
   Image as ImageIcon,
-  AlertCircle
+  AlertCircle,
+  Users
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
 import type { Province } from '../../data/mockData';
@@ -64,7 +65,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
-
+  const [viewingCustomersForTour, setViewingCustomersForTour] = useState<Tour | null>(null);
   // State สำหรับ Popup
   const [popup, setPopup] = useState<{
     isOpen: boolean;
@@ -77,6 +78,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
     provinceId: '', province: '', price: 0, duration: '', duration_th: '', image: '',
+    tourType: 'oneday', // ค่าเริ่มต้นเป็น One Day Trip
+    accommodation: '', 
+    maxCapacity: 10,    // ค่าเริ่มต้นรับได้ 10 คน
     highlights: [], highlights_th: [], itinerary: [{ day: 1, title: '', title_th: '', activities: [], activities_th: [] }],
     included: [], included_th: [], notIncluded: [], notIncluded_th: []
   };
@@ -728,6 +732,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
+
+                                <button onClick={() => setViewingCustomersForTour(tour)} className="text-blue-500 hover:text-blue-600 transition p-2" title={language === 'th' ? "ดูรายชื่อลูกค้า" : "View Customers"}>
+                                  <Users className="w-5 h-5" />
+                                </button>
+
+                                <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
+                                  <Edit className="w-5 h-5" />
+                                </button>
+                                
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
