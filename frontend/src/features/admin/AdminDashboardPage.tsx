@@ -740,7 +740,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
-                                
+
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
@@ -827,6 +827,34 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         onChange={e => setTourForm({ ...tourForm, duration_th: e.target.value, duration: e.target.value })} />
                     </div>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t mt-6">
+                    <div className="space-y-4">
+                      <label className="block font-bold">{language === 'th' ? 'ประเภททัวร์' : 'Tour Type'}</label>
+                      <select 
+                        className="w-full p-4 bg-gray-50 border rounded-2xl"
+                        value={tourForm.tourType || 'oneday'}
+                        onChange={e => setTourForm({ ...tourForm, tourType: e.target.value as 'oneday' | 'package' })}
+                      >
+                        <option value="oneday">{language === 'th' ? 'One Day Trip (ไปเช้าเย็นกลับ)' : 'One Day Trip'}</option>
+                        <option value="package">{language === 'th' ? 'Package (พร้อมที่พัก)' : 'Package with Hotel'}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block font-bold text-orange-600">{language === 'th' ? 'จำนวนรับสูงสุด (คน)' : 'Max Capacity'}</label>
+                      <input type="number" className="w-full p-4 bg-orange-50 border border-orange-200 rounded-2xl font-bold" 
+                        value={tourForm.maxCapacity || ''}
+                        onChange={e => setTourForm({ ...tourForm, maxCapacity: Number(e.target.value) })} />
+                    </div>
+                  </div>
+
+                  {tourForm.tourType === 'package' && (
+                    <div className="pt-4">
+                      <label className="block font-bold">{language === 'th' ? 'ชื่อที่พัก' : 'Accommodation'}</label>
+                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder={language === 'th' ? "เช่น โรงแรม ABC ภูเก็ต" : "e.g., ABC Hotel Phuket"}
+                        value={tourForm.accommodation || ''}
+                        onChange={e => setTourForm({ ...tourForm, accommodation: e.target.value })} />
+                    </div>
+                  )}
 
                   
                   {/* 🟢 ส่วนที่เพิ่มใหม่: จุดเด่น สิ่งที่รวม และสิ่งที่ไม่รวม */}
