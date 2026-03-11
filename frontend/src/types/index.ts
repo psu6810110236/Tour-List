@@ -38,6 +38,9 @@ export interface Tour {
   image: string; 
   rating?: number;
   reviewCount?: number;
+  tourType?: 'oneday' | 'package'; 
+  accommodation?: string;
+  bookedSeats?: number;
   
   provinceId: string;
   province?: Province | string; 

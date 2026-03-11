@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import type { Tour } from "../../types/index"; 
 import { translations } from "../../data/translations";
-import type{ Language } from "../../data/translations";
+import type { Language } from "../../data/translations";
 
 import { tourService, bookingService } from "../../services/api";
 
@@ -23,7 +23,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1)); 
   const [selectedDate, setSelectedDate] = useState(""); 
   
-  // 🌟 [เพิ่มใหม่] State สำหรับ Popup ยืนยันรอบเดินทาง
+  // State สำหรับ Popup ยืนยันรอบเดินทาง
   const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string; }>({ isOpen: false, startDate: "", endDate: "" });
   
   const [travelers, setTravelers] = useState(1);
@@ -31,6 +31,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const [availableSeats, setAvailableSeats] = useState<number>(10);
   const [isFull, setIsFull] = useState<boolean>(false);
 
+  // คำนวณราคารวม
   const totalPrice = (localTour?.price || 0) * travelers;
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
       }
     };
     fetchSeats();
-  }, [localTour, selectedDate]);
+  }, [localTour, selectedDate, travelers]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -99,23 +100,35 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     return true;
   };
 
-  const handleAddToCart = () => { if (validateForm() && onAddToCart) onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo }); };
-  const handleContinue = () => { if (validateForm()) onNavigate("payment", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo }); };
-
-  // 🌟 [ปรับปรุง] ฟังก์ชันคำนวณวันสิ้นสุดตอนคลิกปฏิทิน และเปิด Popup
-  const handleDateClick = (dateStr: string) => {
-    if (!localTour) return;
-    const start = new Date(dateStr);
-    const days = localTour.tripDays || 1;
-    const end = new Date(start);
-    if (days > 1) end.setDate(start.getDate() + (days - 1));
-    
-    setDatePopup({ isOpen: true, startDate: dateStr, endDate: end.toISOString().split('T')[0] });
+  const handleAddToCart = () => {
+    if (isFull || !validateForm()) return;
+    if (onAddToCart) onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
   };
 
+  const handleContinue = () => {
+    if (isFull || !validateForm()) return;
+    onNavigate("payment", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
+  };
+
+  // จัดการเมื่อคลิกเลือกวันในปฏิทิน
+  const handleDateClick = (dateStr: string) => {
+    if (!localTour) return;
+    const tripDays = localTour.tripDays || 1;
+    const start = new Date(dateStr);
+    const end = new Date(start);
+    end.setDate(end.getDate() + tripDays - 1);
+    
+    setDatePopup({
+      isOpen: true,
+      startDate: dateStr,
+      endDate: end.toISOString().split('T')[0]
+    });
+  };
+
+  // ยืนยันการเลือกวันจาก Popup
   const confirmDateSelection = () => {
     setSelectedDate(datePopup.startDate);
-    setDatePopup({ isOpen: false, startDate: "", endDate: "" });
+    setDatePopup(prev => ({ ...prev, isOpen: false }));
   };
 
   const weekDays = language === "th" ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -126,7 +139,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const startDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
 
-  // คำนวณช่วงวันที่เลือกเพื่อแสดง Highlight ยาวๆ ในปฏิทิน
   const isDateInSelectedRange = (dateStr: string) => {
     if (!selectedDate || !localTour?.tripDays || localTour.tripDays <= 1) return selectedDate === dateStr;
     const start = new Date(selectedDate);
@@ -193,7 +205,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                     const hasRule = localTour.availableDates && localTour.availableDates.length > 0;
                     const isAvailableStart = hasRule ? localTour.availableDates!.includes(dateStr) : true;
 
-                    // ดีไซน์ปฏิทินเวลาลากคลุมหลายวัน
                     let bgClass = "bg-white hover:bg-teal-50 text-gray-700 border border-transparent";
                     if (!isAvailableStart && !inRange) bgClass = "opacity-40 bg-gray-50 cursor-not-allowed text-gray-400";
                     if (isStart) bgClass = "bg-[#00A699] text-white shadow-lg shadow-teal-200 z-10 scale-105 rounded-2xl";
@@ -250,22 +261,35 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                   </div>
                 </div>
                 <div className="flex items-center gap-5">
-                  <button onClick={() => setTravelers(Math.max(1, travelers - 1))} disabled={isFull || !selectedDate} className="w-10 h-10 bg-white border shadow-sm hover:bg-gray-50 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"><Minus className="w-5 h-5" /></button>
-                  <span className="text-xl font-bold w-6 text-center">{!selectedDate ? 0 : travelers}</span>
-                  <button onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} disabled={travelers >= availableSeats || isFull || !selectedDate} className="w-10 h-10 bg-white border shadow-sm hover:bg-gray-50 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Plus className="w-5 h-5" /></button>
+                  <button 
+                    onClick={() => setTravelers(Math.max(1, travelers - 1))} 
+                    disabled={travelers <= 1 || isFull}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
+                  >
+                    <Minus className="w-5 h-5" />
+                  </button>
+                  <span className="text-xl font-bold w-6 text-center text-gray-900">{travelers}</span>
+                  <button 
+                    onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} 
+                    disabled={travelers >= availableSeats || isFull}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-all ${isFull ? 'opacity-50 pointer-events-none' : ''}`}>
+            {/* Contact Info */}
+            <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow ${isFull ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'}`}>
               <h2 className="text-xl font-bold text-gray-900 mb-6">{t.personalInfo}</h2>
               <div className="space-y-4">
-                <input name="fullName" type="text" placeholder={t.fullName} value={contactInfo.fullName} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required />
+                <input name="fullName" type="text" placeholder={t.fullName} value={contactInfo.fullName} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required disabled={isFull} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input name="email" type="email" placeholder={t.email} value={contactInfo.email} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required />
-                  <input name="phone" type="tel" placeholder={t.phone} value={contactInfo.phone} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required />
+                  <input name="email" type="email" placeholder={t.email} value={contactInfo.email} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required disabled={isFull} />
+                  <input name="phone" type="tel" placeholder={t.phone} value={contactInfo.phone} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required disabled={isFull} />
                 </div>
-                <textarea name="specialRequests" placeholder={language === "th" ? "คำขอพิเศษ (ไม่บังคับ)" : "Special Requests (Optional)"} value={contactInfo.specialRequests} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all resize-none" rows={3} />
+                <textarea name="specialRequests" placeholder={language === "th" ? "คำขอพิเศษ (ไม่บังคับ)" : "Special Requests (Optional)"} value={contactInfo.specialRequests} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all resize-none" rows={3} disabled={isFull} />
               </div>
             </div>
           </div>
@@ -309,19 +333,34 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <span className="text-xl md:text-2xl font-black text-[#00A699]">฿{selectedDate ? totalPrice.toLocaleString() : 0}</span>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleAddToCart} disabled={isFull || !selectedDate} className="px-5 py-3 md:py-4 rounded-2xl border-2 border-teal-50 bg-teal-50 text-[#00A699] font-bold hover:bg-teal-100 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button 
+              onClick={handleAddToCart} 
+              disabled={isFull}
+              className={`px-5 py-3 md:py-4 rounded-2xl border-2 font-bold flex items-center gap-2 transition-colors ${
+                isFull ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'border-teal-50 bg-teal-50 text-[#00A699] hover:bg-teal-100'
+              }`}
+            >
               <ShoppingBag className="w-5 h-5" />
               <span className="hidden sm:inline">Add to Cart</span>
             </button>
-            <button onClick={handleContinue} disabled={isFull || !selectedDate} className={`px-6 md:px-8 py-3 md:py-4 text-white rounded-2xl font-bold shadow-lg transition-all flex items-center gap-2 ${isFull || !selectedDate ? 'bg-gray-400 cursor-not-allowed shadow-none' : 'bg-[#FF6B4A] hover:bg-[#F25A38] shadow-orange-200/50 active:scale-95'}`}>
-              <span>{isFull ? (language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked') : !selectedDate ? (language === 'th' ? 'เลือกวันเดินทาง' : 'Select Date') : t.proceedToPayment}</span>
-              {!isFull && selectedDate && <ArrowRight className="w-5 h-5" />}
+
+            <button 
+              onClick={handleContinue} 
+              disabled={isFull}
+              className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center gap-2 transition-all ${
+                isFull 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
+                  : 'bg-[#FF6B4A] hover:bg-[#F25A38] text-white shadow-lg shadow-orange-200/50 active:scale-95'
+              }`}
+            >
+              <span>{isFull ? (language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked') : t.proceedToPayment}</span>
+              {!isFull && <ArrowRight className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* 🌟 [เพิ่มใหม่] Popup สรุปวันที่ที่เลือก */}
+      {/* Popup สรุปวันที่ที่เลือก */}
       {datePopup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">

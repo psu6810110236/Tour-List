@@ -42,4 +42,5 @@ export const bookingService = {
   updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) => api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
   
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
+  deleteProvince: (id: string) => axios.delete(`http://localhost:3000/provinces/${id}`),
 };
