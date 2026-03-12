@@ -22,6 +22,7 @@ import { Review } from './entities/review.entity';
 import { ReviewsModule } from './reviews/reviews.module';
 import { ToursModule } from './tours/tours.module';
 import { BookingsModule } from './booking/bookings.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { BookingsModule } from './booking/bookings.module';
     ChatModule,
     ToursModule,
     BookingsModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],

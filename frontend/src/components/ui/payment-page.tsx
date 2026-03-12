@@ -11,9 +11,10 @@ interface PaymentPageProps {
   onNavigate: (page: string, data?: any) => void;
   language: Language;
   onClearCart?: () => void;
+  cartItems?: any[]; // 🌟 เพิ่มตัวนี้แล้วครับ
 }
 
-export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: PaymentPageProps) {
+export function PaymentPage({ bookingData, onNavigate, language, onClearCart, cartItems }: PaymentPageProps) {
   const { user } = useAuth();
   const [localBooking, setLocalBooking] = useState<any>(bookingData || null);
   const [selectedMethod, setSelectedMethod] = useState<"qrcode" | "card">("qrcode");
@@ -61,8 +62,9 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
   const t = translations[language].payment;
   const common = translations[language].booking;
 
-  const items = (localBooking?.items) ? localBooking.items : [localBooking];
-  const totalPrice = items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+  // 🌟 ใช้ cartItems ถ้ามี หรือใช้ localBooking แบบเดิม
+  const items = (cartItems && cartItems.length > 0) ? cartItems : ((localBooking?.items) ? localBooking.items : [localBooking]);
+  const totalPrice = items.reduce((sum: number, item: any) => sum + (Number(item.totalPrice) || 0), 0);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,35 +95,35 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
     }
     
     if (selectedMethod === "qrcode" && (!slipImage || slipImage === "")) {
-    showAlert(
-      language === "th" ? "ข้อมูลไม่ครบถ้วน" : "Missing Information",
-      language === "th" ? "กรุณาอัปโหลดสลิปโอนเงินเพื่อยืนยันการชำระเงิน" : "Please upload a payment slip to confirm.",
-      "warning"
-    );
-    return;
-  }
+      showAlert(
+        language === "th" ? "ข้อมูลไม่ครบถ้วน" : "Missing Information",
+        language === "th" ? "กรุณาอัปโหลดสลิปโอนเงินเพื่อยืนยันการชำระเงิน" : "Please upload a payment slip to confirm.",
+        "warning"
+      );
+      return;
+    }
 
-  setIsProcessing(true);
+    setIsProcessing(true);
 
     try {
       const bookingPromises = items.map(async (item: any) => {
         const payload = {
           userId: user.id,
-          tourId: Number(item.tour.id),
-          travelDate: item.date,
-          travelers: item.travelers,
+          tourId: Number(item.tour?.id || item.tourId),
+          travelDate: item.date || item.selectedDate,
+          travelers: item.travelers || item.pax,
           totalPrice: item.totalPrice,
           paymentSlip: slipImage || undefined,
-          tourNameSnapshot: item.tour.name,
-          tourNameSnapshot_th: item.tour.name_th,
+          tourNameSnapshot: item.tour?.name || "Tour from Cart",
+          tourNameSnapshot_th: item.tour?.name_th || "ทัวร์จากตะกร้า",
         };
         const res = await bookingService.createBooking(payload);
         return res.data;
       });
 
       const results = await Promise.all(bookingPromises);
-      if (onClearCart) onClearCart();
-      onNavigate("payment-confirmation", { ...results[0], tour: items[0].tour });
+      if (onClearCart) onClearCart(); // 🌟 ล้างตะกร้าเมื่อจ่ายเงินเสร็จ
+      onNavigate("payment-confirmation", { ...results[0], tour: items[0]?.tour || { name: 'Multiple Tours' } });
       
     } catch (error) {
       console.error("Payment failed:", error);
@@ -133,10 +135,10 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
           if (onClearCart) onClearCart();
           onNavigate("payment-confirmation", {
             id: `BK-TEST-${Date.now().toString().slice(-6)}`,
-            tour: items[0].tour,
-            travelDate: items[0].date,
-            travelers: items[0].travelers,
-            totalPrice: items[0].totalPrice
+            tour: items[0]?.tour || { name: 'Multiple Tours' },
+            travelDate: items[0]?.date || items[0]?.selectedDate,
+            travelers: items[0]?.travelers || items[0]?.pax,
+            totalPrice: totalPrice
           });
         }
       );
@@ -228,11 +230,19 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
               <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
                 {items.map((item: any, index: number) => (
                   <div key={index} className="flex gap-4 mb-4 pb-4 border-b border-gray-50 last:border-0 last:mb-0 last:pb-0">
-                    <img src={item.tour.image} alt={item.tour.name} className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
+                      {item.tour?.image ? (
+                        <img src={item.tour.image} alt={item.tour.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-gray-400">Tour</span>
+                      )}
+                    </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-gray-900 text-sm line-clamp-2 leading-tight">{getLang(item.tour, "name", language)}</h3>
-                      <div className="text-xs text-gray-500 mt-1.5">{item.date} • {item.travelers} {language === "en" ? "Pax" : "ท่าน"}</div>
-                      <div className="font-black text-[#00A699] text-sm mt-1">฿{item.totalPrice.toLocaleString()}</div>
+                      <h3 className="font-bold text-gray-900 text-sm line-clamp-2 leading-tight">
+                        {item.tour ? getLang(item.tour, "name", language) : `Tour ID: ${item.tourId}`}
+                      </h3>
+                      <div className="text-xs text-gray-500 mt-1.5">{item.date || item.selectedDate} • {item.travelers || item.pax} {language === "en" ? "Pax" : "ท่าน"}</div>
+                      <div className="font-black text-[#00A699] text-sm mt-1">฿{Number(item.totalPrice).toLocaleString()}</div>
                     </div>
                   </div>
                 ))}

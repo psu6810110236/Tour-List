@@ -87,22 +87,52 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     setContactInfo((prev) => ({ ...prev, [name]: value }));
   };
 
+  // ✅ ใส่ Console.log ไว้สืบสวนว่าติดตรงไหน
   const validateForm = () => {
+    console.log("--- กำลังตรวจสอบข้อมูลฟอร์ม ---");
     if (!selectedDate) {
-      alert(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date."); return false;
+      console.log("❌ ตรวจสอบไม่ผ่าน: ยังไม่ได้เลือกวันที่เดินทาง");
+      alert(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date."); 
+      return false;
     }
     if (isFull || travelers <= 0) {
-      alert(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date."); return false;
+      console.log("❌ ตรวจสอบไม่ผ่าน: ทัวร์เต็มแล้ว");
+      alert(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date."); 
+      return false;
     }
     if (!contactInfo.fullName || !contactInfo.email || !contactInfo.phone) {
-      alert(language === "th" ? "กรุณากรอกข้อมูลผู้ติดต่อให้ครบถ้วน" : "Please fill in all contact information"); return false;
+      console.log("❌ ตรวจสอบไม่ผ่าน: กรอกข้อมูลผู้ติดต่อไม่ครบ", contactInfo);
+      alert(language === "th" ? "กรุณากรอกข้อมูลผู้ติดต่อให้ครบถ้วน" : "Please fill in all contact information"); 
+      return false;
     }
+    console.log("✅ ตรวจสอบผ่านครบทุกข้อ!");
     return true;
   };
 
+  // ✅ ใส่ Console.log ตรวจสอบการกดปุ่มและ Props
   const handleAddToCart = () => {
-    if (isFull || !validateForm()) return;
-    if (onAddToCart) onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
+    console.log("🖱️ ปุ่ม Add to Cart ถูกคลิกแล้ว!");
+    
+    // 1. ตรวจสอบก่อนว่ากรอกข้อมูลครบไหม
+    if (isFull || !validateForm()) {
+        console.log("⛔ การทำงานหยุดลง เพราะข้อมูลไม่ผ่านเงื่อนไข (ติด Validate)");
+        return;
+    }
+
+    console.log("🚀 ข้อมูลพร้อมส่งเข้าตะกร้า:", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
+
+    // 2. ถ้ามี prop onAddToCart ส่งมา ให้เรียกใช้งาน
+    if (onAddToCart) {
+      onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
+      console.log("🎉 เรียกฟังก์ชัน onAddToCart สำเร็จ!");
+      alert(language === "th" ? "เพิ่มลงตะกร้าสำเร็จ!" : "Added to cart successfully!"); 
+    } else {
+      // 3. แจ้งเตือนในกรณีที่ลืมส่งฟังก์ชันมาจากไฟล์หลัก
+      console.log("⚠️ ไม่มีฟังก์ชัน onAddToCart ส่งมาจากไฟล์หลัก (Props)");
+      alert(language === "th" 
+        ? "ระบบตรวจสอบข้อมูลผ่านแล้ว! แต่ยังไม่ได้เชื่อมต่อ onAddToCart" 
+        : "Validation passed, but onAddToCart is missing.");
+    }
   };
 
   const handleContinue = () => {

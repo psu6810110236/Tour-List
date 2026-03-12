@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar, ShoppingBag } from 'lucide-react';
 
 // ✅ ใช้ Path ที่ถูกต้องสำหรับโครงสร้างโปรเจกต์ของคุณ
-import { tourService } from '../../../services/api';
+import { tourService, addToCartAPI } from '../../../services/api'; // 🌟 เพิ่ม addToCartAPI
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
+
+// 🌟 นำเข้า useCart สำหรับระบบตะกร้า
+import { useCart } from '../../../context/CartContext'; 
 
 // ✅ 1. สร้าง Interface สำหรับแผนการเดินทาง (Itinerary)
 interface ItineraryDay {
@@ -59,10 +62,15 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const [expandedDay, setExpandedDay] = useState<number | null>(1);
   const [showVideo, setShowVideo] = useState(false);
   
+  // 🌟 4. State สำหรับฟีเจอร์ตะกร้าสินค้า
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [pax, setPax] = useState<number>(1);
+  const { fetchCart, toggleDrawer } = useCart();
+  
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
 
-// 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
+  // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
   useEffect(() => {
     if (!id) return;
 
@@ -70,14 +78,9 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
       setLoading(true);
       setError(null);
       
-      try { // <--- ต้องมีคำว่า try นำหน้าเสมอเมื่อใช้คู่กับ catch
-        
+      try { 
         const response = await tourService.getById(id);
-        
-        // 🟢 ใช้ 'as unknown as TourDetail' เพื่อบอก TypeScript ว่า
-        // เรารู้ว่า Type มันคืออะไร ให้แปลงเป็น TourDetail ซะ จะได้ไม่ Error
         setTour(response.data as unknown as TourDetail);
-
       } catch (err: unknown) { 
         console.error("Error fetching tour details:", err);
         if (err instanceof Error) {
@@ -92,6 +95,37 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
     fetchTourDetail();
   }, [id]);
+
+  // 🌟 5. ฟังก์ชันเพิ่มลงตะกร้า (ยิง API และเปิด Drawer)
+  const handleAddToCart = async () => {
+    if (!selectedDate) {
+      alert(language === 'th' ? 'กรุณาเลือกวันที่เดินทางก่อนครับ' : 'Please select a travel date.');
+      return;
+    }
+    if (!tour || !tour.id || !tour.price) return;
+
+    try {
+      const payload = {
+        tourId: String(tour.id),
+        selectedDate: selectedDate,
+        pax: pax,
+        totalPrice: Number(tour.price) * pax,
+      };
+
+      // ยิง API บันทึกลง Database (Backend)
+      await addToCartAPI(payload);
+      
+      // ดึงข้อมูลตะกร้าใหม่มาอัปเดต UI ทันที
+      await fetchCart();
+      
+      // สั่งให้เปิดหน้าต่างตะกร้าโชว์
+      toggleDrawer(); 
+
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      alert(language === 'th' ? 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง หรือเข้าสู่ระบบก่อนทำรายการครับ' : 'Error adding to cart. Please make sure you are logged in.');
+    }
+  };
 
   // Loading State
   if (loading) {
@@ -327,15 +361,68 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                    </div>
                 </div>
 
-                <button 
-                  onClick={() => navigate(`/booking/${tour.id}`)} 
-                  className="w-full bg-[#FF6B4A] hover:bg-[#ff5232] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 transition-all active:scale-[0.98] relative z-10"
-                >
-                  {t.bookNow}
-                </button>
+                {/* 🌟 ส่วนสำหรับเลือกลงตะกร้า */}
+                <div className="space-y-4 mb-6 relative z-10 border-t border-gray-100 pt-6">
+                  {/* เลือกวันที่ */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      {language === 'th' ? 'วันที่เดินทาง' : 'Travel Date'} <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="date" 
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#00A699] focus:border-transparent outline-none transition-all text-gray-700 bg-white"
+                    />
+                  </div>
+
+                  {/* เลือกจำนวนคน */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      {language === 'th' ? 'จำนวนผู้เดินทาง' : 'Number of Travelers'}
+                    </label>
+                    <div className="flex items-center justify-between border border-gray-200 rounded-xl px-4 py-2 bg-white">
+                      <button 
+                        onClick={() => setPax(Math.max(1, pax - 1))}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+                      >-</button>
+                      <span className="font-bold text-lg text-gray-800">{pax}</span>
+                      <button 
+                        onClick={() => setPax(pax + 1)}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-[#00A699]/10 text-[#00A699] hover:bg-[#00A699]/20 transition"
+                      >+</button>
+                    </div>
+                  </div>
+                  
+                  {/* แสดงราคารวมชั่วคราว */}
+                  {pax > 1 && (
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-800 bg-gray-50 p-3 rounded-lg mt-2">
+                      <span>{language === 'th' ? 'ราคารวม' : 'Total Price'}:</span>
+                      <span className="text-[#00A699] text-lg">฿{(Number(tour.price || 0) * pax).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 🌟 ปุ่ม Add to Cart & Book Now */}
+                <div className="flex flex-col gap-3 relative z-10">
+                  <button 
+                    onClick={handleAddToCart}
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200 py-3.5 rounded-2xl font-bold text-lg transition-all active:scale-[0.98]"
+                  >
+                    <ShoppingBag className="w-5 h-5" />
+                    {language === 'th' ? 'เพิ่มลงตะกร้า' : 'Add to Cart'}
+                  </button>
+                  
+                  <button 
+                    onClick={() => navigate(`/booking/${tour.id}`)} 
+                    className="w-full bg-[#FF6B4A] hover:bg-[#ff5232] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
+                  >
+                    {t.bookNow}
+                  </button>
+                </div>
                 
                 <p className="text-center text-xs text-gray-400 mt-4">
-                    Free cancellation up to 24 hours before start
+                   Free cancellation up to 24 hours before start
                 </p>
               </div>
 

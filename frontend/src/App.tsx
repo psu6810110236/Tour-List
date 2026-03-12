@@ -5,10 +5,10 @@ import { AuthProvider, useAuth } from './features/auth/context/AuthContext';
 import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
 
-// --- Icons ---
+import { CartProvider, useCart } from './context/CartContext'; 
+
 import { Construction, UserCircle } from 'lucide-react';
 
-// --- Import Pages & Components ---
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
 import HomePage from './features/public/pages/home-page';
@@ -22,11 +22,12 @@ import { BookingPage } from './components/ui/booking-page';
 import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
 import { MyBookingsPage } from './pages/MyBookingsPage';
-// Service & Types
+
+import CartDrawer from './components/ui/CartDrawer';
+
 import { tourService } from './services/api';
 import type { Province } from './data/mockData';
 
-// --- UI Helper Components ---
 const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, desc: string, icon: any }) => (
   <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 bg-gray-50/50">
     <div className="bg-white p-10 md:p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 max-w-md w-full text-center border border-gray-100 relative overflow-hidden animate-in fade-in zoom-in duration-500">
@@ -40,8 +41,6 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
   </div>
 );
 
-
-
 const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
   <WorkInProgressTemplate 
     title={language === 'th' ? "โปรไฟล์ผู้ใช้" : "User Profile"} 
@@ -50,14 +49,12 @@ const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
   />
 );
 
-// --- PrivateRoute Helper ---
 const PrivateRoute = () => {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-[#00A699]">กำลังตรวจสอบสิทธิ์...</div>;
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
-// --- Province Wrapper ---
 const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -100,6 +97,10 @@ function AppContent() {
   const navigate = useNavigate();
   const [language, setLanguage] = useState<'th' | 'en'>('th');
   const [bookingData, setBookingData] = useState<any>(null);
+
+  // ✅ ดึงฟังก์ชัน addToCart ออกมาจาก useCart() ตรงนี้
+  const { cartItems, toggleDrawer, clearCart, addToCart } = useCart(); 
+  const totalItems = cartItems.length;
 
   useEffect(() => {
     try {
@@ -160,8 +161,8 @@ function AppContent() {
           onNavigate={handleNavigate}
           userName={user?.fullName || "Guest User"}
           onShowTutorial={() => alert("Tutorial Coming Soon!")}
-          cartCount={0}
-          onOpenCart={() => console.log("Open Cart")}
+          cartCount={totalItems} 
+          onOpenCart={toggleDrawer} 
           language={language}
           onToggleLanguage={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
         />
@@ -178,12 +179,35 @@ function AppContent() {
 
           {/* Private (User) */}
           <Route element={<PrivateRoute />}>
-            <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
-            <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
+            {/* ✅ ส่ง onAddToCart={addToCart} ไปที่หน้า BookingPage */}
+            <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} onAddToCart={addToCart} />} />
+            <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} onAddToCart={addToCart} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
             <Route path="/profile" element={<UserProfile language={language} />} />
-            <Route path="/payment" element={<PaymentPage bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
-            <Route path="/payment-confirmation" element={<PaymentConfirmation bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
+            
+            <Route 
+              path="/payment" 
+              element={
+                <PaymentPage 
+                  bookingData={bookingData || { isFromCart: true }} 
+                  cartItems={cartItems} 
+                  onClearCart={clearCart} 
+                  onNavigate={handleNavigate} 
+                  language={language} 
+                />
+              } 
+            />
+            <Route 
+              path="/payment-confirmation" 
+              element={
+                <PaymentConfirmation 
+                  bookingData={bookingData || { isFromCart: true }} 
+                  cartItems={cartItems} 
+                  onNavigate={handleNavigate} 
+                  language={language} 
+                />
+              } 
+            />
           </Route>
 
           {/* Admin Only */}
@@ -204,6 +228,9 @@ function AppContent() {
       </main>
 
       {showChatWidget && <ChatWidget />}
+
+      <CartDrawer />
+      
     </div>
   );
 }
@@ -211,9 +238,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <CartProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </CartProvider>
     </AuthProvider>
   );
 }

@@ -1,23 +1,25 @@
-// src/components/home-page.tsx
+// src/features/public/pages/home-page.tsx
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // ✅ เพิ่ม axios สำหรับดึงข้อมูลทัวร์
+import axios from "axios";
 import {
   Search,
   Map,
   MapPin,
   ArrowRight,
   Star,
-  TrendingUp
+  TrendingUp,
+  ShoppingBag // 🌟 1. เพิ่ม Icon ตะกร้า
 } from "lucide-react";
 
-// ✅ ใช้ Path นี้เพื่อให้ตรงกับโครงสร้างโฟลเดอร์ปัจจุบันของคุณ
-import { tourService } from "../../../services/api";
+// 🌟 2. นำเข้า Context และ API ของตะกร้า
+import { tourService, addToCartAPI } from "../../../services/api"; 
+import { useCart } from '../../../context/CartContext'; 
+
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 
-// ✅ 1. Interface สำหรับจังหวัด
 interface Province {
   id: string;
   name: string;
@@ -28,7 +30,6 @@ interface Province {
   description_th: string;
 }
 
-// ✅ 2. Interface สำหรับทัวร์
 interface Tour {
   id: string | number;
   name: string;
@@ -45,19 +46,18 @@ interface HomePageProps {
 export default function HomePage({ language }: HomePageProps) { 
   const navigate = useNavigate();
 
-  // ✅ State สำหรับเก็บข้อมูลจาก API
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [tours, setTours] = useState<Tour[]>([]); 
   
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingTours, setLoadingTours] = useState(true); 
 
-  // 🟢 State สำหรับเก็บคำค้นหา
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ ดึงข้อมูลจาก Backend เมื่อเปิดหน้าเว็บ
+  // 🌟 3. เรียกใช้งาน Context ของตะกร้า
+  const { fetchCart, toggleDrawer } = useCart();
+
   useEffect(() => {
-    // 1. ดึงข้อมูลจังหวัด
     const fetchProvinces = async () => {
       try {
         const response = await tourService.getProvinces();
@@ -69,7 +69,6 @@ export default function HomePage({ language }: HomePageProps) {
       }
     };
 
-    // 2. ดึงข้อมูลทัวร์ เก็บหน้าแยก
     const fetchTours = async () => {
       try {
         const response = await axios.get('http://localhost:3000/tours'); 
@@ -95,30 +94,51 @@ export default function HomePage({ language }: HomePageProps) {
     }
   };
 
-  // 🟢 ฟังก์ชันจัดการเมื่อผู้ใช้กดปุ่มค้นหาหรือกด Enter
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault(); // ป้องกันหน้าเว็บรีเฟรช
+    e.preventDefault();
 
     const trimmedQuery = searchQuery.trim().toLowerCase();
 
-    // ถ้าไม่ได้พิมพ์อะไรเลย ให้ไปหน้ารวมจังหวัด
     if (!trimmedQuery) {
       navigate('/provinces');
       return;
     }
 
-    // ค้นหาว่าคำที่พิมพ์ ตรงกับชื่อจังหวัดที่มีในระบบหรือไม่ (ทั้งภาษาไทยและอังกฤษ)
     const matchedProvince = provinces.find(p => 
       p.name.toLowerCase().includes(trimmedQuery) || 
       p.name_th.toLowerCase().includes(trimmedQuery)
     );
 
     if (matchedProvince) {
-      // ถ้าเจอจังหวัดที่ตรงกัน ให้เด้งไปหน้ารายละเอียดของจังหวัดนั้น
       navigate(`/province/${matchedProvince.id}`);
     } else {
-      // ถ้าไม่มีข้อมูลตรงกับที่พิมพ์เลย ให้ไปหน้ารวมจังหวัด
       navigate('/provinces');
+    }
+  };
+
+  // 🌟 4. ฟังก์ชันเพิ่มลงตะกร้าด่วน (จองล่วงหน้า 1 วัน, 1 ท่าน)
+  const handleQuickAddToCart = async (e: React.MouseEvent, tour: Tour) => {
+    e.stopPropagation(); // กันไม่ให้บั๊กกดแล้วเด้งไปหน้าอื่น
+    
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const defaultDate = tomorrow.toISOString().split('T')[0];
+
+      const payload = {
+        tourId: String(tour.id),
+        selectedDate: defaultDate,
+        pax: 1,
+        totalPrice: Number(tour.price || 0),
+      };
+
+      await addToCartAPI(payload);
+      await fetchCart();
+      toggleDrawer(); // เปิดหน้าต่างตะกร้าทันที
+
+    } catch (err) {
+      console.error('Error quick adding to cart:', err);
+      alert(language === 'th' ? 'กรุณาเข้าสู่ระบบก่อนเพิ่มลงตะกร้าครับ' : 'Please login to add items to cart.');
     }
   };
 
@@ -184,12 +204,10 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
       </div>
 
-      {/* ================= STATS SECTION (Glowing Layout) ================= */}
+      {/* ================= STATS SECTION ================= */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-8 md:-mt-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
 
-          {/* Card 1: ซ้าย */}
-          {/* 🟢 เพิ่มเอฟเฟกต์เรืองแสงสีฟ้าอ่อนรอบทิศทาง และสว่างขึ้นเมื่อเอาเมาส์ชี้ */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
@@ -199,8 +217,6 @@ export default function HomePage({ language }: HomePageProps) {
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'แพ็กเกจที่คัดสรรมาอย่างดี' : 'Carefully curated packages'}</p>
           </div>
 
-          {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย) */}
-          {/* 🟢 กล่องกลางจะเรืองแสงสว่างกว่าเพื่อนเล็กน้อย เพื่อให้ดูโดดเด่น */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_35px_rgba(56,189,248,0.4)] hover:shadow-[0_0_50px_rgba(56,189,248,0.7)] border border-sky-200 md:-mt-6 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center relative z-10">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
               <MapPin className="w-8 h-8" />
@@ -210,7 +226,6 @@ export default function HomePage({ language }: HomePageProps) {
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'ครอบคลุมทุกจุดหมายปลายทาง' : 'Covering all destinations'}</p>
           </div>
 
-          {/* Card 3: ขวา */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center text-yellow-500 mb-4">
               <Star className="w-8 h-8 fill-yellow-500" />
@@ -224,7 +239,8 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
 
         </div>
-      </div>หไ
+      </div>
+      
       {/* Province Selection */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -320,9 +336,25 @@ export default function HomePage({ language }: HomePageProps) {
                     <MapPin className="w-4 h-4 text-[#00A699]" />
                     {tour.province}
                   </p>
+                  
+                  {/* 🌟 5. ปรับเปลี่ยน UI ส่วนนี้ให้มีปุ่มตะกร้า */}
                   <div className="mt-auto pt-4 border-t border-gray-100">
-                    <p className="text-gray-500 text-sm mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
-                    <p className="text-[#FF6B4A] font-bold text-2xl mb-4">฿{tour.price.toLocaleString()}</p>
+                    <div className="flex items-end justify-between mb-4">
+                      <div>
+                        <p className="text-gray-500 text-sm mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
+                        <p className="text-[#FF6B4A] font-bold text-2xl">฿{tour.price.toLocaleString()}</p>
+                      </div>
+                      
+                      {/* 🌟 ปุ่ม Quick Add to Cart */}
+                      <button
+                        onClick={(e) => handleQuickAddToCart(e, tour)}
+                        className="w-12 h-12 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white rounded-xl flex justify-center items-center transition-all shadow-sm active:scale-95 border border-emerald-100"
+                        title="Add to Cart"
+                      >
+                        <ShoppingBag className="w-6 h-6" />
+                      </button>
+                    </div>
+                    
                     <button
                       onClick={() => navigate(`/tour/${tour.id}`)}
                       className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-3 rounded-xl font-bold transition flex justify-center items-center gap-2"
@@ -392,104 +424,97 @@ export default function HomePage({ language }: HomePageProps) {
 
       {/* Footer */}
       <footer className="relative bg-[#0f172a] text-white pt-20 pb-10 overflow-hidden">
-  {/* 💡 เอฟเฟกต์แสงฟุ้งด้านหลัง (Glow Effect) */}
-  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00A699]/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-  
-  <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-16">
-      
-      {/* 🏛️ Column 1: Brand Identity (4 Units) */}
-      <div className="lg:col-span-4 space-y-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-white rounded-2xl shadow-xl shadow-[#00A699]/20 flex items-center justify-center p-2 transform hover:rotate-6 transition-transform">
-      
-          </div>
-          <div>
-            <h2 className="text-2xl-[#00A699] ">
-              RoamHub <span className="text-[#00A699]">Tour</span>
-            </h2>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#00A699] font-bold">Premium Travel Experience</p>
-          </div>
-        </div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00A699]/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
         
-        <p className="text-gray-400 leading-relaxed text-sm max-w-sm">
-          {language === 'th' 
-            ? 'ยกระดับการเดินทางของคุณด้วยบริการทัวร์ระดับพรีเมียม คัดสรรสถานที่ที่ดีที่สุดเพื่อสร้างความทรงจำที่ไม่รู้ลืม' 
-            : 'Elevate your journey with premium tour services, handpicking the best locations to create unforgettable memories.'}
-        </p>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-16">
+            
+            <div className="lg:col-span-4 space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white rounded-2xl shadow-xl shadow-[#00A699]/20 flex items-center justify-center p-2 transform hover:rotate-6 transition-transform">
+                </div>
+                <div>
+                  <h2 className="text-2xl text-white font-bold">
+                    RoamHub <span className="text-[#00A699]">Tour</span>
+                  </h2>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#00A699] font-bold">Premium Travel Experience</p>
+                </div>
+              </div>
+              
+              <p className="text-gray-400 leading-relaxed text-sm max-w-sm">
+                {language === 'th' 
+                  ? 'ยกระดับการเดินทางของคุณด้วยบริการทัวร์ระดับพรีเมียม คัดสรรสถานที่ที่ดีที่สุดเพื่อสร้างความทรงจำที่ไม่รู้ลืม' 
+                  : 'Elevate your journey with premium tour services, handpicking the best locations to create unforgettable memories.'}
+              </p>
 
-        {/* Social Icons with Glass effect */}
-        <div className="flex gap-4">
-          {['Facebook', 'Instagram', 'Youtube'].map((social) => (
-            <div key={social} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#00A699] hover:border-[#00A699] transition-all cursor-pointer group">
-              <span className="text-[10px] font-bold group-hover:scale-110 transition-transform">{social[0]}</span>
+              <div className="flex gap-4">
+                {['Facebook', 'Instagram', 'Youtube'].map((social) => (
+                  <div key={social} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#00A699] hover:border-[#00A699] transition-all cursor-pointer group">
+                    <span className="text-[10px] font-bold group-hover:scale-110 transition-transform">{social[0]}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* 🔗 Column 2 & 3: Navigation (4 Units) */}
-      <div className="lg:col-span-4 grid grid-cols-2 gap-8">
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
-            {language === 'th' ? 'สำรวจ' : 'Explore'}
-          </h4>
-          <ul className="space-y-4 text-gray-400 text-sm">
-            {['Destinations', 'Popular Tours', 'Private Trips', 'Activities'].map(item => (
-              <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
-                <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
-            {language === 'th' ? 'บริการ' : 'Services'}
-          </h4>
-          <ul className="space-y-4 text-gray-400 text-sm">
-            {['Booking Policy', 'Partner with Us', 'Help Center', 'Terms'].map(item => (
-              <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
-                <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+            <div className="lg:col-span-4 grid grid-cols-2 gap-8">
+              <div>
+                <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
+                  {language === 'th' ? 'สำรวจ' : 'Explore'}
+                </h4>
+                <ul className="space-y-4 text-gray-400 text-sm">
+                  {['Destinations', 'Popular Tours', 'Private Trips', 'Activities'].map(item => (
+                    <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
+                      <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
+                  {language === 'th' ? 'บริการ' : 'Services'}
+                </h4>
+                <ul className="space-y-4 text-gray-400 text-sm">
+                  {['Booking Policy', 'Partner with Us', 'Help Center', 'Terms'].map(item => (
+                    <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
+                      <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
 
-      {/* ✉️ Column 4: Premium Newsletter (4 Units) */}
-      <div className="lg:col-span-4 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-        <h4 className="text-lg font-bold mb-2">{language === 'th' ? 'รับสิทธิพิเศษก่อนใคร' : 'Exclusive Offers'}</h4>
-        <p className="text-gray-400 text-xs mb-6">
-          {language === 'th' ? 'สมัครสมาชิกเพื่อรับโปรโมชั่นลับเฉพาะคุณ' : 'Join our club for members-only deals and travel tips.'}
-        </p>
-        <form className="relative">
-          <input 
-            type="email" 
-            placeholder="your@email.com" 
-            className="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A699] transition-all"
-          />
-          <button className="absolute right-2 top-2 bottom-2 bg-[#00A699] hover:bg-[#008c81] px-6 rounded-xl font-bold text-sm shadow-lg shadow-[#00A699]/20 transition-all active:scale-95">
-            {language === 'th' ? 'สมัคร' : 'Join'}
-          </button>
-        </form>
-      </div>
-    </div>
+            <div className="lg:col-span-4 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+              <h4 className="text-lg font-bold mb-2">{language === 'th' ? 'รับสิทธิพิเศษก่อนใคร' : 'Exclusive Offers'}</h4>
+              <p className="text-gray-400 text-xs mb-6">
+                {language === 'th' ? 'สมัครสมาชิกเพื่อรับโปรโมชั่นลับเฉพาะคุณ' : 'Join our club for members-only deals and travel tips.'}
+              </p>
+              <form className="relative">
+                <input 
+                  type="email" 
+                  placeholder="your@email.com" 
+                  className="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A699] transition-all"
+                />
+                <button className="absolute right-2 top-2 bottom-2 bg-[#00A699] hover:bg-[#008c81] px-6 rounded-xl font-bold text-sm shadow-lg shadow-[#00A699]/20 transition-all active:scale-95">
+                  {language === 'th' ? 'สมัคร' : 'Join'}
+                </button>
+              </form>
+            </div>
+          </div>
 
-    {/* 📋 Footer Bottom */}
-    <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-      <div className="text-gray-500 text-[11px] font-medium tracking-wide">
-        © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
-      </div>
-      <div className="flex items-center gap-8">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" className="h-4 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-      </div>
-    </div>
-  </div>
-</footer>
+          <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="text-gray-500 text-[11px] font-medium tracking-wide">
+              © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
+            </div>
+            <div className="flex items-center gap-8">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" className="h-4 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

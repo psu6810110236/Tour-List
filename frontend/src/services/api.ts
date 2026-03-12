@@ -44,3 +44,17 @@ export const bookingService = {
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
   deleteProvince: (id: string) => axios.delete(`http://localhost:3000/provinces/${id}`),
 };
+
+// 🌟 ส่วนที่เพิ่มใหม่สำหรับระบบตะกร้า (Cart)
+export interface AddToCartPayload {
+  tourId: string;
+  selectedDate: string;
+  pax: number;
+  totalPrice: number;
+}
+
+export const addToCartAPI = async (payload: AddToCartPayload) => {
+  // 🟢 ใช้ 'api' instance ที่ตั้งค่า baseURL ไว้แล้ว และมันจะแนบ Token ให้อัตโนมัติจาก interceptor ด้านบน
+  const response = await api.post('/cart/add', payload);
+  return response.data;
+};

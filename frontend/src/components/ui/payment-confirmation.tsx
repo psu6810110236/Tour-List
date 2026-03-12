@@ -7,9 +7,10 @@ interface PaymentConfirmationProps {
   bookingData: any;
   onNavigate: (page: string, data?: any) => void;
   language: Language;
+  cartItems?: any[]; // 🌟 เพิ่มตัวนี้แล้วครับ
 }
 
-export function PaymentConfirmation({ bookingData, onNavigate, language }: PaymentConfirmationProps) {
+export function PaymentConfirmation({ bookingData, onNavigate, language, cartItems }: PaymentConfirmationProps) {
   const t = translations[language].confirmation;
   const b = translations[language].booking;
 
@@ -23,8 +24,8 @@ export function PaymentConfirmation({ bookingData, onNavigate, language }: Payme
 
   // รองรับข้อมูลทั้งแบบเก่า(mock) และจาก Backend API
   const bookingId = data.id || data.bookingId || "PENDING";
-  const tourName = data.tourNameSnapshot || data.tourName || data.tour?.name || (language === 'th' ? "ไม่ระบุทัวร์" : "Unknown Tour");
-  const province = data.tour?.province?.name || data.tour?.province || data.province || (language === 'th' ? "ไม่ระบุจังหวัด" : "Unknown Province");
+  const tourName = data.tourNameSnapshot || data.tourName || data.tour?.name || (language === 'th' ? "ทัวร์ (จากตะกร้า)" : "Tour (Cart)");
+  const province = data.tour?.province?.name || data.tour?.province || data.province || (language === 'th' ? "รอการยืนยัน" : "TBD");
   
   // รองรับฟิลด์วันที่จากทั้งสองแบบ
   const dateObj = data.travelDate ? new Date(data.travelDate) : (data.date ? new Date(data.date) : new Date());
@@ -43,7 +44,7 @@ export function PaymentConfirmation({ bookingData, onNavigate, language }: Payme
               </div>
               <h1 className="text-3xl font-extrabold text-white mb-2">{t.success}</h1>
               <p className="text-teal-50 font-medium">
-                {language === 'th' ? "ได้รับข้อมูลการจองของคุณเรียบร้อยแล้ว" : "Your booking has been received successfully"}
+                {language === 'th' ? "ได้รับข้อมูลการชำระเงินของคุณเรียบร้อยแล้ว" : "Your payment has been received successfully"}
               </p>
             </div>
           </div>
@@ -86,7 +87,7 @@ export function PaymentConfirmation({ bookingData, onNavigate, language }: Payme
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium">{b.travelers}</p>
-                    <p className="font-bold text-gray-900 text-sm">{data.travelers} {language === 'th' ? "ท่าน" : "Pax"}</p>
+                    <p className="font-bold text-gray-900 text-sm">{data.travelers || data.pax || 1} {language === 'th' ? "ท่าน" : "Pax"}</p>
                   </div>
                 </div>
               </div>
@@ -107,7 +108,7 @@ export function PaymentConfirmation({ bookingData, onNavigate, language }: Payme
                 </div>
               </div>
               <p className="text-3xl font-black text-[#00A699]">
-                ฿{data.totalPrice?.toLocaleString()}
+                ฿{Number(data.totalPrice || 0).toLocaleString()}
               </p>
             </div>
 
