@@ -153,21 +153,21 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
           </button>
 
           {/* แกน X ที่กางออก (Expanded Area) */}
-          
+
           <div
             className={`flex items-center overflow-hidden transition-all duration-500 ease-in-out ${isFilterExpanded ? "max-w-[1000px] opacity-100 ml-3" : "max-w-0 opacity-0 ml-0"
               }`}
           >
-            <div className="flex gap-2 overflow-x-auto py-1 pl-1 pr-2 [&::-webkit-scrollbar]:hidden whitespace-nowrap">
+            <div className="flex gap-2 overflow-x-auto py-3 pl-1 pr-3 [&::-webkit-scrollbar]:hidden whitespace-nowrap">
               {REGIONS.map((region) => (
                 <button
                   key={region.id}
                   onClick={() => {
                     setSelectedRegion(region.id);
                   }}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 shrink-0 shadow-[0_4px_20px_rgb(0,0,0,0.03)] ${selectedRegion === region.id
-                      ? "bg-blue-400/20 backdrop-blur-md border border-white/60 text-blue-800" /* 💧 กระจกสีน้ำเงินจางๆ */
-                      : "bg-white/40 backdrop-blur-md border border-white/50 text-gray-600 hover:bg-blue-50/50 hover:border-blue-200/50" /* 💧 กระจกใสธรรมดา Hover แล้วอมฟ้า */
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shrink-0 backdrop-blur-xl hover:-translate-y-0.5 active:scale-95 ${selectedRegion === region.id
+                      ? "bg-blue-500/15 border border-white/70 text-blue-800 shadow-[0_8px_30px_-6px_rgba(37,99,235,0.35)]" /* 💧 กระจกสีน้ำเงิน + เงาเรืองแสงสีฟ้า (Colored Shadow) */
+                      : "bg-white/30 border border-white/50 text-gray-600 shadow-[0_4px_15px_-3px_rgba(0,0,0,0.03)] hover:bg-white/50 hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.06)] hover:border-white/60" /* 💧 กระจกใส + เงาเทานุ่มๆ เบาๆ */
                     }`}
                 >
                   {language === "th" ? region.name_th : region.name}
