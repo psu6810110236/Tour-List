@@ -6,7 +6,7 @@ import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
 
 // --- Icons ---
-import { Construction, UserCircle } from 'lucide-react';
+import { Construction, Ticket, UserCircle } from 'lucide-react';
 
 // --- Import Pages & Components ---
 import Login from './features/auth/Login';
@@ -21,7 +21,7 @@ import AllProvincesPage from './pages/AllProvincesPage';
 import { BookingPage } from './components/ui/booking-page';
 import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
-import { MyBookingsPage } from './pages/MyBookingsPage';
+
 // Service & Types
 import { tourService } from './services/api';
 import type { Province } from './data/mockData';
@@ -40,7 +40,13 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
   </div>
 );
 
-
+const BookingsHistoryPage = ({ language }: { language: 'th' | 'en' }) => (
+  <WorkInProgressTemplate 
+    title={language === 'th' ? "ประวัติการจอง" : "My Bookings"} 
+    desc={language === 'th' ? "หน้ารวมรายการทัวร์ที่คุณจองไว้กำลังก่อสร้าง" : "The page for your booked tours history is under construction."} 
+    icon={Ticket} 
+  />
+);
 
 const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
   <WorkInProgressTemplate 
@@ -67,9 +73,11 @@ const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
   useEffect(() => {
     const fetchProvince = async () => {
       try {
+        if (!id) return;
+        // 🟢 เปลี่ยนมาเรียกใช้ API ดึงจังหวัดเดียว
         const response = await tourService.getProvinces();
-        const found = response.data.find((p: any) => String(p.id) === String(id));
-        setProvinceData(found || null);
+        const province = response.data?.find((p: Province) => p.id === id) || null;
+        setProvinceData(province);
       } catch (error) {
         console.error("Error fetching province:", error);
       } finally {
@@ -180,7 +188,7 @@ function AppContent() {
           <Route element={<PrivateRoute />}>
             <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
-            <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
+            <Route path="/my-bookings" element={<BookingsHistoryPage language={language} />} />
             <Route path="/profile" element={<UserProfile language={language} />} />
             <Route path="/payment" element={<PaymentPage bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/payment-confirmation" element={<PaymentConfirmation bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
