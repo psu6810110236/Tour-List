@@ -1,26 +1,23 @@
-const crypto = require('crypto');
-if (!global.crypto) {
-  global.crypto = crypto;
-}
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // 🟢 เปิดใช้งาน CORS แบบละเอียด (อนุญาตให้ Frontend เรียก API ได้)
   app.enableCors({
-    origin: true, // อนุญาตทุกโดเมน (เหมาะสำหรับตอน Develop) หรือจะเจาะจงเป็น 'http://localhost:5173' ก็ได้
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
   // เปิดใช้งาน Validation สำหรับตรวจสอบข้อมูลที่ส่งเข้ามา
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  // จัดการ Error format ให้เป็นมาตรฐานเดียวกันทั้งระบบ (หากต้องการใช้งานให้ลบคอมเมนต์ด้านล่างออก)
-  // app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   await app.listen(3000);
   console.log('🚀 Application is running on: http://localhost:3000');

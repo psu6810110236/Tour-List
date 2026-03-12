@@ -1,17 +1,14 @@
-// src/types/index.ts
 
-// ข้อมูลจังหวัด
 export interface Province {
   id: string;
-  name: string;      // ชื่อภาษาอังกฤษ
-  name_th: string;   // ชื่อภาษาไทย
+  name: string;      
+  name_th: string;   
   tourCount: number;
   image: string;
   description: string;
   description_th: string;
 }
 
-// กิจกรรมในแต่ละวัน (Itinerary)
 export interface ItineraryItem {
   day: number;
   title: string;
@@ -20,7 +17,6 @@ export interface ItineraryItem {
   activities_th: string[];
 }
 
-// ข้อมูลทัวร์ (ตรงกับ Backend Tour Entity)
 export interface Tour {
   id: string;
   name: string;
@@ -30,13 +26,24 @@ export interface Tour {
   price: number;
   duration: string;
   duration_th: string;
-  image: string; // URL รูปภาพหลัก
+  
+  vehicleType?: string;
+  maxCapacity?: number;
+
+  tripType?: string;
+  // 🌟 [เพิ่มใหม่]
+  tripDays?: number;
+  availableDates?: string[];
+
+  image: string; 
   rating?: number;
   reviewCount?: number;
+  tourType?: 'oneday' | 'package'; 
+  accommodation?: string;
+  bookedSeats?: number;
   
-  // Relations (บางครั้ง backend ส่งมาแค่ ID หรือส่งมาทั้ง Object)
   provinceId: string;
-  province?: Province | string; // ยืดหยุ่นรองรับทั้ง 2 แบบ
+  province?: Province | string; 
   
   highlights: string[];
   highlights_th: string[];
@@ -48,26 +55,22 @@ export interface Tour {
   itinerary: ItineraryItem[];
 }
 
-// ข้อมูลการจอง (Booking)
 export interface Booking {
   id: string;
   userId: string;
-  tourId: string;
-  bookingDate: string; // ISO Date String
+  tourId: number;
+  bookingDate: string; 
   travelDate: string;
   travelers: number;
   totalPrice: number;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   paymentStatus: 'pending' | 'completed' | 'failed';
-  paymentSlip?: string; // URL สลิป (ถ้ามี)
+  paymentSlip?: string; 
   
-  // Snapshot ข้อมูลตอนจอง (เผื่อทัวร์เปลี่ยนราคา)
   tourNameSnapshot: string;
   tourNameSnapshot_th?: string;
   
-  // Optional relations
   tour?: Tour;
   user?: any;
-  
-  province?: any;// ถ้ายังไม่ได้ทำ Interface User ใช้ any ไปก่อนชั่วคราว
+  province?: any;
 }

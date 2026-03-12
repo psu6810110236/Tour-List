@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Upload, Lock, QrCode, CreditCard, CheckCircle } from "lucide-react";
+import { ArrowLeft, Upload, Lock, QrCode, CreditCard, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { getLang } from "../../data/mockData";
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
@@ -19,6 +19,31 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
   const [selectedMethod, setSelectedMethod] = useState<"qrcode" | "card">("qrcode");
   const [isProcessing, setIsProcessing] = useState(false);
   const [slipImage, setSlipImage] = useState<string | null>(null);
+
+  // --- ระบบ Pop-up Modal ---
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "warning" | "error" | "success";
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "success",
+  });
+
+  const showAlert = (title: string, message: string, type: "warning" | "error" | "success", onConfirm?: () => void) => {
+    setModalConfig({ isOpen: true, title, message, type, onConfirm });
+  };
+
+  const closeModal = () => {
+    const { onConfirm } = modalConfig;
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+    if (onConfirm) onConfirm();
+  };
+  // -----------------------
 
   useEffect(() => {
     if (!localBooking) {
@@ -43,7 +68,11 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert(language === "th" ? "ขนาดไฟล์ใหญ่เกินไป กรุณาใช้ไฟล์ขนาดไม่เกิน 5MB" : "File is too large. Please use a file under 5MB.");
+        showAlert(
+          language === "th" ? "ไฟล์มีขนาดใหญ่เกินไป" : "File too large",
+          language === "th" ? "กรุณาใช้ไฟล์ขนาดไม่เกิน 5MB" : "Please use a file under 5MB.",
+          "error"
+        );
         return;
       }
       const reader = new FileReader();
@@ -54,28 +83,34 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
 
   const handlePayment = async () => {
     if (!user) {
-      alert(language === "th" ? "กรุณาเข้าสู่ระบบก่อนทำการชำระเงิน" : "Please login before making a payment.");
-      onNavigate('login');
+      showAlert(
+        language === "th" ? "กรุณาเข้าสู่ระบบ" : "Login Required",
+        language === "th" ? "กรุณาเข้าสู่ระบบก่อนทำการชำระเงิน" : "Please login before making a payment.",
+        "warning",
+        () => onNavigate('login')
+      );
       return;
     }
     
-    if (selectedMethod === "qrcode" && !slipImage) {
-      alert(language === "th" ? "กรุณาอัปโหลดสลิปโอนเงินเพื่อยืนยันการชำระเงิน" : "Please upload a payment slip to confirm.");
-      return;
-    }
+    if (selectedMethod === "qrcode" && (!slipImage || slipImage === "")) {
+    showAlert(
+      language === "th" ? "ข้อมูลไม่ครบถ้วน" : "Missing Information",
+      language === "th" ? "กรุณาอัปโหลดสลิปโอนเงินเพื่อยืนยันการชำระเงิน" : "Please upload a payment slip to confirm.",
+      "warning"
+    );
+    return;
+  }
 
-    setIsProcessing(true);
+  setIsProcessing(true);
 
     try {
       const bookingPromises = items.map(async (item: any) => {
         const payload = {
           userId: user.id,
-          tourId: item.tour.id,
+          tourId: Number(item.tour.id),
           travelDate: item.date,
           travelers: item.travelers,
           totalPrice: item.totalPrice,
-          status: "pending" as const, 
-          paymentStatus: "pending" as const, 
           paymentSlip: slipImage || undefined,
           tourNameSnapshot: item.tour.name,
           tourNameSnapshot_th: item.tour.name_th,
@@ -85,34 +120,33 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
       });
 
       const results = await Promise.all(bookingPromises);
-      
       if (onClearCart) onClearCart();
-      
-      onNavigate("payment-confirmation", {
-        ...results[0],
-        tour: items[0].tour
-      });
+      onNavigate("payment-confirmation", { ...results[0], tour: items[0].tour });
       
     } catch (error) {
       console.error("Payment failed:", error);
-      alert(language === "th" ? "เชื่อมต่อ API ไม่สำเร็จ: จะจำลองพาไปหน้ายืนยันการจอง" : "API Error: Redirecting to mock confirmation.");
-      
-      if (onClearCart) onClearCart();
-      
-      onNavigate("payment-confirmation", {
-        id: `BK-TEST-${Date.now().toString().slice(-6)}`, // จำลองรหัสการจอง
-        tour: items[0].tour,
-        travelDate: items[0].date,
-        travelers: items[0].travelers,
-        totalPrice: items[0].totalPrice
-      });
+      showAlert(
+        language === "th" ? "ขออภัย ระบบขัดข้อง" : "Payment Error",
+        language === "th" ? "ไม่สามารถเชื่อมต่อระบบได้ จะนำท่านไปยังหน้ายืนยันการจองชั่วคราว" : "API Error: Redirecting to mock confirmation.",
+        "warning",
+        () => {
+          if (onClearCart) onClearCart();
+          onNavigate("payment-confirmation", {
+            id: `BK-TEST-${Date.now().toString().slice(-6)}`,
+            tour: items[0].tour,
+            travelDate: items[0].date,
+            travelers: items[0].travelers,
+            totalPrice: items[0].totalPrice
+          });
+        }
+      );
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FA] py-8 md:py-12 font-sans">
+    <div className="min-h-screen bg-[#F7F9FA] py-8 md:py-12 font-sans relative">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <button onClick={() => onNavigate("home")} className="flex items-center gap-2 text-gray-500 hover:text-[#00A699] mb-8 transition-colors font-medium w-fit">
           <ArrowLeft className="w-5 h-5" />
@@ -221,6 +255,42 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
           </div>
         </div>
       </div>
+
+      {/* --- UI Pop-up Modal --- */}
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+            <div className="p-8 text-center relative">
+              <button onClick={closeModal} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className={`mx-auto flex items-center justify-center h-20 w-20 rounded-full mb-6 ${
+                modalConfig.type === 'warning' ? 'bg-orange-50 text-orange-500' : 
+                modalConfig.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-teal-50 text-[#00A699]'
+              }`}>
+                {modalConfig.type === 'warning' && <AlertTriangle className="h-10 w-10" />}
+                {modalConfig.type === 'error' && <X className="h-10 w-10" />}
+                {modalConfig.type === 'success' && <CheckCircle className="h-10 w-10" />}
+              </div>
+              
+              <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">
+                {modalConfig.title}
+              </h3>
+              <p className="text-gray-500 font-medium leading-relaxed mb-8">
+                {modalConfig.message}
+              </p>
+              
+              <button
+                onClick={closeModal}
+                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-black transition-all active:scale-[0.97] shadow-lg shadow-gray-200"
+              >
+                {language === "th" ? "รับทราบ" : "Got it"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

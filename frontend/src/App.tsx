@@ -73,9 +73,11 @@ const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
   useEffect(() => {
     const fetchProvince = async () => {
       try {
+        if (!id) return;
+        // 🟢 เปลี่ยนมาเรียกใช้ API ดึงจังหวัดเดียว
         const response = await tourService.getProvinces();
-        const found = response.data.find((p: any) => String(p.id) === String(id));
-        setProvinceData(found || null);
+        const province = response.data?.find((p: Province) => p.id === id) || null;
+        setProvinceData(province);
       } catch (error) {
         console.error("Error fetching province:", error);
       } finally {

@@ -28,7 +28,6 @@ export class Tour {
   @Column('text', { nullable: true })
   description_th: string;
 
-  // ✅ ฟิลด์นี้ใช้สำหรับทำ Filter Price (ราคา) มีอยู่แล้ว
   @Column('float')
   price: number;
 
@@ -37,6 +36,22 @@ export class Tour {
 
   @Column({ nullable: true })
   duration_th: string;
+
+  @Column({ nullable: true })
+  vehicleType: string;
+
+  @Column('int', { default: 10 })
+  maxCapacity: number;
+
+  @Column({ nullable: true })
+  tripType: string;
+
+  // 🌟 [เพิ่มใหม่] จำนวนวันเดินทางของทริปนี้
+  @Column('int', { default: 1 })
+  tripDays: number;
+
+  @Column('json', { nullable: true })
+  availableDates: string[];
 
   @Column()
   image: string;
@@ -50,7 +65,6 @@ export class Tour {
   @Column({ default: 0 })
   reviewCount: number;
 
-  // ข้อมูลที่เป็นรายการ (Array) เก็บเป็น JSON
   @Column('json')
   highlights: string[];
 
@@ -72,13 +86,10 @@ export class Tour {
   @Column('json', { nullable: true })
   notIncluded_th: string[];
 
-  // 🌟 [เพิ่มใหม่] ฟิลด์นี้ใช้สำหรับทำ Filter Date (วันที่เริ่มทัวร์)
   @Column({ type: 'date', nullable: true })
   startDate: Date; 
 
   // --- Relations ---
-  
-  // ✅ ฟิลด์นี้ใช้สำหรับทำ Filter Province (จังหวัด) มีอยู่แล้ว
   @Column()
   provinceId: string; 
 
@@ -94,4 +105,16 @@ export class Tour {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  // ประเภททัวร์ (oneday หรือ package)
+  @Column({ type: 'varchar', length: 50, default: 'oneday' })
+  tourType: string;
+
+  // ชื่อที่พัก (nullable = true เพราะ one day trip จะไม่มีที่พัก)
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  accommodation: string;s
+
+  // จำนวนคนที่จองและจ่ายเงินแล้ว (เพื่อเอาไว้ทำระบบตัดยอด)
+  @Column({ type: 'int', default: 0 })
+  bookedSeats: number;
 }

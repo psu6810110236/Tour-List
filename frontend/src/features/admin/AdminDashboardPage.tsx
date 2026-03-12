@@ -17,7 +17,12 @@ import {
   Trash2,
   MessageSquare,
   ListChecks,
-  AlertCircle
+  Image as ImageIcon,
+  Users,
+  AlertCircle,
+  FileText,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
 import type { Province } from '../../data/mockData';
@@ -33,6 +38,7 @@ interface AdminDashboardProps {
   language: Language;
 }
 
+
 export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'tours'>('overview');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -42,17 +48,17 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
   const [bookingsList, setBookingsList] = useState<Booking[]>([]);
 
-  // 🟢 1. State สำหรับตัวกรอง "แท็บการจอง"
+  // State สำหรับตัวกรอง "แท็บการจอง"
   const [bookingSearch, setBookingSearch] = useState('');
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
   const [bookingProvinceFilter, setBookingProvinceFilter] = useState('all');
   const [bookingSort, setBookingSort] = useState('newest');
 
-  // 🟢 2. State สำหรับตัวกรอง "แท็บชำระเงิน"
+  // State สำหรับตัวกรอง "แท็บชำระเงิน"
   const [paymentSearch, setPaymentSearch] = useState('');
   const [paymentSort, setPaymentSort] = useState('oldest');
 
-  // 🟢 3. State สำหรับตัวกรอง "แท็บทัวร์"
+  // State สำหรับตัวกรอง "แท็บทัวร์"
   const [tourSearch, setTourSearch] = useState('');
   const [tourProvinceFilter, setTourProvinceFilter] = useState('all');
   const [tourPriceSort, setTourPriceSort] = useState('default');
@@ -63,6 +69,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
 
+  // 🌟 State สำหรับปฏิทินแอดมิน
+  const [adminMonth, setAdminMonth] = useState(new Date(2026, 2, 1));
+
   // State สำหรับ Popup
   const [popup, setPopup] = useState<{
     isOpen: boolean;
@@ -72,9 +81,12 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     onConfirm?: () => void;
   }>({ isOpen: false, type: 'alert', title: '', message: '' });
 
+  // 🌟 เพิ่มฟิลด์ใหม่: vehicleType, maxCapacity, tripType, tripDays, availableDates
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
     provinceId: '', province: '', price: 0, duration: '', duration_th: '', image: '',
+    vehicleType: 'รถตู้ VIP', maxCapacity: 10,
+    tripType: 'one-day', tripDays: 1, availableDates: [],
     highlights: [], highlights_th: [], itinerary: [{ day: 1, title: '', title_th: '', activities: [], activities_th: [] }],
     included: [], included_th: [], notIncluded: [], notIncluded_th: []
   };
@@ -82,7 +94,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [tourForm, setTourForm] = useState<Partial<Tour>>({ ...initialTourForm, id: `T-${Date.now()}` });
 
   const t = translations[language].admin;
-  const common = translations[language].booking;
   const tourT = translations[language].tourDetail;
 
   const LOGO_URL = "https://github.com/psu6810110318/-/blob/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png?raw=true";
@@ -110,6 +121,88 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const showConfirm = (title: string, message: string, onConfirm: () => void) => { setPopup({ isOpen: true, type: 'confirm', title, message, onConfirm }); };
   const closePopup = () => setPopup(prev => ({ ...prev, isOpen: false }));
 
+  // ==========================================
+  // 🟢 ฟังก์ชันจัดการสถานะ
+  // ==========================================
+
+  const handleApproveBooking = (bookingId: string) => {
+    showConfirm(language === 'th' ? "ยืนยันการอนุมัติที่นั่ง" : "Confirm Seat Approval", language === 'th' ? `คุณต้องการอนุมัติที่นั่งให้การจอง ${bookingId} ใช่หรือไม่?` : `Approve seats for booking ${bookingId}?`, async () => {
+      try {
+        await bookingService.updateBookingStatus(bookingId, 'approved');
+        fetchAdminData();
+        setSelectedBooking(null);
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "อนุมัติที่นั่งเรียบร้อยแล้ว" : "Seats approved successfully.");
+      } catch (error) {
+        showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการอนุมัติ" : "Error approving booking.");
+        closePopup();
+      }
+    });
+  };
+
+  const handleRejectBooking = (bookingId: string) => {
+    const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธการจอง (เช่น ทัวร์เต็ม):" : "Please enter rejection reason (e.g., Tour is full):");
+    if (reason === null) return;
+
+    showConfirm(language === 'th' ? "ยืนยันการปฏิเสธการจอง" : "Confirm Rejection", language === 'th' ? `คุณต้องการปฏิเสธการจอง ${bookingId} ใช่หรือไม่?` : `Reject booking ${bookingId}?`, async () => {
+      try {
+        await Promise.all([
+          bookingService.updateBookingStatus(bookingId, 'rejected', reason),
+          bookingService.updatePaymentStatus(bookingId, 'failed', reason)
+        ]);
+        fetchAdminData();
+        setSelectedBooking(null);
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธการจองเรียบร้อยแล้ว" : "Booking rejected.");
+      } catch (error) {
+        closePopup();
+      }
+    });
+  };
+
+  const handleApprovePayment = (bookingId: string) => {
+    showConfirm(language === 'th' ? "ยืนยันยอดชำระเงิน" : "Confirm Payment", language === 'th' ? `สลิปถูกต้อง อนุมัติยอดเงินสำหรับ ${bookingId} ใช่หรือไม่?` : `Slip is valid, approve payment?`, async () => {
+      try {
+        await bookingService.updatePaymentStatus(bookingId, 'completed');
+        fetchAdminData();
+        setSelectedBooking(null);
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ยืนยันยอดชำระเงินเรียบร้อยแล้ว" : "Payment verified successfully.");
+      } catch (error) {
+        showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการยืนยันสลิป" : "Error verifying payment.");
+        closePopup();
+      }
+    });
+  };
+
+  const handleRejectPayment = (bookingId: string) => {
+    const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธสลิป (เช่น ยอดเงินไม่ตรง):" : "Please enter rejection reason (e.g., Invalid amount):");
+    if (reason === null) return;
+
+    showConfirm(language === 'th' ? "ปฏิเสธสลิปและยกเลิก" : "Reject Payment & Booking", language === 'th' ? `สลิปไม่ถูกต้อง ปฏิเสธยอดเงินและยกเลิกการจองใช่หรือไม่?` : `Slip invalid, reject payment and cancel booking?`, async () => {
+      try {
+        await Promise.all([
+          bookingService.updatePaymentStatus(bookingId, 'failed', reason),
+          bookingService.updateBookingStatus(bookingId, 'rejected', reason)
+        ]);
+        fetchAdminData();
+        setSelectedBooking(null);
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธสลิปและยกเลิกการจองแล้ว" : "Payment rejected and booking cancelled.");
+      } catch (error) {
+        closePopup();
+      }
+    });
+  };
+
+  const handleDeleteBooking = (bookingId: string) => {
+    showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? `ต้องการลบการจอง ${bookingId} ถาวรใช่หรือไม่?` : `Permanently delete booking ${bookingId}?`, async () => {
+      try {
+        await bookingService.deleteBooking(bookingId); fetchAdminData();
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบการจองเรียบร้อยแล้ว" : "Booking deleted successfully."); closePopup();
+      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking."); closePopup(); }
+    });
+  };
+
+  // ==========================================
+  // ฟังก์ชันทัวร์ (Tours)
+  // ==========================================
   const handleEditClick = (tour: Tour) => {
     setEditingTourId(tour.id);
     const currentProvinceId = typeof tour.province === 'object' && tour.province !== null ? (tour.province as any).id : tour.provinceId || tour.province;
@@ -161,56 +254,60 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     setTourForm(prev => ({ ...prev, itinerary: [...(prev.itinerary || []), { day: (prev.itinerary?.length || 0) + 1, title: '', title_th: '', activities: [], activities_th: [] }] }));
   };
 
+  // 🌟 ฟังก์ชันจัดการปฏิทิน Admin
+  const adminWeekDays = language === "th" ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const adminMonthNames = language === "th" ? ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  const adminNextMonth = (e: any) => { e.preventDefault(); setAdminMonth(new Date(adminMonth.getFullYear(), adminMonth.getMonth() + 1, 1)); };
+  const adminPrevMonth = (e: any) => { e.preventDefault(); setAdminMonth(new Date(adminMonth.getFullYear(), adminMonth.getMonth() - 1, 1)); };
+  const adminDaysInMonth = new Date(adminMonth.getFullYear(), adminMonth.getMonth() + 1, 0).getDate();
+  const adminStartDay = new Date(adminMonth.getFullYear(), adminMonth.getMonth(), 1).getDay();
+
+  const toggleAvailableDate = (e: any, dateStr: string) => {
+    e.preventDefault();
+    const currentDates = tourForm.availableDates || [];
+    if (currentDates.includes(dateStr)) {
+      setTourForm({ ...tourForm, availableDates: currentDates.filter(d => d !== dateStr) });
+    } else {
+      setTourForm({ ...tourForm, availableDates: [...currentDates, dateStr].sort() });
+    }
+  };
+
+  const isDateInAnyAdminRange = (dateStr: string) => {
+    if (!tourForm.availableDates || tourForm.availableDates.length === 0 || !tourForm.tripDays || tourForm.tripDays <= 1) return false;
+    const current = new Date(dateStr);
+    return tourForm.availableDates.some(startStr => {
+      const start = new Date(startStr);
+      const end = new Date(startStr);
+      end.setDate(start.getDate() + tourForm.tripDays! - 1);
+      return current > start && current <= end;
+    });
+  };
+
   const stats = {
     totalBookings: bookingsList.length,
-    pendingVerification: bookingsList.filter(b => b.status === 'pending').length,
-    approvedBookings: bookingsList.filter(b => b.status === 'approved').length,
-    totalRevenue: bookingsList.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.totalPrice, 0)
-  };
-
-  const handleApproveBooking = (bookingId: string) => {
-    showConfirm(language === 'th' ? "ยืนยันการอนุมัติ" : "Confirm Approval", language === 'th' ? `คุณต้องการอนุมัติการจอง ${bookingId} ใช่หรือไม่?` : `Approve booking ${bookingId}?`, async () => {
-      try {
-        await bookingService.updateBookingStatus(bookingId, 'approved'); fetchAdminData(); setSelectedBooking(null);
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "อนุมัติการจองเรียบร้อยแล้ว" : "Booking approved successfully."); closePopup();
-      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการอนุมัติ" : "Error approving booking."); closePopup(); }
-    });
-  };
-
-  const handleRejectBooking = (bookingId: string) => {
-    showConfirm(language === 'th' ? "ยืนยันการปฏิเสธ" : "Confirm Rejection", language === 'th' ? `คุณต้องการปฏิเสธการจอง ${bookingId} ใช่หรือไม่?` : `Reject booking ${bookingId}?`, async () => {
-      try {
-        await bookingService.updateBookingStatus(bookingId, 'rejected'); fetchAdminData(); setSelectedBooking(null);
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธการจองเรียบร้อยแล้ว" : "Booking rejected successfully."); closePopup();
-      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการปฏิเสธ" : "Error rejecting booking."); closePopup(); }
-    });
-  };
-
-  const handleDeleteBooking = (bookingId: string) => {
-    showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? `ต้องการลบการจอง ${bookingId} ถาวรใช่หรือไม่?` : `Permanently delete booking ${bookingId}?`, async () => {
-      try {
-        await bookingService.deleteBooking(bookingId); fetchAdminData();
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบการจองเรียบร้อยแล้ว" : "Booking deleted successfully."); closePopup();
-      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking."); closePopup(); }
-    });
+    pendingBookings: bookingsList.filter(b => b.status?.toLowerCase() === 'pending').length,
+    pendingPayments: bookingsList.filter(b => b.paymentStatus?.toLowerCase() === 'verifying').length,
+    approvedBookings: bookingsList.filter(b => b.status?.toLowerCase() === 'approved' && b.paymentStatus?.toLowerCase() === 'completed').length,
+    totalRevenue: bookingsList.filter(b => b.status?.toLowerCase() === 'approved' && b.paymentStatus?.toLowerCase() === 'completed').reduce((sum, b) => sum + (b.totalPrice || 0), 0)
   };
 
   // ==========================================
   // 🔍 ระบบกรองข้อมูล (Filters)
   // ==========================================
 
-  // 1. กรองรายการจอง
   const filteredBookings = bookingsList
     .filter(b => {
       const searchLower = (bookingSearch || '').toLowerCase();
       const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
       const matchesSearch = String(b.id || '').toLowerCase().includes(searchLower) || String(tourName).toLowerCase().includes(searchLower);
-      const matchesStatus = bookingStatusFilter === 'all' || b.status === bookingStatusFilter;
-      
-      const relatedTour = b.tour || allTours.find(t => t.id === b.tourId);
+
+      const matchesStatus = bookingStatusFilter === 'all' || b.status?.toLowerCase() === bookingStatusFilter.toLowerCase();
+
+      const relatedTour = b.tour || allTours.find(t => String(t.id) === String(b.tourId));
       const bProv = relatedTour?.province || b.province;
       const bProvId = typeof bProv === 'object' && bProv !== null ? (bProv as any).id : (relatedTour?.provinceId || bProv || '');
-      
+
       const matchesProvince = bookingProvinceFilter === 'all' || String(bProvId).toLowerCase() === bookingProvinceFilter.toLowerCase();
 
       return matchesSearch && matchesStatus && matchesProvince;
@@ -229,9 +326,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       return 0;
     });
 
-  // 2. กรองการชำระเงิน
   const filteredPayments = bookingsList
-    .filter(b => b.status === 'pending')
+    .filter(b => b.paymentStatus?.toLowerCase() === 'verifying')
     .filter(b => {
       const searchLower = (paymentSearch || '').toLowerCase();
       const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
@@ -248,12 +344,12 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
 
   // 3. กรองทัวร์
-  const filteredTours = allTours
+  const filteredTours = allTours 
     .filter(t => {
       const searchLower = (tourSearch || '').toLowerCase();
       const tourName = getLang(t, 'name', language) || '';
       const matchesSearch = String(tourName).toLowerCase().includes(searchLower) || String(t.id || '').toLowerCase().includes(searchLower);
-      
+
       const currentProvinceId = typeof t.province === 'object' && t.province !== null ? (t.province as any).id : t.provinceId || t.province;
       const matchesProvince = tourProvinceFilter === 'all' || currentProvinceId === tourProvinceFilter;
 
@@ -265,29 +361,30 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       return 0;
     });
 
+  const [viewingCustomersForTour, setViewingCustomersForTour] = useState<Tour | null>(null);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Admin Header */}
-      <div className="bg-gradient-to-r from-[#1e293b] to-[#0f172a] text-white">
+      <div className="bg-white border-b border-gray-200 text-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-18 h-18 bg-white rounded-xl flex items-center justify-center p-1 overflow-hidden">
+              <div className="w-18 h-18 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-center p-1 overflow-hidden">
                 <img
                   src={LOGO_URL}
                   alt="RoamHub Tour Logo"
-                  className="w-16 h-16 object-contain"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{t.title}</h1>
-                <p className="text-white/80 text-sm">{t.subtitle}</p>
+                <p className="text-gray-500 text-sm">{t.subtitle}</p>
               </div>
             </div>
 
             <button
               onClick={() => onNavigate('home')}
-              className="flex items-center gap-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 px-4 py-2 rounded-xl transition"
+              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition"
             >
               <LogOut className="w-5 h-5" />
               <span>{t.exit}</span>
@@ -296,7 +393,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-1 overflow-x-auto no-scrollbar">
@@ -318,9 +414,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 {tab === 'payments' && <DollarSign className="w-5 h-5" />}
                 {tab === 'tours' && <Package className="w-5 h-5" />}
                 {t.tabs[tab]}
-                {tab === 'bookings' && stats.pendingVerification > 0 && (
-                  <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {stats.pendingVerification}
+
+                {tab === 'bookings' && stats.pendingBookings > 0 && (
+                  <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {stats.pendingBookings}
+                  </span>
+                )}
+                {tab === 'payments' && stats.pendingPayments > 0 && (
+                  <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {stats.pendingPayments}
                   </span>
                 )}
               </button>
@@ -333,12 +435,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               <MessageSquare className="w-5 h-5" />
               {language === 'th' ? 'ระบบแชท' : 'Chat System'}
             </button>
-
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* ================= OVERVIEW TAB ================= */}
@@ -347,24 +447,26 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white rounded-2xl p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-gray-600" />
                   </div>
                   <TrendingUp className="w-5 h-5 text-green-500" />
                 </div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{stats.totalBookings}</div>
-                <div className="text-sm text-gray-600">{t.stats.totalBookings}</div>
+                <div className="text-sm text-gray-600">{language === 'th' ? 'การจองทั้งหมด' : 'Total Bookings'}</div>
               </div>
 
               <div className="bg-white rounded-2xl p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-yellow-600" />
+                  <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-orange-600" />
                   </div>
-                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-semibold">{t.stats.actionRequired}</span>
+                  <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full font-semibold">
+                    {stats.pendingBookings + stats.pendingPayments} รายการ
+                  </span>
                 </div>
-                <div className="text-3xl font-bold text-gray-900 mb-1">{stats.pendingVerification}</div>
-                <div className="text-sm text-gray-600">{t.stats.pending}</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{stats.pendingBookings + stats.pendingPayments}</div>
+                <div className="text-sm text-gray-600">{language === 'th' ? 'รอดำเนินการ (จอง+สลิป)' : 'Total Pending Actions'}</div>
               </div>
 
               <div className="bg-white rounded-2xl p-6 shadow-lg">
@@ -374,7 +476,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-gray-900 mb-1">{stats.approvedBookings}</div>
-                <div className="text-sm text-gray-600">{t.stats.approved}</div>
+                <div className="text-sm text-gray-600">{language === 'th' ? 'สมบูรณ์ (จอง+จ่าย)' : 'Fully Completed'}</div>
               </div>
 
               <div className="bg-white rounded-2xl p-6 shadow-lg">
@@ -394,22 +496,22 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 {bookingsList.slice(0, 5).map((booking) => (
                   <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${booking.status === 'pending' ? 'bg-yellow-100' :
-                        booking.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${booking.status?.toLowerCase() === 'pending' ? 'bg-orange-100' :
+                        booking.status?.toLowerCase() === 'approved' ? 'bg-green-100' : 'bg-red-100'
                         }`}>
-                        {booking.status === 'pending' && <Clock className="w-5 h-5 text-yellow-600" />}
-                        {booking.status === 'approved' && <CheckCircle className="w-5 h-5 text-green-600" />}
-                        {booking.status === 'rejected' && <XCircle className="w-5 h-5 text-red-600" />}
+                        {booking.status?.toLowerCase() === 'pending' && <Clock className="w-5 h-5 text-orange-600" />}
+                        {booking.status?.toLowerCase() === 'approved' && <CheckCircle className="w-5 h-5 text-green-600" />}
+                        {booking.status?.toLowerCase() === 'rejected' && <XCircle className="w-5 h-5 text-red-600" />}
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
-                        <div className="text-sm text-gray-600">{booking.id} • {getLang(booking, 'province', language)}</div>
+                        <div className="text-sm text-gray-600">{booking.id}</div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</div>
-                      <div className={`text-sm font-medium ${booking.status === 'pending' ? 'text-yellow-600' :
-                        booking.status === 'approved' ? 'text-green-600' : 'text-red-600'
+                      <div className={`text-sm font-medium ${booking.status?.toLowerCase() === 'pending' ? 'text-orange-600' :
+                        booking.status?.toLowerCase() === 'approved' ? 'text-green-600' : 'text-red-600'
                         }`}>{booking.status?.toUpperCase()}</div>
                     </div>
                   </div>
@@ -426,10 +528,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         {activeTab === 'bookings' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col xl:flex-row justify-between gap-4">
-              <h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings}</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings} (จัดการที่นั่งทัวร์)</h2>
               <div className="flex flex-col md:flex-row gap-3">
-                
-                {/* 🟢 ตัวกรองจังหวัด (การจอง) */}
+
                 <select
                   className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
                   value={bookingProvinceFilter}
@@ -441,7 +542,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   ))}
                 </select>
 
-                {/* 🟢 ตัวเรียงลำดับ (การจอง) */}
                 <select
                   className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
                   value={bookingSort}
@@ -458,9 +558,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   onChange={(e) => setBookingStatusFilter(e.target.value)}
                 >
                   <option value="all">{language === 'th' ? 'ทุกสถานะ' : 'All Statuses'}</option>
-                  <option value="pending">{language === 'th' ? 'รอดำเนินการ (Pending)' : 'Pending'}</option>
+                  <option value="pending">{language === 'th' ? 'รออนุมัติที่นั่ง (Pending)' : 'Pending'}</option>
                   <option value="approved">{language === 'th' ? 'ยืนยันแล้ว (Approved)' : 'Approved'}</option>
-                  <option value="rejected">{language === 'th' ? 'ยกเลิก (Rejected)' : 'Rejected'}</option>
+                  <option value="rejected">{language === 'th' ? 'ปฏิเสธ (Rejected)' : 'Rejected'}</option>
                 </select>
 
                 <div className="relative group w-full md:w-64">
@@ -486,9 +586,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.id}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.tour}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{language === 'th' ? 'วันที่เดินทาง' : 'Travel Date'}</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{language === 'th' ? 'วันที่จอง' : 'Booking Date'}</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.amount}</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.status}</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">สถานะที่นั่ง (Booking)</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">สถานะเงิน (Payment)</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.actions}</th>
                     </tr>
                   </thead>
@@ -498,25 +597,30 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
-                          <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {new Date((booking as any).travelDate || (booking as any).date || 0).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {new Date(booking.bookingDate || (booking as any).createdAt || 0).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</td>
+
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            booking.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${booking.status?.toLowerCase() === 'pending' ? 'bg-orange-100 text-orange-800' :
+                            booking.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
                             {booking.status?.toUpperCase()}
                           </span>
                         </td>
+
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${booking.paymentStatus?.toLowerCase() === 'verifying' ? 'bg-blue-100 text-blue-800' :
+                            booking.paymentStatus?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                            {booking.paymentStatus?.toUpperCase()}
+                          </span>
+                        </td>
+
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <button onClick={() => setSelectedBooking(booking)} className="text-[#00A699] hover:text-[#008c81] transition p-1" title="ดูรายละเอียด">
+                            <button onClick={() => setSelectedBooking(booking)} className="text-[#00A699] hover:text-[#008c81] transition p-1" title="ดูรายละเอียด/จัดการ">
                               <Eye className="w-5 h-5" />
                             </button>
                             <button onClick={() => handleDeleteBooking(booking.id)} className="text-red-500 hover:text-red-600 transition p-1" title="ลบการจอง">
@@ -528,7 +632,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     ))}
                     {filteredBookings.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบข้อมูลการจองที่ค้นหา' : 'No bookings found'}</td>
+                        <td colSpan={6} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบข้อมูลการจองที่ค้นหา' : 'No bookings found'}</td>
                       </tr>
                     )}
                   </tbody>
@@ -543,12 +647,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{t.payment.title}</h2>
-                <p className="text-gray-600 mt-1">{t.payment.desc}</p>
+                <h2 className="text-2xl font-bold text-gray-900">ตรวจสลิปโอนเงิน (Payment Verification)</h2>
+                <p className="text-gray-600 mt-1">รายการด้านล่างคือลูกค้าที่ส่งสลิปมาแล้ว รอแอดมินยืนยันยอดเงิน</p>
               </div>
               <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                
-                {/* 🟢 ตัวเรียงลำดับ (การชำระเงิน) */}
+
                 <select
                   className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
                   value={paymentSort}
@@ -576,48 +679,47 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPayments.map((booking) => (
-                <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <div className="text-sm text-gray-600 mb-1">{t.table.id}</div>
-                      <div className="font-semibold text-gray-900">{booking.id}</div>
-                    </div>
-                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg text-xs font-semibold">Pending</span>
+                <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg border-t-4 border-blue-400 relative">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-gray-600 font-mono">{booking.id}</span>
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold animate-pulse">WAITING SLIP</span>
                   </div>
-                  <div className="mb-4">
-                    <div className="font-medium text-gray-900 mb-1">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
-                    <div className="text-sm text-gray-600">{getLang(booking, 'province', language)}</div>
+                  <div className="font-bold text-gray-900 mb-4 line-clamp-1">{getLang(booking, 'tourNameSnapshot', language)}</div>
+
+                  <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-blue-400 transition" onClick={() => window.open(booking.paymentSlip, '_blank')}>
+                    {booking.paymentSlip ? (
+                      <img src={booking.paymentSlip} alt="slip" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-gray-400 flex flex-col items-center"><FileText className="w-6 h-6 mb-2" /> ไม่มีสลิปแนบมา</span>
+                    )}
                   </div>
-                  <div className="bg-gray-100 rounded-2xl p-6 mb-4 text-center">
-                    <div className="text-4xl mb-2">📄</div>
-                    <div className="text-sm text-gray-600">{t.payment.slipPreview}</div>
-                    <div className="text-xs text-gray-500 mt-1">{t.payment.clickToView}</div>
-                  </div>
+
                   <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                     <div>
                       <div className="text-gray-600 mb-1">{t.payment.amount}</div>
-                      <div className="font-semibold text-gray-900">฿{booking.totalPrice?.toLocaleString()}</div>
+                      <div className="font-bold text-[#00A699] text-lg">฿{booking.totalPrice?.toLocaleString()}</div>
                     </div>
                     <div>
                       <div className="text-gray-600 mb-1">{t.payment.paymentDate}</div>
                       <div className="font-semibold text-gray-900">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
                     </div>
                   </div>
+
                   <div className="flex gap-3">
-                    <button onClick={() => handleApproveBooking(booking.id)} className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
-                      <CheckCircle className="w-5 h-5" /> {t.payment.approve}
+                    <button onClick={() => handleApprovePayment(booking.id)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
+                      <CheckCircle className="w-4 h-4" /> อนุมัติสลิป
                     </button>
-                    <button onClick={() => handleRejectBooking(booking.id)} className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
-                      <XCircle className="w-5 h-5" /> {t.payment.reject}
+                    <button onClick={() => handleRejectPayment(booking.id)} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
+                      <XCircle className="w-4 h-4" /> ปฏิเสธ
                     </button>
                   </div>
                 </div>
               ))}
               {filteredPayments.length === 0 && (
                 <div className="col-span-full bg-white rounded-3xl p-12 text-center shadow-lg border">
-                  <div className="text-6xl mb-4">✓</div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{t.payment.caughtUp}</h3>
-                  <p className="text-gray-600">{language === 'th' ? 'ไม่พบรายการ หรือ ตรวจสอบครบหมดแล้ว' : 'All caught up! No pending payments.'}</p>
+                  <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-10 h-10" /></div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">ตรวจสอบสลิปครบหมดแล้ว!</h3>
+                  <p className="text-gray-600">{language === 'th' ? 'ไม่มีรายการโอนเงินที่ต้องรอตรวจสอบในขณะนี้' : 'All caught up! No pending payments.'}</p>
                 </div>
               )}
             </div>
@@ -636,8 +738,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
 
                   <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
-                    
-                    {/* 🟢 ตัวกรองจังหวัด (ทัวร์) */}
+
                     <select
                       className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
                       value={tourProvinceFilter}
@@ -649,7 +750,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       ))}
                     </select>
 
-                    {/* 🟢 ตัวเรียงลำดับ (ทัวร์) */}
                     <select
                       className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
                       value={tourPriceSort}
@@ -726,10 +826,16 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
+
+                                <button onClick={() => setViewingCustomersForTour(tour)} className="text-blue-500 hover:text-blue-600 transition p-2" title={language === 'th' ? "ดูรายชื่อลูกค้า" : "View Customers"}>
+                                  <Users className="w-5 h-5" />
+                                </button>
+
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
                                 <button onClick={() => handleDeleteTour(tour.id)} className="text-red-500 hover:text-red-600 transition p-2">
+   
                                   <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
@@ -756,8 +862,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       : (language === 'th' ? 'ข้อมูลทัวร์และสถานที่ (สร้างใหม่)' : 'New Tour & Location Info')}
                   </h2>
                   <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                    <button onClick={() => setFormLang('en')} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'en' ? 'bg-white text-[#00A699] shadow' : ''}`}>EN</button>
-                    <button onClick={() => setFormLang('th')} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'th' ? 'bg-white text-[#00A699] shadow' : ''}`}>TH</button>
+                    <button onClick={(e) => { e.preventDefault(); setFormLang('en'); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'en' ? 'bg-white text-[#00A699] shadow' : ''}`}>EN</button>
+                    <button onClick={(e) => { e.preventDefault(); setFormLang('th'); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition ${formLang === 'th' ? 'bg-white text-[#00A699] shadow' : ''}`}>TH</button>
                   </div>
                 </div>
 
@@ -765,7 +871,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   <div className="bg-[#00A699]/5 p-6 rounded-2xl border-2 border-dashed border-[#00A699]/20">
                     <div className="flex justify-between items-center mb-4">
                       <label className="font-bold flex items-center gap-2"><MapPin size={18} /> {language === 'th' ? 'ระบุจังหวัด' : 'Specify Province'}</label>
-                      <button onClick={() => setCreateNewProvince(!createNewProvince)} className="text-xs font-bold text-[#00A699] hover:underline">
+                      <button onClick={(e) => { e.preventDefault(); setCreateNewProvince(!createNewProvince); }} className="text-xs font-bold text-[#00A699] hover:underline">
                         {createNewProvince ? (language === 'th' ? 'เลือกจังหวัดที่มีอยู่' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
                       </button>
                     </div>
@@ -801,22 +907,136 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       <label className="block font-bold">{language === 'th' ? 'ราคาพื้นฐาน' : 'Base Price'}</label>
                       <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold text-[#00A699]" placeholder="0" value={tourForm.price || ''}
                         onChange={e => setTourForm({ ...tourForm, price: Number(e.target.value) })} />
+
+                      {/* 🌟 1. ข้อมูลยานพาหนะและจำนวนคน */}
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <label className="block font-bold text-orange-600">{language === 'th' ? 'ประเภทยานพาหนะ' : 'Vehicle Type'}</label>
+                          <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="เช่น รถตู้ VIP, สปีดโบ๊ท" value={tourForm.vehicleType || ''} onChange={e => setTourForm({ ...tourForm, vehicleType: e.target.value })} />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-orange-600">{language === 'th' ? 'รับจำนวนสูงสุด (คน)' : 'Max Capacity'}</label>
+                          <input type="number" className="w-full p-4 bg-gray-50 border rounded-2xl font-bold" placeholder="10" value={tourForm.maxCapacity || ''} onChange={e => setTourForm({ ...tourForm, maxCapacity: Number(e.target.value) })} />
+                        </div>
+                      </div>
+
                     </div>
                     <div className="space-y-4">
+
+                      {/* 🌟 2. เลือกประเภททริป จำนวนวัน และปฏิทินของแอดมิน */}
+                      <div className="p-5 border border-blue-100 bg-blue-50/30 rounded-2xl space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'ประเภททริป' : 'Trip Type'}</label>
+                            <select className="w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm"
+                              value={tourForm.tripType || 'one-day'}
+                              onChange={e => setTourForm({ ...tourForm, tripType: e.target.value })}>
+                              <option value="one-day">One Day (ไปเช้าเย็นกลับ)</option>
+                              <option value="multiple-days">Multiple Days (หลายวัน)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'จำนวนวันเดินทาง' : 'Trip Days'}</label>
+                            <input type="number" className={`w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm ${tourForm.tripType === 'one-day' ? 'opacity-50' : ''}`}
+                              min="1"
+                              value={tourForm.tripDays || 1}
+                              disabled={tourForm.tripType === 'one-day'}
+                              onChange={e => setTourForm({ ...tourForm, tripDays: Number(e.target.value) })} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-blue-600 mb-2">
+                            {language === 'th' ? 'กำหนดวันเปิดรอบ (จิ้มที่ปฏิทินเพื่อเพิ่ม/ลบ)' : 'Available Dates (Click to toggle)'}
+                          </label>
+
+                          {/* 🌟 Calendar Component สำหรับ Admin */}
+                          <div className="bg-white border border-blue-100 rounded-xl p-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <button onClick={adminPrevMonth} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronLeft className="w-5 h-5" /></button>
+                              <div className="font-bold text-sm text-gray-800">{adminMonthNames[adminMonth.getMonth()]} {adminMonth.getFullYear()}</div>
+                              <button onClick={adminNextMonth} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronRight className="w-5 h-5" /></button>
+                            </div>
+                            <div className="grid grid-cols-7 gap-1 text-center mb-1">
+                              {adminWeekDays.map(day => <div key={day} className="text-[10px] font-bold text-gray-400 py-1">{day}</div>)}
+                            </div>
+                            <div className="grid grid-cols-7 gap-y-1 text-center">
+                              {Array.from({ length: adminStartDay }).map((_, i) => <div key={`empty-${i}`} />)}
+                              {Array.from({ length: adminDaysInMonth }).map((_, i) => {
+                                const day = i + 1;
+                                const dateStr = `${adminMonth.getFullYear()}-${String(adminMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                                const isStart = (tourForm.availableDates || []).includes(dateStr);
+                                const inRange = isDateInAnyAdminRange(dateStr);
+
+                                let bgClass = "hover:bg-blue-50 text-gray-700";
+                                if (isStart) bgClass = "bg-blue-600 text-white shadow-sm shadow-blue-200 z-10 rounded-lg font-bold";
+                                else if (inRange) bgClass = "bg-blue-50 text-blue-600 font-bold border-y border-blue-100 rounded-none";
+
+                                return (
+                                  <div key={i} className={`relative flex items-center justify-center ${inRange && !isStart ? 'bg-blue-50' : ''}`}>
+                                    <button
+                                      onClick={(e) => toggleAvailableDate(e, dateStr)}
+                                      className={`w-full aspect-square flex items-center justify-center text-xs transition-all ${bgClass} ${!isStart && !inRange ? 'rounded-lg' : ''}`}
+                                    >
+                                      {day}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          {tourForm.availableDates && tourForm.availableDates.length > 0 && (
+                            <p className="text-xs text-blue-500 mt-2 font-medium">
+                              เปิดไว้ทั้งหมด {tourForm.availableDates.length} รอบ (คลิกซ้ำเพื่อเอาออก)
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
                       <label className="block font-bold">{language === 'th' ? 'รูปภาพหลัก' : 'Main Image'} (URL)</label>
                       <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="https://..." value={tourForm.image || ''}
                         onChange={e => setTourForm({ ...tourForm, image: e.target.value })} />
 
-                      <label className="block font-bold">{language === 'th' ? 'ระยะเวลา' : 'Duration'}</label>
-                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="1 Day" value={tourForm.duration || ''}
+                      <label className="block font-bold">{language === 'th' ? 'คำอธิบายระยะเวลา' : 'Duration Text'}</label>
+                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder="เช่น 3 วัน 2 คืน" value={tourForm.duration || ''}
                         onChange={e => setTourForm({ ...tourForm, duration_th: e.target.value, duration: e.target.value })} />
                     </div>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t mt-6">
+                    <div className="space-y-4">
+                      <label className="block font-bold">{language === 'th' ? 'ประเภททัวร์' : 'Tour Type'}</label>
+                      <select 
+                        className="w-full p-4 bg-gray-50 border rounded-2xl"
+                        value={tourForm.tourType || 'oneday'}
+                        onChange={e => setTourForm({ ...tourForm, tourType: e.target.value as 'oneday' | 'package' })}
+                      >
+                        <option value="oneday">{language === 'th' ? 'One Day Trip (ไปเช้าเย็นกลับ)' : 'One Day Trip'}</option>
+                        <option value="package">{language === 'th' ? 'Package (พร้อมที่พัก)' : 'Package with Hotel'}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="block font-bold text-orange-600">{language === 'th' ? 'จำนวนรับสูงสุด (คน)' : 'Max Capacity'}</label>
+                      <input type="number" className="w-full p-4 bg-orange-50 border border-orange-200 rounded-2xl font-bold" 
+                        value={tourForm.maxCapacity ?? ''}
+                        onChange={e => setTourForm({ ...tourForm, maxCapacity: Number(e.target.value) })} />
+                    </div>
+                  </div>
+
+                  {tourForm.tourType === 'package' && (
+                    <div className="pt-4">
+                      <label className="block font-bold">{language === 'th' ? 'ชื่อที่พัก' : 'Accommodation'}</label>
+                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder={language === 'th' ? "เช่น โรงแรม ABC ภูเก็ต" : "e.g., ABC Hotel Phuket"}
+                        value={tourForm.accommodation || ''}
+                        onChange={e => setTourForm({ ...tourForm, accommodation: e.target.value })} />
+                    </div>
+                  )}
+
+                  
                   {/* 🟢 ส่วนที่เพิ่มใหม่: จุดเด่น สิ่งที่รวม และสิ่งที่ไม่รวม */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t">
                     <div className="space-y-4">
                       <label className="block font-bold text-[#00A699]">{language === 'th' ? 'จุดเด่น (Highlights)' : 'Highlights'} ({formLang.toUpperCase()})</label>
-                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed"
                         placeholder={language === 'th' ? "เช่น ดำน้ำดูปะการัง, ชมวิวภูเขา (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Snorkeling, Mountain View (comma separated)"}
                         value={formLang === 'en' ? (tourForm.highlights?.join(',') || '') : (tourForm.highlights_th?.join(',') || '')}
                         onChange={e => {
@@ -828,7 +1048,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
                     <div className="space-y-4">
                       <label className="block font-bold text-green-600">{language === 'th' ? 'สิ่งที่รวม (Included)' : 'Included'} ({formLang.toUpperCase()})</label>
-                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed"
                         placeholder={language === 'th' ? "เช่น รถรับส่ง, อาหารกลางวัน (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Transfer, Lunch (comma separated)"}
                         value={formLang === 'en' ? (tourForm.included?.join(',') || '') : (tourForm.included_th?.join(',') || '')}
                         onChange={e => {
@@ -840,7 +1060,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
                     <div className="space-y-4">
                       <label className="block font-bold text-red-600">{language === 'th' ? 'สิ่งที่ไม่รวม (Not Included)' : 'Not Included'} ({formLang.toUpperCase()})</label>
-                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed" 
+                      <textarea className="w-full p-4 bg-gray-50 border rounded-2xl h-32 text-sm leading-relaxed"
                         placeholder={language === 'th' ? "เช่น ค่าใช้จ่ายส่วนตัว, ทิปไกด์ (ใช้เครื่องหมาย , คั่นข้อ)" : "e.g. Personal expenses, Guide tips (comma separated)"}
                         value={formLang === 'en' ? (tourForm.notIncluded?.join(',') || '') : (tourForm.notIncluded_th?.join(',') || '')}
                         onChange={e => {
@@ -850,10 +1070,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         }} />
                     </div>
                   </div>
+
                   <div className="border-t pt-8">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-bold flex items-center gap-2"><ListChecks /> {tourT.itinerary}</h3>
-                      <button onClick={handleAddDay} className="text-[#00A699] font-bold text-sm">{language === 'th' ? '+ เพิ่มวันเดินทาง' : '+ Add Day'}</button>
+                      <button onClick={(e) => { e.preventDefault(); handleAddDay(); }} className="text-[#00A699] font-bold text-sm">{language === 'th' ? '+ เพิ่มวันเดินทาง' : '+ Add Day'}</button>
                     </div>
                     <div className="space-y-4">
                       {tourForm.itinerary?.map((day, idx) => (
@@ -877,10 +1098,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </div>
 
                   <div className="flex gap-4 pt-10 border-t">
-                    <button onClick={handleSaveTour} className="flex-1 bg-[#00A699] hover:bg-[#008c81] text-white py-4 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition">
+                    <button onClick={(e) => { e.preventDefault(); handleSaveTour(); }} className="flex-1 bg-[#00A699] hover:bg-[#008c81] text-white py-4 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition">
                       {editingTourId ? (language === 'th' ? 'บันทึกการแก้ไข' : 'Save Changes') : (language === 'th' ? 'บันทึกและเผยแพร่' : 'Save & Publish')}
                     </button>
-                    <button onClick={() => { setIsAddingTour(false); setEditingTourId(null); }} className="px-10 bg-gray-100 text-gray-500 py-4 rounded-2xl font-bold hover:bg-gray-200 transition">
+                    <button onClick={(e) => { e.preventDefault(); setIsAddingTour(false); setEditingTourId(null); }} className="px-10 bg-gray-100 text-gray-500 py-4 rounded-2xl font-bold hover:bg-gray-200 transition">
                       {language === 'th' ? 'ยกเลิก' : 'Cancel'}
                     </button>
                   </div>
@@ -890,67 +1111,86 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
       </div>
+      
 
       {/* ================= MODALS ================= */}
 
-      {/* 1. Modal ดูรายละเอียดการจอง */}
+      {/* 1. Modal ดูรายละเอียดและกดอนุมัติของ Admin */}
       {selectedBooking && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">{t.modal.title}</h2>
-              <button onClick={() => setSelectedBooking(null)} className="text-gray-400 hover:text-gray-600 transition">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">จัดการการจอง</h2>
+                <div className="text-sm font-mono text-gray-500 mt-1">Ref: {selectedBooking.id}</div>
+              </div>
+              <button onClick={() => setSelectedBooking(null)} className="text-gray-400 hover:text-gray-900 bg-gray-100 p-2 rounded-full transition">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
-            <div className="space-y-4 mb-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{t.table.id}</div>
-                  <div className="font-medium text-gray-900">{selectedBooking.id}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{t.table.status}</div>
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold ${selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    selectedBooking.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                    {selectedBooking.status?.charAt(0).toUpperCase() + selectedBooking.status?.slice(1)}
-                  </span>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{t.tours.name}</div>
-                  <div className="font-medium text-gray-900">{getLang(selectedBooking, 'tourName', language) || getLang(selectedBooking, 'tourNameSnapshot', language)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{t.tours.province}</div>
-                  <div className="font-medium text-gray-900">{getLang(selectedBooking, 'province', language)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{common.selectDate}</div>
-                  <div className="font-medium text-gray-900">{new Date(selectedBooking.date || selectedBooking.travelDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{common.travelers}</div>
-                  <div className="font-medium text-gray-900">{selectedBooking.travelers}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{common.totalPrice}</div>
-                  <div className="text-xl font-bold text-[#00A699]">฿{selectedBooking.totalPrice?.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">{t.modal.bookedOn}</div>
-                  <div className="font-medium text-gray-900">{selectedBooking.bookingDate ? new Date(selectedBooking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
-                </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+              <div>
+                <span className="text-xs text-gray-500 block mb-1">สถานะที่นั่ง (Booking Status)</span>
+                <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold ${selectedBooking.status?.toLowerCase() === 'pending' ? 'bg-orange-100 text-orange-800' :
+                  selectedBooking.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {selectedBooking.status?.toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 block mb-1">สถานะชำระเงิน (Payment Status)</span>
+                <span className={`inline-block px-3 py-1 rounded-lg text-xs font-bold ${selectedBooking.paymentStatus?.toLowerCase() === 'verifying' ? 'bg-blue-100 text-blue-800' :
+                  selectedBooking.paymentStatus?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {selectedBooking.paymentStatus?.toUpperCase()}
+                </span>
               </div>
             </div>
-            {selectedBooking.status === 'pending' && (
-              <div className="flex gap-3 pt-6 border-t border-gray-200">
-                <button onClick={() => handleApproveBooking(selectedBooking.id)} className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
-                  <CheckCircle className="w-5 h-5" /> {t.modal.approveBtn}
-                </button>
-                <button onClick={() => handleRejectBooking(selectedBooking.id)} className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2">
-                  <XCircle className="w-5 h-5" /> {t.modal.rejectBtn}
-                </button>
+
+            <div className="grid grid-cols-2 gap-y-4 gap-x-6 mb-8 text-sm">
+              <div><span className="text-gray-500 block mb-1">ชื่อทัวร์:</span> <div className="font-bold text-gray-900">{getLang(selectedBooking, 'tourNameSnapshot', language)}</div></div>
+              <div><span className="text-gray-500 block mb-1">วันที่เดินทาง:</span> <div className="font-medium text-gray-900">{new Date(selectedBooking.travelDate || selectedBooking.date).toLocaleDateString('th-TH')}</div></div>
+              <div><span className="text-gray-500 block mb-1">จำนวนผู้เดินทาง:</span> <div className="font-medium text-gray-900">{selectedBooking.travelers} ท่าน</div></div>
+              <div><span className="text-gray-500 block mb-1">ยอดรวมสุทธิ:</span> <div className="font-black text-[#00A699] text-lg">฿{selectedBooking.totalPrice?.toLocaleString()}</div></div>
+            </div>
+
+            <div className="space-y-4">
+              {selectedBooking.status?.toLowerCase() === 'pending' && (
+                <div className="bg-orange-50 border border-orange-200 p-5 rounded-2xl">
+                  <h4 className="font-bold text-orange-900 mb-3 flex items-center gap-2"><Calendar className="w-5 h-5" /> 1. อนุมัติที่นั่งว่าง (Seat Approval)</h4>
+                  <p className="text-sm text-orange-800 mb-4">กรุณาตรวจสอบว่ามีที่นั่งว่างสำหรับทัวร์นี้หรือไม่ ก่อนกดยืนยัน</p>
+                  <div className="flex gap-3">
+                    <button onClick={() => handleApproveBooking(selectedBooking.id)} className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold transition">อนุมัติให้ที่นั่ง (Approve)</button>
+                    <button onClick={() => handleRejectBooking(selectedBooking.id)} className="px-6 bg-white border border-orange-200 text-orange-700 py-3 rounded-xl font-bold hover:bg-orange-100 transition">ปฏิเสธและยกเลิก</button>
+                  </div>
+                </div>
+              )}
+
+              {selectedBooking.paymentStatus?.toLowerCase() === 'verifying' && (
+                <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl">
+                  <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5" /> 2. ตรวจสอบสลิปเงิน (Payment Verification)</h4>
+                  {selectedBooking.paymentSlip ? (
+                    <div className="mb-4">
+                      <img src={selectedBooking.paymentSlip} alt="slip" className="w-full max-h-48 object-contain bg-white border rounded-xl cursor-pointer hover:border-blue-400" onClick={() => window.open(selectedBooking.paymentSlip, '_blank')} />
+                      <p className="text-xs text-center text-blue-600 mt-2">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-red-500 mb-4 bg-white p-3 rounded-lg border border-red-100 text-center">ลูกค้ายังไม่แนบสลิป หรือเกิดข้อผิดพลาดในการโหลดรูป</div>
+                  )}
+                  <div className="flex gap-3">
+                    <button onClick={() => handleApprovePayment(selectedBooking.id)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-blue-500/30">สลิปถูกต้อง อนุมัติยอดเงิน</button>
+                    <button onClick={() => handleRejectPayment(selectedBooking.id)} className="px-6 bg-white border border-red-200 text-red-600 py-3 rounded-xl font-bold hover:bg-red-50 transition">สลิปผิด/ยกเลิก</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {selectedBooking.status?.toLowerCase() === 'approved' && selectedBooking.paymentStatus?.toLowerCase() === 'completed' && (
+              <div className="mt-6 bg-green-50 border border-green-200 p-4 rounded-2xl flex items-center gap-3 text-green-800">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+                <div>
+                  <div className="font-bold">รายการนี้สมบูรณ์แล้ว 100%</div>
+                  <div className="text-sm">อนุมัติที่นั่งและตรวจสอบยอดเงินเรียบร้อยแล้ว</div>
+                </div>
               </div>
             )}
           </div>
@@ -961,9 +1201,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       {popup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
-            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${
-              popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'
-            }`}>
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'}`}>
               {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> : <CheckCircle className="w-10 h-10" />}
             </div>
             <h3 className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">{popup.title}</h3>
@@ -974,20 +1212,67 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   {language === 'th' ? 'ยกเลิก' : 'Cancel'}
                 </button>
               )}
-              <button 
-                onClick={() => {
-                  if (popup.type === 'confirm' && popup.onConfirm) {
-                    popup.onConfirm();
-                  } else {
-                    closePopup();
-                  }
-                }} 
-                className={`flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg ${
-                  popup.type === 'confirm' ? 'bg-[#FF6B4A] hover:bg-[#ff5232] shadow-orange-200' : 'bg-[#00A699] hover:bg-[#008c81] shadow-[#00A699]/30'
-                }`}
+              <button
+                onClick={() => { if (popup.type === 'confirm' && popup.onConfirm) { popup.onConfirm(); } else { closePopup(); } }}
+                className={`flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg ${popup.type === 'confirm' ? 'bg-[#FF6B4A] hover:bg-[#ff5232] shadow-orange-200' : 'bg-[#00A699] hover:bg-[#008c81] shadow-[#00A699]/30'}`}
               >
                 {popup.type === 'confirm' ? (language === 'th' ? 'ยืนยัน' : 'Confirm') : (language === 'th' ? 'ตกลง' : 'OK')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewingCustomersForTour && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6 border-b pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{language === 'th' ? 'รายชื่อลูกค้าที่จอง' : 'Customer List'}</h2>
+                <p className="text-[#00A699] font-medium mt-1">{getLang(viewingCustomersForTour, 'name', language)}</p>
+              </div>
+              <button onClick={() => setViewingCustomersForTour(null)} className="text-gray-400 hover:text-gray-600 transition">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-sm text-gray-600">
+                  <tr>
+                    <th className="p-4 rounded-tl-xl">Booking ID</th>
+                    <th className="p-4">วันที่จอง</th>
+                    <th className="p-4">วันที่เดินทาง</th>
+                    <th className="p-4 text-center">จำนวนผู้เดินทาง</th>
+                    <th className="p-4 text-right">สถานะการจ่ายเงิน</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {bookingsList
+                    .filter(b => String(b.tourId) === String(viewingCustomersForTour?.id))
+                    .map(b => (
+                    <tr key={b.id} className="hover:bg-gray-50">
+                      <td className="p-4 font-medium">{b.id}</td>
+                      <td className="p-4">{new Date(b.bookingDate || '').toLocaleDateString('th-TH')}</td>
+                      <td className="p-4">{new Date((b as any).travelDate || '').toLocaleDateString('th-TH')}</td>
+                      <td className="p-4 text-center font-bold text-blue-600">{b.travelers} ท่าน</td>
+                      <td className="p-4 text-right">
+                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                           b.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                         }`}>
+                           {b.status === 'approved' ? 'จ่ายแล้ว (ตัดยอด)' : 'รอชำระเงิน'}
+                         </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {bookingsList.filter(b => String(b.tourId) === String(viewingCustomersForTour?.id)).length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-gray-500">
+                        ยังไม่มีลูกค้าจองแพ็กเกจนี้
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -996,3 +1281,4 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     </div>
   );
 }
+

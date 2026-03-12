@@ -88,7 +88,7 @@ export class AppService implements OnApplicationBootstrap {
           name_th: 'เชียงใหม่',
           description: 'Cultural capital of Northern Thailand',
           description_th: 'เมืองหลวงทางวัฒนธรรมของภาคเหนือ',
-          image: 'https://images.unsplash.com/photo-1585123334904-845d60e97b29',
+          image: 'https://github.com/psu6810110318/-/blob/main/imagกหดหกหดe.png',
         },
       ]);
       console.log('✅ Seeded Provinces');
@@ -113,7 +113,7 @@ export class AppService implements OnApplicationBootstrap {
             price: 1500,
             duration: '8 Hours',
             duration_th: '8 ชั่วโมง',
-            image: 'https://images.unsplash.com/photo-1596390314481-98782084c59a',
+            image: 'https://github.com/psu6810110318/-/blob/main/imagกหดหกหดe.png',
             rating: 4.8,
             reviewCount: 120,
             highlights: ['Visit Pagodas', 'Wachirathan Waterfall', 'Highest Point'],

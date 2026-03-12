@@ -9,7 +9,11 @@ import {
   FileText,
   XCircle,
   Building,
-  CreditCard
+  CreditCard,
+  Wallet,
+  Clock,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react";
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
@@ -27,12 +31,18 @@ export function MyBookingsPage({
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🟢 State สำหรับ Tabs และค้นหา
-  const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "to_pay" | "processing" | "completed" | "cancelled">("all");
   const [searchQuery, setSearchQuery] = useState("");
-
-  // 🟢 State สำหรับ Modal ดูรายละเอียด
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+
+  // 🟢 State สำหรับ Popup ยกเลิกการจอง
+  const [popup, setPopup] = useState<{
+    isOpen: boolean;
+    type: 'alert' | 'confirm';
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ isOpen: false, type: 'alert', title: '', message: '' });
 
   const safeLanguage = (language as Language) || "th";
   const t = translations[safeLanguage]?.myBookings || {
@@ -55,8 +65,7 @@ export function MyBookingsPage({
           return;
         }
 
-        const response = await bookingService.getAllBookings();
-        // จัดเรียงให้รายการล่าสุดขึ้นก่อน
+        const response = await bookingService.getMyBookings();
         const sortedBookings = (response.data || []).sort(
           (a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime()
         );
@@ -71,54 +80,103 @@ export function MyBookingsPage({
     fetchMyBookings();
   }, []);
 
-  // 🟢 ฟังก์ชัน Badge ตรวจสอบทั้ง 2 เงื่อนไข
-  const getStatusBadge = (booking: any) => {
-    const isBookingApproved = booking.status?.toLowerCase() === 'approved';
-    const isPaymentCompleted = booking.paymentStatus?.toLowerCase() === 'completed';
-    const isPaymentVerifying = booking.paymentStatus?.toLowerCase() === 'verifying';
+  // 🟢 ฟังก์ชันช่วยเหลือสำหรับ Popup
+  const showAlert = (title: string, message: string) => { setPopup({ isOpen: true, type: 'alert', title, message }); };
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => { setPopup({ isOpen: true, type: 'confirm', title, message, onConfirm }); };
+  const closePopup = () => setPopup(prev => ({ ...prev, isOpen: false }));
 
-    // 1. ถ้าผ่านทั้งคู่ = จองสมบูรณ์
-    if (isBookingApproved && isPaymentCompleted) {
-      return (
-        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl text-sm font-semibold border bg-green-100 text-green-800 border-green-200">
-          <span>✓</span> {safeLanguage === "th" ? "จองสมบูรณ์" : "Confirmed"}
-        </span>
-      );
-    }
-    // 2. ถ้าถูกปฏิเสธอย่างใดอย่างหนึ่ง
-    if (booking.status?.toLowerCase() === 'rejected' || booking.paymentStatus?.toLowerCase() === 'failed') {
-      return (
-        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl text-sm font-semibold border bg-red-100 text-red-800 border-red-200">
-          <span>✗</span> {safeLanguage === "th" ? "มีปัญหา/ยกเลิก" : "Issue/Cancelled"}
-        </span>
-      );
-    }
-    // 3. ถ้าได้ที่นั่งแล้ว แต่รอตรวจสลิป
-    if (isBookingApproved && isPaymentVerifying) {
-      return (
-        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl text-sm font-semibold border bg-blue-100 text-blue-800 border-blue-200">
-          <span>⏳</span> {safeLanguage === "th" ? "รอตรวจสลิป" : "Checking Payment"}
-        </span>
-      );
-    }
-    // 4. ถ้าตรวจสลิปผ่านแล้ว แต่รออนุมัติที่นั่ง
-    if (!isBookingApproved && isPaymentCompleted) {
-      return (
-        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl text-sm font-semibold border bg-orange-100 text-orange-800 border-orange-200">
-          <span>⏳</span> {safeLanguage === "th" ? "รออนุมัติที่นั่ง" : "Waiting Seat"}
-        </span>
-      );
-    }
+  // 🟢 เปลี่ยนจาก alert/confirm เป็น Custom Popup
+  const handleCancelBookingClick = (bookingId: string) => {
+    showConfirm(
+      safeLanguage === "th" ? "ยืนยันการยกเลิก" : "Confirm Cancellation",
+      safeLanguage === "th" 
+        ? "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้" 
+        : "Are you sure you want to cancel this booking? This action cannot be undone.",
+      async () => {
+        try {
+          const reason = safeLanguage === 'th' ? 'ยกเลิกโดยผู้ใช้ (Cancelled by user)' : 'Cancelled by user';
+          
+          await Promise.all([
+            bookingService.updateBookingStatus(bookingId, 'cancelled', reason),
+            bookingService.updatePaymentStatus(bookingId, 'failed', reason)
+          ]);
 
-    // ค่าเริ่มต้น
-    return (
-      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl text-sm font-semibold border bg-yellow-100 text-yellow-800 border-yellow-200">
-        <span>⏳</span> {safeLanguage === "th" ? "รอดำเนินการ" : "Pending"}
-      </span>
+          setBookings(prevBookings => prevBookings.map(b => {
+            if (b.id === bookingId) {
+              return {
+                ...b,
+                status: 'CANCELLED',
+                paymentStatus: 'FAILED',
+                rejectReason: reason
+              };
+            }
+            return b;
+          }));
+
+          if (selectedBooking?.id === bookingId) {
+            setSelectedBooking(null);
+          }
+
+          closePopup();
+          // แจ้งเตือนเมื่อยกเลิกสำเร็จ
+          showAlert(
+            safeLanguage === "th" ? "สำเร็จ" : "Success",
+            safeLanguage === "th" ? "ยกเลิกการจองเรียบร้อยแล้ว" : "Booking has been cancelled successfully."
+          );
+
+        } catch (err) {
+          console.error("Error cancelling booking:", err);
+          closePopup();
+          showAlert(
+            safeLanguage === "th" ? "ข้อผิดพลาด" : "Error",
+            safeLanguage === "th" ? "ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่อีกครั้ง" : "Could not cancel booking. Please try again."
+          );
+        }
+      }
     );
   };
 
-  // ฟังก์ชันป้องกันวันที่พัง
+  const getStatusBadge = (booking: any) => {
+    const statusLower = booking.status?.toLowerCase() || '';
+    const paymentLower = booking.paymentStatus?.toLowerCase() || '';
+
+    const isFullyApproved = statusLower === 'approved' && paymentLower === 'completed';
+    const isRejected = statusLower === 'rejected' || paymentLower === 'failed' || statusLower === 'cancelled';
+    const isToPay = paymentLower === 'pending' && !isRejected;
+    const isProcessing = !isFullyApproved && !isRejected && !isToPay;
+
+    if (isFullyApproved) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold bg-green-100 text-green-800 border border-green-200">
+          <CheckCircle className="w-4 h-4" /> {safeLanguage === "th" ? "ที่เสร็จสมบูรณ์" : "Completed"}
+        </span>
+      );
+    }
+    if (isRejected) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold bg-red-100 text-red-800 border border-red-200">
+          <XCircle className="w-4 h-4" /> {safeLanguage === "th" ? "ยกเลิก/ปฏิเสธ" : "Cancelled"}
+        </span>
+      );
+    }
+    if (isToPay) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+          <Wallet className="w-4 h-4" /> {safeLanguage === "th" ? "ที่ต้องชำระ" : "To Pay"}
+        </span>
+      );
+    }
+    if (isProcessing) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold bg-teal-50 text-[#00A699] border border-teal-200">
+          <Clock className="w-4 h-4" /> {safeLanguage === "th" ? "รอดำเนินการ" : "Processing"}
+        </span>
+      );
+    }
+
+    return null;
+  };
+
   const formatDateSafe = (dateStr: string | Date, options?: Intl.DateTimeFormatOptions) => {
     try {
       if (!dateStr) return "-";
@@ -128,15 +186,20 @@ export function MyBookingsPage({
     }
   };
 
-  // 🟢 กรองข้อมูลตาม Tab และ Search
   const filteredBookings = bookings.filter((booking) => {
-    const isFullyApproved = booking.status?.toLowerCase() === 'approved' && booking.paymentStatus?.toLowerCase() === 'completed';
-    const isRejected = booking.status?.toLowerCase() === 'rejected' || booking.paymentStatus?.toLowerCase() === 'failed';
-    const isPending = !isFullyApproved && !isRejected;
+    const statusLower = booking.status?.toLowerCase() || '';
+    const paymentLower = booking.paymentStatus?.toLowerCase() || '';
+
+    const isFullyApproved = statusLower === 'approved' && paymentLower === 'completed';
+    const isRejected = statusLower === 'rejected' || paymentLower === 'failed' || statusLower === 'cancelled';
+    const isToPay = paymentLower === 'pending' && !isRejected;
+    const isProcessing = !isFullyApproved && !isRejected && !isToPay;
 
     let statusMatch = true;
-    if (activeTab === "approved") statusMatch = isFullyApproved;
-    if (activeTab === "pending") statusMatch = isPending; // ไม่นับรายการที่โดนปฏิเสธ
+    if (activeTab === "to_pay") statusMatch = isToPay;
+    if (activeTab === "processing") statusMatch = isProcessing;
+    if (activeTab === "completed") statusMatch = isFullyApproved;
+    if (activeTab === "cancelled") statusMatch = isRejected;
 
     const tourName = booking.tourNameSnapshot || "";
     const tourNameTh = booking.tourNameSnapshot_th || "";
@@ -147,6 +210,29 @@ export function MyBookingsPage({
 
     return statusMatch && searchMatch;
   });
+
+  const countToPay = bookings.filter(b => {
+    const s = b.status?.toLowerCase() || '';
+    const p = b.paymentStatus?.toLowerCase() || '';
+    return p === 'pending' && s !== 'rejected' && s !== 'cancelled';
+  }).length;
+  
+  const countProcessing = bookings.filter(b => {
+    const s = b.status?.toLowerCase() || '';
+    const p = b.paymentStatus?.toLowerCase() || '';
+    const isFullyApproved = s === 'approved' && p === 'completed';
+    const isRejected = s === 'rejected' || p === 'failed' || s === 'cancelled';
+    const isToPay = p === 'pending' && !isRejected;
+    return !isFullyApproved && !isRejected && !isToPay;
+  }).length;
+  
+  const countCompleted = bookings.filter(b => b.status?.toLowerCase() === 'approved' && b.paymentStatus?.toLowerCase() === 'completed').length;
+  
+  const countCancelled = bookings.filter(b => {
+    const s = b.status?.toLowerCase() || '';
+    const p = b.paymentStatus?.toLowerCase() || '';
+    return s === 'rejected' || p === 'failed' || s === 'cancelled';
+  }).length;
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center font-bold text-[#00A699]">กำลังโหลดข้อมูลการจอง...</div>;
@@ -189,45 +275,61 @@ export function MyBookingsPage({
                 className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00A699] focus:border-transparent transition"
               />
             </div>
-            <button className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium text-gray-700 transition whitespace-nowrap">
-              <Filter className="w-5 h-5" />
-              <span>{safeLanguage === "th" ? "ตัวกรอง" : "Filters"}</span>
-            </button>
           </div>
         </div>
 
-        {/* Status Tabs */}
+        {/* แถบ Tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-6 py-2 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "all" ? "bg-[#00A699] text-white" : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"}`}
+            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "all" ? "bg-gray-800 text-white shadow-md" : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"}`}
           >
             {safeLanguage === "th" ? "ทั้งหมด" : "All"} ({bookings.length})
           </button>
           <button
-            onClick={() => setActiveTab("pending")}
-            className={`px-6 py-2 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "pending" ? "bg-[#00A699] text-white" : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"}`}
+            onClick={() => setActiveTab("to_pay")}
+            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "to_pay" ? "bg-yellow-500 text-white shadow-md" : "bg-white hover:bg-yellow-50 text-gray-700 border border-gray-200"}`}
           >
-            {safeLanguage === "th" ? "รอดำเนินการ" : "Pending"} ({bookings.filter(b => !(b.status?.toLowerCase() === 'approved' && b.paymentStatus?.toLowerCase() === 'completed') && !(b.status?.toLowerCase() === 'rejected' || b.paymentStatus?.toLowerCase() === 'failed')).length})
+            {safeLanguage === "th" ? "ที่ต้องชำระ" : "To Pay"} {countToPay > 0 && `(${countToPay})`}
           </button>
           <button
-            onClick={() => setActiveTab("approved")}
-            className={`px-6 py-2 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "approved" ? "bg-[#00A699] text-white" : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"}`}
+            onClick={() => setActiveTab("processing")}
+            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "processing" ? "bg-[#00A699] text-white shadow-md" : "bg-white hover:bg-teal-50 text-gray-700 border border-gray-200"}`}
           >
-            {safeLanguage === "th" ? "จองสำเร็จ" : "Completed"} ({bookings.filter(b => b.status?.toLowerCase() === 'approved' && b.paymentStatus?.toLowerCase() === 'completed').length})
+            {safeLanguage === "th" ? "รอดำเนินการ" : "Processing"} {countProcessing > 0 && `(${countProcessing})`}
+          </button>
+          <button
+            onClick={() => setActiveTab("completed")}
+            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "completed" ? "bg-green-600 text-white shadow-md" : "bg-white hover:bg-green-50 text-gray-700 border border-gray-200"}`}
+          >
+            {safeLanguage === "th" ? "ที่เสร็จสมบูรณ์" : "Completed"} {countCompleted > 0 && `(${countCompleted})`}
+          </button>
+          <button
+            onClick={() => setActiveTab("cancelled")}
+            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "cancelled" ? "bg-red-500 text-white shadow-md" : "bg-white hover:bg-red-50 text-gray-700 border border-gray-200"}`}
+          >
+            {safeLanguage === "th" ? "ยกเลิกแล้ว" : "Cancelled"} {countCancelled > 0 && `(${countCancelled})`}
           </button>
         </div>
 
         {/* Bookings List */}
         <div className="space-y-4">
           {filteredBookings.map((booking) => {
-            // คำนวณสถานะของแต่ละรายการ
-            const isFullyApproved = booking.status?.toLowerCase() === 'approved' && booking.paymentStatus?.toLowerCase() === 'completed';
-            const isRejected = booking.status?.toLowerCase() === 'rejected' || booking.paymentStatus?.toLowerCase() === 'failed';
-            const isPending = !isFullyApproved && !isRejected;
+            const statusLower = booking.status?.toLowerCase() || '';
+            const paymentLower = booking.paymentStatus?.toLowerCase() || '';
+
+            const isFullyApproved = statusLower === 'approved' && paymentLower === 'completed';
+            const isRejected = statusLower === 'rejected' || paymentLower === 'failed' || statusLower === 'cancelled';
+            const isToPay = paymentLower === 'pending' && !isRejected;
+            const isProcessing = !isFullyApproved && !isRejected && !isToPay;
+
+            let borderColor = "border-[#005a87]/20"; 
+            if (isRejected) borderColor = "border-red-400";
+            if (isFullyApproved) borderColor = "border-green-400";
+            if (isToPay) borderColor = "border-yellow-400";
 
             return (
-              <div key={booking.id} className={`bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition border-t-4 ${isRejected ? 'border-red-400' : isFullyApproved ? 'border-green-400' : 'border-yellow-400'}`}>
+              <div key={booking.id} className={`bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition border-t-4 ${borderColor}`}>
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
 
                   {/* Booking Info */}
@@ -244,6 +346,7 @@ export function MyBookingsPage({
                           <span>{booking.tour?.name || booking.tourNameSnapshot?.province?.name || (safeLanguage === "th" ? "ประเทศไทย" : "Thailand")}</span>
                         </div>
                       </div>
+                      {/* ป้ายสถานะ */}
                       {getStatusBadge(booking)}
                     </div>
 
@@ -297,16 +400,20 @@ export function MyBookingsPage({
                       {safeLanguage === "th" ? "ดูรายละเอียด" : "View Details"}
                     </button>
 
-                    {/* ซ่อนปุ่มยกเลิกถ้ารายการถูกปฏิเสธ หรือ สำเร็จไปแล้ว */}
-                    {isPending && (
-                      <button className="flex-1 lg:w-44 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-xl font-semibold transition text-sm flex items-center justify-center gap-2">
+                    {/* ปุ่มยกเลิกการจอง แสดงเฉพาะตอน รอดำเนินการ หรือ รอชำระเงิน */}
+                    {(isToPay || isProcessing) && (
+                      <button 
+                        onClick={() => handleCancelBookingClick(booking.id)}
+                        className="flex-1 lg:w-44 bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-600 border hover:border-red-200 px-4 py-3 rounded-xl font-semibold transition text-sm flex items-center justify-center gap-2"
+                      >
                         <XCircle className="w-4 h-4" />
                         {safeLanguage === "th" ? "ยกเลิกการจอง" : "Cancel Booking"}
                       </button>
                     )}
 
+                    {/* ปุ่มดาวน์โหลดตั๋ว จะขึ้นก็ต่อเมื่อเสร็จสมบูรณ์ */}
                     {isFullyApproved && (
-                      <button className="flex-1 lg:w-44 bg-white hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl font-semibold transition border border-gray-200 text-sm flex items-center justify-center gap-2">
+                      <button className="flex-1 lg:w-44 bg-white hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl font-semibold transition border border-gray-200 text-sm flex items-center justify-center gap-2 shadow-sm">
                         <FileText className="w-4 h-4" />
                         {safeLanguage === "th" ? "ดาวน์โหลดตั๋ว" : "Download Ticket"}
                       </button>
@@ -315,49 +422,53 @@ export function MyBookingsPage({
                 </div>
 
                 {/* 🟢 Status Messages Box */}
-                {isRejected ? (
+                {isRejected && (
                   <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl">
                     <div className="flex items-start gap-3">
                       <span className="text-2xl">❌</span>
                       <div>
                         <div className="font-semibold text-red-900 mb-1">
-                          {safeLanguage === "th" ? "การจอง/การชำระเงิน ถูกปฏิเสธและยกเลิกแล้ว" : "Booking/Payment Rejected"}
+                          {safeLanguage === "th" ? "การจองถูกยกเลิก/ปฏิเสธ" : "Booking Cancelled/Rejected"}
                         </div>
                         <p className="text-sm text-red-800 bg-white p-3 rounded-lg border border-red-100 mt-2">
-                          <span className="font-bold">{safeLanguage === "th" ? "เหตุผลจากแอดมิน: " : "Reason: "}</span> 
-                          {booking.rejectReason || (safeLanguage === "th" ? "ไม่ระบุเหตุผล กรุณาติดต่อแอดมิน" : "No reason provided")}
+                          <span className="font-bold">{safeLanguage === "th" ? "เหตุผล: " : "Reason: "}</span> 
+                          {booking.rejectReason || (safeLanguage === "th" ? "ไม่ระบุเหตุผล" : "No reason provided")}
                         </p>
                       </div>
                     </div>
                   </div>
-                ) : isPending ? (
+                )}
+
+                {isToPay && (
                   <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl">
                     <div className="flex items-start gap-3">
-                      <span className="text-2xl">⏳</span>
+                      <span className="text-2xl">💳</span>
                       <div>
                         <div className="font-semibold text-yellow-900 mb-1">
-                          {safeLanguage === "th" ? "รอดำเนินการจากระบบ" : "Processing"}
+                          {safeLanguage === "th" ? "รอการชำระเงิน" : "Awaiting Payment"}
                         </div>
                         <p className="text-sm text-yellow-800">
                           {safeLanguage === "th"
-                            ? "การจองของคุณกำลังอยู่ระหว่างดำเนินการ (กำลังตรวจสอบที่นั่งว่าง หรือ ตรวจสอบสลิปเงิน) แอดมินจะทำการตรวจสอบโดยเร็วที่สุด"
-                            : "Your booking is currently processing. Please wait while our admin team verifies your details."}
+                            ? "คุณยังไม่ได้แนบหลักฐานการโอนเงิน หรือ หลักฐานเดิมมีปัญหา กรุณาติดต่อแอดมินหรือทำการจองใหม่หากต้องการ"
+                            : "Payment slip is required. Please upload your payment slip or contact admin."}
                         </p>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-2xl">
+                )}
+
+                {isProcessing && (
+                  <div className="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-2xl">
                     <div className="flex items-start gap-3">
-                      <span className="text-2xl">✓</span>
+                      <span className="text-2xl">⏳</span>
                       <div>
-                        <div className="font-semibold text-green-900 mb-1">
-                          {safeLanguage === "th" ? "การจองเสร็จสมบูรณ์" : "Booking Complete"}
+                        <div className="font-semibold text-teal-900 mb-1">
+                          {safeLanguage === "th" ? "รอดำเนินการจากแอดมิน" : "Processing"}
                         </div>
-                        <p className="text-sm text-green-800">
+                        <p className="text-sm text-teal-800">
                           {safeLanguage === "th"
-                            ? "คุณสามารถกดปุ่ม 'ดาวน์โหลดตั๋ว' เพื่อใช้เป็นหลักฐานในวันเดินทางได้เลย ขอให้สนุกกับทริปนี้นะครับ!"
-                            : "Your booking is 100% complete! You can download your ticket now. Have a great trip!"}
+                            ? "ได้รับข้อมูลแล้ว! กำลังอยู่ระหว่างการตรวจสอบความถูกต้องของที่นั่งและยอดเงิน กรุณารอสักครู่ครับ"
+                            : "We received your data! Our admin is verifying the seats and payment."}
                         </p>
                       </div>
                     </div>
@@ -384,7 +495,7 @@ export function MyBookingsPage({
             {bookings.length === 0 && (
               <button
                 onClick={() => onNavigate("home")}
-                className="bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-4 rounded-2xl font-semibold transition inline-flex items-center gap-2"
+                className="bg-[#00A699] hover:bg-[#008c81] text-white px-8 py-4 rounded-2xl font-semibold transition inline-flex items-center gap-2"
               >
                 {t.startExploring}
               </button>
@@ -421,41 +532,41 @@ export function MyBookingsPage({
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto">
               {/* สถานะรวม */}
-              <div className="flex justify-between items-center mb-6 bg-gray-50 p-4 rounded-2xl">
+              <div className="flex justify-between items-center mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-100">
                 <span className="font-semibold text-gray-700">
-                  {safeLanguage === "th" ? "สถานะรวมทั้งหมด" : "Overall Status"}
+                  {safeLanguage === "th" ? "สถานะการจองรวม" : "Overall Status"}
                 </span>
                 {getStatusBadge(selectedBooking)}
               </div>
 
-              {/* 🟢 หากโดนปฏิเสธ ให้โชว์กล่องเหตุผลใน Modal ด้วย */}
-              {(selectedBooking.status?.toLowerCase() === 'rejected' || selectedBooking.paymentStatus?.toLowerCase() === 'failed') && (
-                <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-2xl">
-                  <h3 className="font-bold text-red-900 mb-2 flex items-center gap-2">
-                    <XCircle className="w-5 h-5" />
-                    {safeLanguage === "th" ? "สาเหตุที่ถูกยกเลิก/ปฏิเสธ" : "Reason for Rejection"}
-                  </h3>
-                  <p className="text-sm text-red-800 bg-white p-3 rounded-lg border border-red-100">
-                    {selectedBooking.rejectReason || (safeLanguage === "th" ? "ไม่ระบุเหตุผล กรุณาติดต่อแอดมิน" : "No reason provided")}
-                  </p>
-                </div>
-              )}
-
               {/* แสดงสถานะย่อยให้ผู้ใช้เห็นว่าติดตรงไหน */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="border border-gray-200 p-3 rounded-xl text-center">
+                <div className="border border-gray-200 p-3 rounded-xl text-center bg-white shadow-sm">
                   <div className="text-xs text-gray-500 mb-1">{safeLanguage === "th" ? "สถานะที่นั่ง (Booking)" : "Booking Status"}</div>
-                  <div className={`font-bold ${selectedBooking.status?.toLowerCase() === 'approved' ? 'text-green-600' : selectedBooking.status?.toLowerCase() === 'rejected' ? 'text-red-500' : 'text-orange-500'}`}>
+                  <div className={`font-bold ${selectedBooking.status?.toLowerCase() === 'approved' ? 'text-green-600' : selectedBooking.status?.toLowerCase() === 'rejected' ? 'text-red-500' : selectedBooking.status?.toLowerCase() === 'cancelled' ? 'text-gray-500' : 'text-blue-500'}`}>
                     {selectedBooking.status?.toUpperCase()}
                   </div>
                 </div>
-                <div className="border border-gray-200 p-3 rounded-xl text-center">
+                <div className="border border-gray-200 p-3 rounded-xl text-center bg-white shadow-sm">
                   <div className="text-xs text-gray-500 mb-1">{safeLanguage === "th" ? "สถานะชำระเงิน (Payment)" : "Payment Status"}</div>
-                  <div className={`font-bold ${selectedBooking.paymentStatus?.toLowerCase() === 'completed' ? 'text-green-600' : selectedBooking.paymentStatus?.toLowerCase() === 'failed' ? 'text-red-500' : 'text-blue-500'}`}>
+                  <div className={`font-bold ${selectedBooking.paymentStatus?.toLowerCase() === 'completed' ? 'text-green-600' : selectedBooking.paymentStatus?.toLowerCase() === 'failed' ? 'text-red-500' : selectedBooking.paymentStatus?.toLowerCase() === 'verifying' ? 'text-blue-500' : 'text-orange-500'}`}>
                     {selectedBooking.paymentStatus?.toUpperCase()}
                   </div>
                 </div>
               </div>
+
+              {/* หากโดนปฏิเสธ ให้โชว์กล่องเหตุผลใน Modal */}
+              {(selectedBooking.status?.toLowerCase() === 'rejected' || selectedBooking.paymentStatus?.toLowerCase() === 'failed' || selectedBooking.status?.toLowerCase() === 'cancelled') && (
+                <div className="mb-6 bg-red-50 border border-red-200 p-4 rounded-2xl">
+                  <h3 className="font-bold text-red-900 mb-2 flex items-center gap-2">
+                    <XCircle className="w-5 h-5" />
+                    {safeLanguage === "th" ? "รายละเอียดการยกเลิก" : "Cancellation Details"}
+                  </h3>
+                  <p className="text-sm text-red-800 bg-white p-3 rounded-lg border border-red-100">
+                    {selectedBooking.rejectReason || (safeLanguage === "th" ? "ไม่ระบุเหตุผล" : "No reason provided")}
+                  </p>
+                </div>
+              )}
 
               {/* ข้อมูลแพ็กเกจ */}
               <div className="mb-6">
@@ -528,7 +639,7 @@ export function MyBookingsPage({
                           {safeLanguage === "th" ? "ดูรูปเต็ม" : "View Full"}
                         </button>
                       </div>
-                      <div className="rounded-xl overflow-hidden border border-gray-200 bg-white cursor-pointer" onClick={() => window.open(selectedBooking.paymentSlip, '_blank')}>
+                      <div className="rounded-xl overflow-hidden border border-gray-200 bg-white cursor-pointer hover:border-[#00A699] transition-colors" onClick={() => window.open(selectedBooking.paymentSlip, '_blank')}>
                         <img src={selectedBooking.paymentSlip} alt="Payment Slip" className="w-full h-auto max-h-48 object-contain bg-gray-50" />
                       </div>
                     </div>
@@ -541,16 +652,63 @@ export function MyBookingsPage({
             <div className="p-6 border-t border-gray-100 flex gap-3">
               <button
                 onClick={() => setSelectedBooking(null)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold transition-colors"
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl font-semibold transition-colors"
               >
                 {safeLanguage === "th" ? "ปิด" : "Close"}
               </button>
-              {selectedBooking.status?.toLowerCase() === "approved" && selectedBooking.paymentStatus?.toLowerCase() === "completed" && (
-                <button className="flex-1 bg-[#00A699] hover:bg-[#008c81] text-white py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  {safeLanguage === "th" ? "ดาวน์โหลดตั๋วเดินทาง" : "Download Ticket"}
+
+              {/* ปุ่มยกเลิกใน Modal */}
+              {!(selectedBooking.status?.toLowerCase() === 'approved' && selectedBooking.paymentStatus?.toLowerCase() === 'completed') && 
+               !(selectedBooking.status?.toLowerCase() === 'rejected' || selectedBooking.paymentStatus?.toLowerCase() === 'failed' || selectedBooking.status?.toLowerCase() === 'cancelled') && (
+                <button 
+                  onClick={() => handleCancelBookingClick(selectedBooking.id)}
+                  className="flex-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <XCircle className="w-5 h-5" />
+                  {safeLanguage === "th" ? "ยกเลิกการจอง" : "Cancel Booking"}
                 </button>
               )}
+
+              {selectedBooking.status?.toLowerCase() === "approved" && selectedBooking.paymentStatus?.toLowerCase() === "completed" && (
+                <button className="flex-1 bg-[#00A699] hover:bg-[#008c81] text-white py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg">
+                  <FileText className="w-5 h-5" />
+                  {safeLanguage === "th" ? "ดาวน์โหลดตั๋ว" : "Download Ticket"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 🟢 Custom Popup Modal (Alert / Confirm) แทน Alert เดิม */}
+      {/* ======================================================== */}
+      {popup.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${popup.type === 'confirm' || popup.title === 'ข้อผิดพลาด' ? 'bg-red-50 border-red-100 text-red-500' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'}`}>
+              {popup.type === 'confirm' || popup.title === 'ข้อผิดพลาด' ? <AlertCircle className="w-10 h-10" /> : <CheckCircle className="w-10 h-10" />}
+            </div>
+            <h3 className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">{popup.title}</h3>
+            <p className="text-gray-500 mb-8 leading-relaxed text-sm">{popup.message}</p>
+            <div className="flex gap-3">
+              {popup.type === 'confirm' && (
+                <button onClick={closePopup} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl font-bold active:scale-95 transition">
+                  {safeLanguage === 'th' ? 'ไม่ยกเลิก' : 'Cancel'}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (popup.type === 'confirm' && popup.onConfirm) {
+                    popup.onConfirm();
+                  } else {
+                    closePopup();
+                  }
+                }}
+                className={`flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg ${popup.type === 'confirm' ? 'bg-red-500 hover:bg-red-600 shadow-red-200' : 'bg-[#00A699] hover:bg-[#008c81] shadow-[#00A699]/30'}`}
+              >
+                {popup.type === 'confirm' ? (safeLanguage === 'th' ? 'ยืนยันยกเลิก' : 'Confirm') : (safeLanguage === 'th' ? 'ตกลง' : 'OK')}
+              </button>
             </div>
           </div>
         </div>

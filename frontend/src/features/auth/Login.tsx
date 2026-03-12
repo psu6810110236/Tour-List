@@ -75,12 +75,9 @@ export default function Login() {
                 />
               </div>
             </div>
-            
-
-            {/* 🔵 ช่อง Password */}
+          
             <div>
               <div className="relative">
-                {/* 🟢 แก้ไขตรงนี้: ใช้กรอบ Flex ครอบไอคอนไว้ */}
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="text-gray-400 w-5 h-5" />
                 </div>
@@ -95,7 +92,7 @@ export default function Login() {
               </div>
               <div className="text-right mt-2">
                 <button type="button" className="text-xs text-[#00A699] font-semibold tracking-wide uppercase">
-                  {language === 'th' ? 'ลืมรหัสผ่าน?' : 'Forgot Password?'}
+                 
                 </button>
               </div>
             </div>
