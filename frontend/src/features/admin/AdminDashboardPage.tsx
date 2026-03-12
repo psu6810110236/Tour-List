@@ -201,8 +201,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? `ต้องการลบการจอง ${bookingId} ถาวรใช่หรือไม่?` : `Permanently delete booking ${bookingId}?`, async () => {
       try {
         await bookingService.deleteBooking(bookingId); fetchAdminData();
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบการจองเรียบร้อยแล้ว" : "Booking deleted successfully."); closePopup();
-      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking."); closePopup(); }
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบการจองเรียบร้อยแล้ว" : "Booking deleted successfully.");
+      } catch (error) {
+        showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking.");
+      }
     });
   };
 
@@ -216,25 +218,18 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   };
 
   // 🟢 ฟังก์ชันเลือกลบหลายอัน สำหรับ "ทัวร์"
-  const handleBulkDeleteTours = () => {
+ const handleBulkDeleteTours = () => {
     if (selectedTourIds.length === 0) return;
-    showConfirm(
-      language === 'th' ? "ยืนยันการลบหลายรายการ" : "Confirm Bulk Delete",
-      language === 'th' ? `คุณต้องการลบทัวร์ที่เลือก ${selectedTourIds.length} รายการแบบถาวรใช่หรือไม่?` : `Delete ${selectedTourIds.length} selected tours?`,
-      async () => {
-        try {
-          // ยิง API สั่งลบทีละตัวพร้อมๆ กัน
-          await Promise.all(selectedTourIds.map(id => tourService.deleteTour(id)));
-          setSelectedTourIds([]); // ล้างค่าที่เลือกไว้
-          fetchAdminData();
-          showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
-          closePopup();
-        } catch (error) {
-          showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", "ไม่สามารถลบรายการได้ทั้งหมด");
-          closePopup();
-        }
+    showConfirm(language === 'th' ? "ยืนยันการลบหลายรายการ" : "Confirm Bulk Delete", language === 'th' ? `คุณต้องการลบทัวร์ที่เลือก ${selectedTourIds.length} รายการแบบถาวรใช่หรือไม่?` : `Delete ${selectedTourIds.length} selected tours?`, async () => {
+      try {
+        await Promise.all(selectedTourIds.map(id => tourService.deleteTour(id)));
+        setSelectedTourIds([]); fetchAdminData();
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
+      } catch (error) {
+        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้ทั้งหมด
+        showAlert(language === 'th' ? "ลบได้แค่บางส่วน" : "Partial Success", language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่ครับ" : "Some tours could not be deleted because they have active bookings.");
       }
-    );
+    });
   };
 
   // 🟢 ฟังก์ชันเลือกทั้งหมด / เลือกทีละอัน สำหรับ "การจอง"
@@ -322,13 +317,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const handleDeleteTour = (id: string) => {
     showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบทัวร์นี้แบบถาวร?" : "Are you sure you want to permanently delete this tour?", async () => {
       try {
-        await tourService.deleteTour(id); 
-        fetchAdminData();
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully."); 
-        closePopup();
-      } catch (error) { 
-        showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Failed to delete tour."); 
-        closePopup(); 
+        await tourService.deleteTour(id); fetchAdminData();
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully.");
+      } catch (error) {
+        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้
+        showAlert(language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Cannot Delete", language === 'th' ? "ทัวร์นี้มีการจองของลูกค้าค้างอยู่ กรุณาไปลบการจองในแท็บ 'การจอง' ให้หมดก่อนครับ" : "Please delete all bookings associated with this tour first.");
       }
     });
   };

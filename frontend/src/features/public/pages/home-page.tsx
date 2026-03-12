@@ -39,6 +39,7 @@ interface Tour {
   image?: string;
   bookedSeats?: number;
   description?: string;
+   isHidden?: boolean;
 }
 
 interface HomePageProps {
@@ -242,7 +243,7 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {tours.map((tour) => {
+            {tours.filter(tour => !tour.isHidden).map((tour) => {
               // จัดการเรื่องชื่อจังหวัด (ถ้ามี relation มาด้วย ให้ใช้ชื่อไทย/อังกฤษ ตามภาษา)
               const provinceName = tour.province?.name_th && language === 'th' ? tour.province.name_th :
                                    tour.province?.name && language === 'en' ? tour.province.name :
