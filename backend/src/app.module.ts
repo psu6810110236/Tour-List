@@ -9,6 +9,8 @@ if (!global.crypto) {
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { MailerModule, MailerService } from '@nestjs-modules/mailer';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Role } from './entities/role.entity';
@@ -39,6 +41,30 @@ import { CartModule } from './cart/cart.module';
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: true, 
+      }),
+    }),
+    // ตั้งค่าป้องกันการยิง Request รัวๆ จำกัด 10 ครั้งใน 60 วินาที
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
+    // ตั้งค่าระบบส่งอีเมล
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        transport: {
+          host: configService.get('MAIL_HOST') || 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          auth: {
+            user: configService.get('MAIL_USER'),
+            pass: configService.get('MAIL_PASS'),
+          },
+        },
+        defaults: {
+          from: '"RoamHub Tour" <noreply@roamhub.com>',
+        },
       }),
     }),
     TypeOrmModule.forFeature([Role, Province, Tour, User, Review]), 

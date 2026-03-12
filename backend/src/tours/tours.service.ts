@@ -6,6 +6,8 @@ import { Province } from '../entities/province.entity';
 
 @Injectable()
 export class ToursService {
+  
+
   constructor(
     @InjectRepository(Tour)
     private tourRepository: Repository<Tour>,
@@ -50,6 +52,19 @@ export class ToursService {
 
   async findAllProvinces() {
     return this.provinceRepository.find();
+  }
+
+  // 🟢 ฟังก์ชันที่แก้ไขแล้ว
+  async findProvinceById(id: string) {
+    const province = await this.provinceRepository.findOne({
+      where: { id: id } 
+    });
+
+    if (!province) {
+      throw new NotFoundException(`ไม่พบข้อมูลจังหวัดรหัส ${id}`);
+    }
+
+    return province;
   }
 
   async createProvince(provinceData: Partial<Province>) {

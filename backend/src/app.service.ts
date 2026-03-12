@@ -4,8 +4,8 @@ import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm'; // เ�
 import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
-import { User } from './entities/user.entity'; 
-import * as bcrypt from 'bcryptjs'; 
+import { User } from './entities/user.entity';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AppService implements OnApplicationBootstrap {
@@ -18,7 +18,7 @@ export class AppService implements OnApplicationBootstrap {
     private tourRepository: Repository<Tour>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   //ทำงานอัตโนมัติเมื่อ Start Server
   async onApplicationBootstrap() {
@@ -39,7 +39,13 @@ export class AppService implements OnApplicationBootstrap {
 
   // ดึงทัวร์ทั้งหมด
   async getAllTours() {
-    return await this.tourRepository.find();
+    return await this.tourRepository.find({
+      order: {
+        bookedSeats: 'DESC' // 🟢 เรียงยอดจอง (bookedSeats) จากมาก (DESC) ไปน้อย
+      },
+      take: 6, // 🟢 แนะนำให้แสดงแค่ 6 อันดับแรกบนหน้า Homepage ให้ดูพอดี
+      relations: ['province'] // 🟢 (ถ้าต้องการ) ดึงข้อมูลจังหวัดมาแสดงผลด้วย
+    });
   }
 
   // ดึงรายละเอียดทัวร์รายตัว
@@ -50,7 +56,7 @@ export class AppService implements OnApplicationBootstrap {
   // ระบบ Search & Filter ทัวร์ (รองรับ Price, Province)
   async searchTours(query: { provinceId?: string; maxPrice?: number; minPrice?: number }) {
     const where: any = {};
-    
+
     if (query.provinceId) where.provinceId = query.provinceId;
     if (query.maxPrice) where.price = LessThanOrEqual(query.maxPrice);
     if (query.minPrice) where.price = MoreThanOrEqual(query.minPrice);
@@ -134,7 +140,7 @@ export class AppService implements OnApplicationBootstrap {
   private async seedUsers() {
     const adminEmail = 'admin@test.com';
     const userEmail = 'user@test.com';
-    const password = 'password123'; 
+    const password = 'password123';
 
     const hashedPassword = await bcrypt.hash(password, 10);
 

@@ -25,7 +25,6 @@ export class BookingsService {
     });
   }
 
-  // 🟢 ค้นหาการจองของ User คนนั้นๆ (ของเพื่อน)
   async findMyBookings(userId: string) {
     return this.bookingRepository.find({
       where: { user: { id: userId } },
@@ -34,16 +33,16 @@ export class BookingsService {
     });
   }
 
-  // 🟢 รวมร่างฟังก์ชันสร้างการจอง (ใช้แบบของเพื่อนที่มี UUID และ userId)
+  // 🟢 1. ตอนสร้างการจอง (บังคับให้ travelers เป็นตัวเลข)
   async createBooking(userId: string, bookingData: any) {
     const bookingId = randomUUID();
 
-    // ดึงตัวเลขออกมาจาก tourId
     let numericTourId = Number(String(bookingData.tourId).replace(/\D/g, ''));
     if (!numericTourId || isNaN(numericTourId)) numericTourId = 1;
 
     const newBooking = this.bookingRepository.create({
       ...bookingData,
+      travelers: Number(bookingData.travelers) || 1, // 🌟 ป้องกัน undefined หรือ string
       id: bookingId,
       status: 'PENDING', 
       paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',
@@ -55,7 +54,7 @@ export class BookingsService {
     return this.bookingRepository.save(newBooking);
   }
 
-  // 🟢 รวมร่างฟังก์ชันอัปเดตสถานะ (ได้ทั้งระบบ "ตัดยอด" ของคุณ และ "เซฟ reason" ของเพื่อน)
+  // 🟢 2. ตอนอนุมัติสถานะ (บังคับแปลค่าให้เป็นตัวเลขก่อนบวก/ลบ)
   async updateStatus(id: string, status: string, reason?: string) {
     const newStatus = status.toUpperCase();
 
@@ -75,31 +74,36 @@ export class BookingsService {
 
     const oldStatus = booking.status ? booking.status.toUpperCase() : '';
 
+    // 🌟 แปลงค่าเป็น Number ป้องกันบั๊ก String Concatenation
+    const travelersCount = Number(booking.travelers) || 1;
+    const currentBooked = Number(tour.bookedSeats) || 0;
+    const maxCap = Number(tour.maxCapacity) || 10;
+
     // ระบบตัดยอด / คืนยอด
     if (newStatus === 'APPROVED' && oldStatus !== 'APPROVED') {
-      if (tour.bookedSeats + booking.travelers > tour.maxCapacity) {
+      if (currentBooked + travelersCount > maxCap) {
         throw new BadRequestException(
-          `ไม่สามารถอนุมัติได้: ทัวร์นี้รับได้สูงสุด ${tour.maxCapacity} คน (เหลือที่ว่าง ${tour.maxCapacity - tour.bookedSeats} ที่)`
+          `ไม่สามารถอนุมัติได้: ทัวร์นี้รับได้สูงสุด ${maxCap} คน (เหลือที่ว่าง ${maxCap - currentBooked} ที่)`
         );
       }
-      tour.bookedSeats += booking.travelers;
+      tour.bookedSeats = currentBooked + travelersCount; // 🌟 บวกตัวเลข
       await this.tourRepository.save(tour);
+      
     } else if (oldStatus === 'APPROVED' && newStatus !== 'APPROVED') {
-      tour.bookedSeats -= booking.travelers;
+      tour.bookedSeats = currentBooked - travelersCount; // 🌟 ลบตัวเลข
       if (tour.bookedSeats < 0) {
         tour.bookedSeats = 0;
       }
       await this.tourRepository.save(tour);
     }
 
-    // เซฟสถานะ และเหตุผล (ถ้ามี)
     booking.status = newStatus as any;
     if (reason) (booking as any).rejectReason = reason;
 
     return this.bookingRepository.save(booking);
   }
 
-  // 🟢 อัปเดตสถานะการชำระเงิน (ของเพื่อน)
+  // อัปเดตสถานะชำระเงิน
   async updatePaymentStatus(id: string, paymentStatus: string, reason?: string) {
     const upperStatus = paymentStatus.toUpperCase();
     if (!VALID_PAYMENT_STATUSES.includes(upperStatus)) {
@@ -115,18 +119,18 @@ export class BookingsService {
     return this.bookingRepository.save(booking);
   }
 
-  // 🟢 รวมร่างฟังก์ชันลบการจอง (ใช้แบบของคุณที่มีระบบ "คืนยอดก่อนลบ")
+  // 🟢 3. ตอนลบบิล (คืนยอด ต้องเป็นตัวเลขเช่นกัน)
   async deleteBooking(id: string) {
     const booking = await this.bookingRepository.findOne({ where: { id: id as any } });
     if (!booking) {
       throw new NotFoundException(`ไม่พบการจองรหัส ${id}`);
     }
     
-    // คืนยอดถ้าลบบิลที่เคย APPROVED ไปแล้ว
     if (booking.status && booking.status.toUpperCase() === 'APPROVED') {
       const tour = await this.tourRepository.findOne({ where: { id: booking.tourId as any } });
       if (tour) {
-        tour.bookedSeats -= booking.travelers;
+        // 🌟 แปลงเป็นตัวเลขก่อนลบเสมอ
+        tour.bookedSeats = (Number(tour.bookedSeats) || 0) - (Number(booking.travelers) || 1);
         if (tour.bookedSeats < 0) tour.bookedSeats = 0;
         await this.tourRepository.save(tour);
       }
