@@ -72,7 +72,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
 
-  // 🌟 State สำหรับปฏิทินแอดมิน
+  // State นี้สำหรับเก็บรูปจังหวัดโดยเฉพาะ
+  const [provinceImage, setProvinceImage] = useState<string>('');
+
+  // State สำหรับปฏิทินแอดมิน
   const [adminMonth, setAdminMonth] = useState(new Date(2026, 2, 1));
 
   // State สำหรับ Popup
@@ -198,8 +201,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? `ต้องการลบการจอง ${bookingId} ถาวรใช่หรือไม่?` : `Permanently delete booking ${bookingId}?`, async () => {
       try {
         await bookingService.deleteBooking(bookingId); fetchAdminData();
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบการจองเรียบร้อยแล้ว" : "Booking deleted successfully."); closePopup();
-      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking."); closePopup(); }
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบการจองเรียบร้อยแล้ว" : "Booking deleted successfully.");
+      } catch (error) {
+        showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการลบ" : "Error deleting booking.");
+      }
     });
   };
 
@@ -213,25 +218,18 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   };
 
   // 🟢 ฟังก์ชันเลือกลบหลายอัน สำหรับ "ทัวร์"
-  const handleBulkDeleteTours = () => {
+ const handleBulkDeleteTours = () => {
     if (selectedTourIds.length === 0) return;
-    showConfirm(
-      language === 'th' ? "ยืนยันการลบหลายรายการ" : "Confirm Bulk Delete",
-      language === 'th' ? `คุณต้องการลบทัวร์ที่เลือก ${selectedTourIds.length} รายการแบบถาวรใช่หรือไม่?` : `Delete ${selectedTourIds.length} selected tours?`,
-      async () => {
-        try {
-          // ยิง API สั่งลบทีละตัวพร้อมๆ กัน
-          await Promise.all(selectedTourIds.map(id => tourService.deleteTour(id)));
-          setSelectedTourIds([]); // ล้างค่าที่เลือกไว้
-          fetchAdminData();
-          showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
-          closePopup();
-        } catch (error) {
-          showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", "ไม่สามารถลบรายการได้ทั้งหมด");
-          closePopup();
-        }
+    showConfirm(language === 'th' ? "ยืนยันการลบหลายรายการ" : "Confirm Bulk Delete", language === 'th' ? `คุณต้องการลบทัวร์ที่เลือก ${selectedTourIds.length} รายการแบบถาวรใช่หรือไม่?` : `Delete ${selectedTourIds.length} selected tours?`, async () => {
+      try {
+        await Promise.all(selectedTourIds.map(id => tourService.deleteTour(id)));
+        setSelectedTourIds([]); fetchAdminData();
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
+      } catch (error) {
+        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้ทั้งหมด
+        showAlert(language === 'th' ? "ลบได้แค่บางส่วน" : "Partial Success", language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่ครับ" : "Some tours could not be deleted because they have active bookings.");
       }
-    );
+    });
   };
 
   // 🟢 ฟังก์ชันเลือกทั้งหมด / เลือกทีละอัน สำหรับ "การจอง"
@@ -279,11 +277,21 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     if (!(tourForm.name || tourForm.name_th) || !tourForm.provinceId) {
       return showAlert(language === 'th' ? "ข้อมูลไม่ครบ" : "Incomplete Data", language === 'th' ? "กรุณากรอกชื่อทัวร์และเลือกจังหวัด" : "Please enter tour name and select province.");
     }
+    
     try {
       if (createNewProvince) {
-        const newProv = { id: tourForm.provinceId!, name: String(tourForm.province || ''), name_th: String(tourForm.province || ''), tourCount: 0, image: tourForm.image || '', description: '', description_th: '' };
+        const newProv = { 
+          id: tourForm.provinceId!, 
+          name: String(tourForm.province || ''), 
+          name_th: String(tourForm.province || ''), 
+          tourCount: 0, 
+          image: provinceImage || '', // 🟢 ดึงรูปจาก provinceImage แทน
+          description: '', 
+          description_th: '' 
+        };
         await tourService.createProvince(newProv);
       }
+      
       if (editingTourId) {
         await tourService.updateTour(editingTourId, tourForm);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "อัปเดตทัวร์สำเร็จ!" : "Tour updated successfully!");
@@ -293,8 +301,14 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         await tourService.createTour(newTour);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "สร้างทัวร์สำเร็จ!" : "Tour created successfully!");
       }
-      setIsAddingTour(false); setEditingTourId(null); fetchAdminData();
-      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` }); setCreateNewProvince(false);
+      
+      setIsAddingTour(false); 
+      setEditingTourId(null); 
+      fetchAdminData();
+      setTourForm({ ...initialTourForm, id: `T-${Date.now()}` }); 
+      setCreateNewProvince(false);
+      setProvinceImage(''); // 🟢 เคลียร์รูปลิงก์จังหวัดทิ้งด้วย
+      
     } catch (error) {
       showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการบันทึกข้อมูล" : "Error saving data");
     }
@@ -304,12 +318,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     showConfirm(language === 'th' ? "ยืนยันการลบ" : "Confirm Delete", language === 'th' ? "คุณแน่ใจหรือไม่ว่าต้องการลบทัวร์นี้แบบถาวร?" : "Are you sure you want to permanently delete this tour?", async () => {
       try {
         await tourService.deleteTour(id); fetchAdminData();
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully."); closePopup();
-      } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Failed to delete tour."); closePopup(); }
+        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully.");
+      } catch (error) {
+        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้
+        showAlert(language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Cannot Delete", language === 'th' ? "ทัวร์นี้มีการจองของลูกค้าค้างอยู่ กรุณาไปลบการจองในแท็บ 'การจอง' ให้หมดก่อนครับ" : "Please delete all bookings associated with this tour first.");
+      }
     });
   };
 
-  
+
 
   // 🟢 ฟังก์ชันซ่อน/แสดงทัวร์
   const handleToggleVisibility = (tour: Tour) => {
@@ -1035,10 +1052,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
 
                 <div className="space-y-10">
+                  {/* 🟢 คลุมดำวางทับตั้งแต่บรรทัดนี้ลงไปเลยครับ */}
                   <div className="bg-[#00A699]/5 p-6 rounded-2xl border-2 border-dashed border-[#00A699]/20">
                     <div className="flex justify-between items-center mb-4">
                       <label className="font-bold flex items-center gap-2"><MapPin size={18} /> {language === 'th' ? 'ระบุจังหวัด' : 'Specify Province'}</label>
-                      <button onClick={(e) => { e.preventDefault(); setCreateNewProvince(!createNewProvince); }} className="text-xs font-bold text-[#00A699] hover:underline">
+                      <button onClick={() => setCreateNewProvince(!createNewProvince)} className="text-xs font-bold text-[#00A699] hover:underline">
                         {createNewProvince ? (language === 'th' ? 'เลือกจังหวัดที่มีอยู่' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
                       </button>
                     </div>
@@ -1049,12 +1067,46 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         {allProvinces.map(p => <option key={p.id} value={p.id}>{getLang(p, 'name', language)}</option>)}
                       </select>
                     ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        <input placeholder="Province ID (e.g., hat-yai)" className="p-4 border rounded-xl" onChange={e => setTourForm({ ...tourForm, provinceId: e.target.value })} />
-                        <input placeholder="Province Name (TH/EN)" className="p-4 border rounded-xl" onChange={e => setTourForm({ ...tourForm, province: e.target.value })} />
+                      <div className="space-y-4 animate-in fade-in duration-300">
+                        <div className="grid grid-cols-2 gap-4">
+                          <input placeholder="Province ID (e.g., hat-yai)" className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" onChange={e => setTourForm({ ...tourForm, provinceId: e.target.value })} />
+                          <input placeholder="Province Name (TH/EN)" className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" onChange={e => setTourForm({ ...tourForm, province: e.target.value })} />
+                        </div>
+                        
+                        <div className="bg-white p-4 border rounded-xl">
+                          <label className="block text-sm font-bold text-gray-700 mb-2">
+                            {language === 'th' ? 'รูปภาพจังหวัด (URL)' : 'Province Image (URL)'}
+                          </label>
+                          
+                          {provinceImage ? (
+                            <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 group">
+                              <img src={provinceImage} alt="Province Preview" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button
+                                  onClick={() => setProvinceImage('')}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transform hover:scale-105 transition shadow-lg"
+                                >
+                                  <Trash2 className="w-4 h-4" /> {language === 'th' ? 'ลบรูปภาพ' : 'Remove Image'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <ImageIcon className="w-5 h-5 text-gray-400" />
+                              <input 
+                                type="text" 
+                                placeholder={language === 'th' ? "วางลิงก์รูปภาพจังหวัดที่นี่ (https://...)" : "Paste province image URL here..."} 
+                                className="w-full p-3 bg-gray-50 border border-transparent focus:border-[#00A699] focus:bg-white rounded-lg outline-none transition text-sm"
+                                value={provinceImage}
+                                onChange={e => setProvinceImage(e.target.value)} 
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
+                  
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">

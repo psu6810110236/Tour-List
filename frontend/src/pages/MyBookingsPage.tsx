@@ -89,13 +89,13 @@ export function MyBookingsPage({
   const handleCancelBookingClick = (bookingId: string) => {
     showConfirm(
       safeLanguage === "th" ? "ยืนยันการยกเลิก" : "Confirm Cancellation",
-      safeLanguage === "th" 
-        ? "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้" 
+      safeLanguage === "th"
+        ? "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้"
         : "Are you sure you want to cancel this booking? This action cannot be undone.",
       async () => {
         try {
           const reason = safeLanguage === 'th' ? 'ยกเลิกโดยผู้ใช้ (Cancelled by user)' : 'Cancelled by user';
-          
+
           await Promise.all([
             bookingService.updateBookingStatus(bookingId, 'cancelled', reason),
             bookingService.updatePaymentStatus(bookingId, 'failed', reason)
@@ -186,10 +186,13 @@ export function MyBookingsPage({
     }
   };
 
-  const filteredBookings = bookings.filter((booking) => {
-    const statusLower = booking.status?.toLowerCase() || '';
-    const paymentLower = booking.paymentStatus?.toLowerCase() || '';
+  // 🟢 แก้ไขส่วน filteredBookings (ประมาณบรรทัดที่ 130 เป็นต้นไป)
 
+  const filteredBookings = bookings.filter((booking) => {
+    const statusLower = (booking.status || '').toLowerCase();
+    const paymentLower = (booking.paymentStatus || '').toLowerCase();
+
+    // ... ส่วนเช็คสถานะเดิม ...
     const isFullyApproved = statusLower === 'approved' && paymentLower === 'completed';
     const isRejected = statusLower === 'rejected' || paymentLower === 'failed' || statusLower === 'cancelled';
     const isToPay = paymentLower === 'pending' && !isRejected;
@@ -201,12 +204,16 @@ export function MyBookingsPage({
     if (activeTab === "completed") statusMatch = isFullyApproved;
     if (activeTab === "cancelled") statusMatch = isRejected;
 
-    const tourName = booking.tourNameSnapshot || "";
-    const tourNameTh = booking.tourNameSnapshot_th || "";
+    // 🟢 แก้ไขตรงนี้: ใช้ String() ครอบ ID เพื่อป้องกันแอปพังถ้า ID เป็นตัวเลข
+    const bookingId = String(booking.id || "").toLowerCase();
+    const tourName = String(booking.tourNameSnapshot || "").toLowerCase();
+    const tourNameTh = String(booking.tourNameSnapshot_th || "").toLowerCase();
+    const query = searchQuery.toLowerCase();
+
     const searchMatch =
-      booking.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tourName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tourNameTh.toLowerCase().includes(searchQuery.toLowerCase());
+      bookingId.includes(query) ||
+      tourName.includes(query) ||
+      tourNameTh.includes(query);
 
     return statusMatch && searchMatch;
   });
@@ -216,7 +223,7 @@ export function MyBookingsPage({
     const p = b.paymentStatus?.toLowerCase() || '';
     return p === 'pending' && s !== 'rejected' && s !== 'cancelled';
   }).length;
-  
+
   const countProcessing = bookings.filter(b => {
     const s = b.status?.toLowerCase() || '';
     const p = b.paymentStatus?.toLowerCase() || '';
@@ -225,9 +232,9 @@ export function MyBookingsPage({
     const isToPay = p === 'pending' && !isRejected;
     return !isFullyApproved && !isRejected && !isToPay;
   }).length;
-  
+
   const countCompleted = bookings.filter(b => b.status?.toLowerCase() === 'approved' && b.paymentStatus?.toLowerCase() === 'completed').length;
-  
+
   const countCancelled = bookings.filter(b => {
     const s = b.status?.toLowerCase() || '';
     const p = b.paymentStatus?.toLowerCase() || '';
@@ -323,7 +330,7 @@ export function MyBookingsPage({
             const isToPay = paymentLower === 'pending' && !isRejected;
             const isProcessing = !isFullyApproved && !isRejected && !isToPay;
 
-            let borderColor = "border-[#005a87]/20"; 
+            let borderColor = "border-[#005a87]/20";
             if (isRejected) borderColor = "border-red-400";
             if (isFullyApproved) borderColor = "border-green-400";
             if (isToPay) borderColor = "border-yellow-400";
@@ -343,7 +350,11 @@ export function MyBookingsPage({
                         </h3>
                         <div className="flex items-center gap-2 text-gray-600 mb-2">
                           <MapPin className="w-4 h-4" />
-                          <span>{booking.tour?.name || booking.tourNameSnapshot?.province?.name || (safeLanguage === "th" ? "ประเทศไทย" : "Thailand")}</span>
+                          <span>
+                            {booking.tour?.province?.name_th ||
+                              booking.tour?.province?.name ||
+                              (safeLanguage === "th" ? "ประเทศไทย" : "Thailand")}
+                          </span>
                         </div>
                       </div>
                       {/* ป้ายสถานะ */}
@@ -402,7 +413,7 @@ export function MyBookingsPage({
 
                     {/* ปุ่มยกเลิกการจอง แสดงเฉพาะตอน รอดำเนินการ หรือ รอชำระเงิน */}
                     {(isToPay || isProcessing) && (
-                      <button 
+                      <button
                         onClick={() => handleCancelBookingClick(booking.id)}
                         className="flex-1 lg:w-44 bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-600 border hover:border-red-200 px-4 py-3 rounded-xl font-semibold transition text-sm flex items-center justify-center gap-2"
                       >
@@ -431,7 +442,7 @@ export function MyBookingsPage({
                           {safeLanguage === "th" ? "การจองถูกยกเลิก/ปฏิเสธ" : "Booking Cancelled/Rejected"}
                         </div>
                         <p className="text-sm text-red-800 bg-white p-3 rounded-lg border border-red-100 mt-2">
-                          <span className="font-bold">{safeLanguage === "th" ? "เหตุผล: " : "Reason: "}</span> 
+                          <span className="font-bold">{safeLanguage === "th" ? "เหตุผล: " : "Reason: "}</span>
                           {booking.rejectReason || (safeLanguage === "th" ? "ไม่ระบุเหตุผล" : "No reason provided")}
                         </p>
                       </div>
@@ -658,16 +669,16 @@ export function MyBookingsPage({
               </button>
 
               {/* ปุ่มยกเลิกใน Modal */}
-              {!(selectedBooking.status?.toLowerCase() === 'approved' && selectedBooking.paymentStatus?.toLowerCase() === 'completed') && 
-               !(selectedBooking.status?.toLowerCase() === 'rejected' || selectedBooking.paymentStatus?.toLowerCase() === 'failed' || selectedBooking.status?.toLowerCase() === 'cancelled') && (
-                <button 
-                  onClick={() => handleCancelBookingClick(selectedBooking.id)}
-                  className="flex-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
-                >
-                  <XCircle className="w-5 h-5" />
-                  {safeLanguage === "th" ? "ยกเลิกการจอง" : "Cancel Booking"}
-                </button>
-              )}
+              {!(selectedBooking.status?.toLowerCase() === 'approved' && selectedBooking.paymentStatus?.toLowerCase() === 'completed') &&
+                !(selectedBooking.status?.toLowerCase() === 'rejected' || selectedBooking.paymentStatus?.toLowerCase() === 'failed' || selectedBooking.status?.toLowerCase() === 'cancelled') && (
+                  <button
+                    onClick={() => handleCancelBookingClick(selectedBooking.id)}
+                    className="flex-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    {safeLanguage === "th" ? "ยกเลิกการจอง" : "Cancel Booking"}
+                  </button>
+                )}
 
               {selectedBooking.status?.toLowerCase() === "approved" && selectedBooking.paymentStatus?.toLowerCase() === "completed" && (
                 <button className="flex-1 bg-[#00A699] hover:bg-[#008c81] text-white py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg">
