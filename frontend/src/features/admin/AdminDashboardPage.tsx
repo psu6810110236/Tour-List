@@ -43,11 +43,13 @@ interface AdminDashboardProps {
 export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'tours'>('overview');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
 
   // ข้อมูลจาก Backend
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [allProvinces, setAllProvinces] = useState<Province[]>([]);
   const [bookingsList, setBookingsList] = useState<Booking[]>([]);
+  const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
 
   // State สำหรับตัวกรอง "แท็บการจอง"
   const [bookingSearch, setBookingSearch] = useState('');
@@ -201,6 +203,67 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
   };
 
+  // 🟢 ฟังก์ชันเลือกทั้งหมด / เลือกทีละอัน สำหรับ "ทัวร์"
+  const handleSelectAllTours = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) setSelectedTourIds(filteredTours.map(t => t.id));
+    else setSelectedTourIds([]);
+  };
+  const handleSelectTour = (id: string) => {
+    setSelectedTourIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  // 🟢 ฟังก์ชันเลือกลบหลายอัน สำหรับ "ทัวร์"
+  const handleBulkDeleteTours = () => {
+    if (selectedTourIds.length === 0) return;
+    showConfirm(
+      language === 'th' ? "ยืนยันการลบหลายรายการ" : "Confirm Bulk Delete",
+      language === 'th' ? `คุณต้องการลบทัวร์ที่เลือก ${selectedTourIds.length} รายการแบบถาวรใช่หรือไม่?` : `Delete ${selectedTourIds.length} selected tours?`,
+      async () => {
+        try {
+          // ยิง API สั่งลบทีละตัวพร้อมๆ กัน
+          await Promise.all(selectedTourIds.map(id => tourService.deleteTour(id)));
+          setSelectedTourIds([]); // ล้างค่าที่เลือกไว้
+          fetchAdminData();
+          showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
+          closePopup();
+        } catch (error) {
+          showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", "ไม่สามารถลบรายการได้ทั้งหมด");
+          closePopup();
+        }
+      }
+    );
+  };
+
+  // 🟢 ฟังก์ชันเลือกทั้งหมด / เลือกทีละอัน สำหรับ "การจอง"
+  const handleSelectAllBookings = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) setSelectedBookingIds(filteredBookings.map(b => b.id));
+    else setSelectedBookingIds([]);
+  };
+  const handleSelectBooking = (id: string) => {
+    setSelectedBookingIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  // 🟢 ฟังก์ชันเลือกลบหลายอัน สำหรับ "การจอง"
+  const handleBulkDeleteBookings = () => {
+    if (selectedBookingIds.length === 0) return;
+    showConfirm(
+      language === 'th' ? "ยืนยันการลบหลายรายการ" : "Confirm Bulk Delete",
+      language === 'th' ? `คุณต้องการลบการจองที่เลือก ${selectedBookingIds.length} รายการแบบถาวรใช่หรือไม่?` : `Delete ${selectedBookingIds.length} selected bookings?`,
+      async () => {
+        try {
+          await Promise.all(selectedBookingIds.map(id => bookingService.deleteBooking(id)));
+          setSelectedBookingIds([]); // ล้างค่าที่เลือกไว้
+          fetchAdminData();
+          showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
+          closePopup();
+        } catch (error) {
+          showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", "ไม่สามารถลบรายการได้ทั้งหมด");
+          closePopup();
+        }
+      }
+    );
+  };
+
   // ==========================================
   // ฟังก์ชันทัวร์ (Tours)
   // ==========================================
@@ -245,6 +308,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Failed to delete tour."); closePopup(); }
     });
   };
+
+  
 
   // 🟢 ฟังก์ชันซ่อน/แสดงทัวร์
   const handleToggleVisibility = (tour: Tour) => {
@@ -560,6 +625,17 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               <h2 className="text-2xl font-bold text-gray-900">{t.tabs.bookings} (จัดการที่นั่งทัวร์)</h2>
               <div className="flex flex-col md:flex-row gap-3">
 
+                {/* 🟢 เพิ่มปุ่มลบหลายรายการตรงนี้ (จะโชว์เมื่อมีการติ๊กเลือกเท่านั้น) */}
+                {selectedBookingIds.length > 0 && (
+                  <button
+                    onClick={handleBulkDeleteBookings}
+                    className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-xl font-semibold transition whitespace-nowrap animate-in fade-in shadow-sm"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    {language === 'th' ? `ลบที่เลือก (${selectedBookingIds.length})` : `Delete Selected (${selectedBookingIds.length})`}
+                  </button>
+                )}
+
                 <select
                   className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
                   value={bookingProvinceFilter}
@@ -607,11 +683,20 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
+                      {/* 🟢 1. เพิ่ม Checkbox ที่หัวตาราง (เลือกทั้งหมด) */}
+                      <th className="px-6 py-4 w-12 text-center">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 text-[#00A699] rounded border-gray-300 focus:ring-[#00A699] cursor-pointer"
+                          checked={selectedBookingIds.length === filteredBookings.length && filteredBookings.length > 0}
+                          onChange={handleSelectAllBookings}
+                        />
+                      </th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.id}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.table.tour}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{language === 'th' ? 'วันที่เดินทาง' : 'Travel Date'}</th>
@@ -622,7 +707,18 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {filteredBookings.map((booking) => (
-                      <tr key={booking.id} className="hover:bg-gray-50 transition">
+                      <tr key={booking.id} className={`transition ${selectedBookingIds.includes(booking.id) ? 'bg-[#00A699]/5' : 'hover:bg-gray-50'}`}>
+                        
+                        {/* 🟢 2. เพิ่ม Checkbox ในแต่ละแถว */}
+                        <td className="px-6 py-4 text-center">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 text-[#00A699] rounded border-gray-300 focus:ring-[#00A699] cursor-pointer"
+                            checked={selectedBookingIds.includes(booking.id)}
+                            onChange={() => handleSelectBooking(booking.id)}
+                          />
+                        </td>
+
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
                         <td className="px-6 py-4">
                           <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
@@ -661,7 +757,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     ))}
                     {filteredBookings.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบข้อมูลการจองที่ค้นหา' : 'No bookings found'}</td>
+                        {/* 🟢 3. อัปเดต colSpan จาก 6 เป็น 7 ให้ครอบคลุมคอลัมน์ Checkbox */}
+                        <td colSpan={7} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบข้อมูลการจองที่ค้นหา' : 'No bookings found'}</td>
                       </tr>
                     )}
                   </tbody>
@@ -755,7 +852,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
 
-        {/* ================= TOURS TAB ================= */}
+       {/* ================= TOURS TAB ================= */}
         {activeTab === 'tours' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             {!isAddingTour ? (
@@ -766,7 +863,18 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     <p className="text-gray-600 mt-1">{t.tours.desc}</p>
                   </div>
 
-                  <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+                  <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto items-center">
+
+                    {/* 🟢 1. เพิ่มปุ่มลบหลายรายการ (แสดงเมื่อมีการติ๊กเลือก) */}
+                    {selectedTourIds.length > 0 && (
+                      <button
+                        onClick={handleBulkDeleteTours}
+                        className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2.5 rounded-xl font-semibold transition shadow-sm whitespace-nowrap animate-in fade-in"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                        {language === 'th' ? `ลบที่เลือก (${selectedTourIds.length})` : `Delete Selected (${selectedTourIds.length})`}
+                      </button>
+                    )}
 
                     <select
                       className="border border-gray-200 rounded-xl px-4 py-2.5 bg-white text-sm outline-none focus:ring-2 focus:ring-[#00A699]"
@@ -801,6 +909,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         onChange={(e) => setTourSearch(e.target.value)}
                       />
                     </div>
+                    
                     <button
                       onClick={() => {
                         setIsAddingTour(true);
@@ -820,6 +929,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     <table className="w-full">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
+                          {/* 🟢 2. เพิ่ม Checkbox ที่หัวตาราง */}
+                          <th className="px-6 py-4 w-12 text-center">
+                            <input 
+                              type="checkbox" 
+                              className="w-4 h-4 text-[#00A699] rounded border-gray-300 focus:ring-[#00A699] cursor-pointer"
+                              checked={selectedTourIds.length === filteredTours.length && filteredTours.length > 0}
+                              onChange={handleSelectAllTours}
+                            />
+                          </th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{language === 'th' ? 'รหัส' : 'ID'}</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.name}</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">{t.tours.province}</th>
@@ -830,7 +948,18 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {filteredTours.map((tour) => (
-                          <tr key={tour.id} className="hover:bg-gray-50 transition">
+                          <tr key={tour.id} className={`transition ${selectedTourIds.includes(tour.id) ? 'bg-[#00A699]/5' : tour.isHidden ? 'bg-gray-100 opacity-60' : 'hover:bg-gray-50'}`}>
+                            
+                            {/* 🟢 3. เพิ่ม Checkbox ในแต่ละแถว */}
+                            <td className="px-6 py-4 text-center">
+                              <input 
+                                type="checkbox" 
+                                className="w-4 h-4 text-[#00A699] rounded border-gray-300 focus:ring-[#00A699] cursor-pointer"
+                                checked={selectedTourIds.includes(tour.id)}
+                                onChange={() => handleSelectTour(tour.id)}
+                              />
+                            </td>
+
                             <td className="px-6 py-4 text-sm font-bold text-[#00A699]">{tour.id}</td>
                             <td className="px-6 py-4">
                               <div className="font-medium text-gray-900">{getLang(tour, 'name', language)}</div>
@@ -855,26 +984,22 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
-
                                 <button onClick={() => setViewingCustomersForTour(tour)} className="text-blue-500 hover:text-blue-600 transition p-2" title={language === 'th' ? "ดูรายชื่อลูกค้า" : "View Customers"}>
                                   <Users className="w-5 h-5" />
                                 </button>
+                                
                                 <button 
-      onClick={() => handleToggleVisibility(tour)} 
-      className={`transition p-2 ${tour.isHidden ? 'text-gray-400 hover:text-gray-600' : 'text-green-500 hover:text-green-600'}`}
-      title={tour.isHidden ? "คลิกเพื่อแสดงทัวร์" : "คลิกเพื่อซ่อนทัวร์"}
-    >
-      {tour.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-    </button>
-                                
+                                  onClick={() => handleToggleVisibility(tour)} 
+                                  className={`transition p-2 ${tour.isHidden ? 'text-gray-400 hover:text-gray-600' : 'text-green-500 hover:text-green-600'}`}
+                                  title={tour.isHidden ? "คลิกเพื่อแสดงทัวร์" : "คลิกเพื่อซ่อนทัวร์"}
+                                >
+                                  {tour.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
 
-                                
-
-                                <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
+                                <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2" title={language === 'th' ? "แก้ไขทัวร์" : "Edit Tour"}>
                                   <Edit className="w-5 h-5" />
                                 </button>
-                                <button onClick={() => handleDeleteTour(tour.id)} className="text-red-500 hover:text-red-600 transition p-2">
-   
+                                <button onClick={() => handleDeleteTour(tour.id)} className="text-red-500 hover:text-red-600 transition p-2" title={language === 'th' ? "ลบทัวร์" : "Delete Tour"}>
                                   <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
@@ -883,7 +1008,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         ))}
                         {filteredTours.length === 0 && (
                           <tr>
-                            <td colSpan={7} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบทัวร์ที่ค้นหา' : 'No tours found'}</td>
+                            {/* 🟢 4. แก้ colSpan จาก 7 เป็น 8 เพราะมีคอลัมน์เพิ่มมา */}
+                            <td colSpan={8} className="text-center py-6 text-gray-500">{language === 'th' ? 'ไม่พบทัวร์ที่ค้นหา' : 'No tours found'}</td>
                           </tr>
                         )}
                       </tbody>
@@ -892,6 +1018,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 </div>
               </>
             ) : (
+            
+              // โค้ดส่วนฟอร
               /* ================= ฟอร์มเพิ่ม/แก้ไขทัวร์ ================= */
               <div className="bg-white rounded-3xl shadow-xl p-8 border animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-between items-center mb-8 border-b pb-4">
