@@ -114,10 +114,6 @@ export class Tour {
   @Column({ type: 'varchar', length: 255, nullable: true })
   accommodation: string;
 
-  // จำนวนรับสูงสุด (Max Capacity)
-  @Column({ type: 'int', default: 10 })
-  maxCapacity: number;
-
   // จำนวนคนที่จองและจ่ายเงินแล้ว (เพื่อเอาไว้ทำระบบตัดยอด)
   @Column({ type: 'int', default: 0 })
   bookedSeats: number;
