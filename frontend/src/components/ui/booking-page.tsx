@@ -1,12 +1,149 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, X } from "lucide-react";
 import type { Tour } from "../../types/index"; 
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 
 import { tourService, bookingService } from "../../services/api";
 
+// ============================================================
+//  Toast System
+// ============================================================
+type ToastType = "success" | "error" | "warning";
+
+interface ToastData {
+  id: number;
+  type: ToastType;
+  message: string;
+}
+
+function ToastContainer({ toasts, onRemove }: { toasts: ToastData[]; onRemove: (id: number) => void }) {
+  return (
+    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-3 pointer-events-none w-full max-w-sm px-4">
+      {toasts.map((toast) => (
+        <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
+      ))}
+    </div>
+  );
+}
+
+function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: number) => void }) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    // Mount → slide in
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+    // Auto-dismiss
+    const leaveTimer = setTimeout(() => handleClose(), 3800);
+    return () => { clearTimeout(enterTimer); clearTimeout(leaveTimer); };
+  }, []);
+
+  const handleClose = () => {
+    setLeaving(true);
+    setTimeout(() => onRemove(toast.id), 350);
+  };
+
+  const config = {
+    success: {
+      bg: "bg-white",
+      border: "border-[#00A699]/25",
+      accent: "bg-[#00A699]",
+      iconBg: "bg-[#00A699]/10",
+      iconColor: "text-[#00A699]",
+      Icon: CheckCircle,
+      progressColor: "bg-[#00A699]",
+    },
+    error: {
+      bg: "bg-white",
+      border: "border-red-200",
+      accent: "bg-red-500",
+      iconBg: "bg-red-50",
+      iconColor: "text-red-500",
+      Icon: XCircle,
+      progressColor: "bg-red-500",
+    },
+    warning: {
+      bg: "bg-white",
+      border: "border-amber-200",
+      accent: "bg-amber-400",
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-500",
+      Icon: AlertCircle,
+      progressColor: "bg-amber-400",
+    },
+  }[toast.type];
+
+  const { Icon } = config;
+
+  return (
+    <div
+      className="pointer-events-auto w-full"
+      style={{
+        transition: "all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        opacity: visible && !leaving ? 1 : 0,
+        transform: visible && !leaving ? "translateY(0) scale(1)" : "translateY(-20px) scale(0.95)",
+      }}
+    >
+      <div className={`relative flex items-start gap-3 ${config.bg} border ${config.border} rounded-2xl px-4 py-3.5 shadow-xl shadow-black/8 overflow-hidden`}>
+        {/* Left accent bar */}
+        <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.accent} rounded-l-2xl`} />
+
+        {/* Icon */}
+        <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config.iconBg}`}>
+          <Icon className={`w-5 h-5 ${config.iconColor}`} />
+        </div>
+
+        {/* Message */}
+        <p className="flex-1 text-sm font-semibold text-gray-800 leading-snug pt-1.5">{toast.message}</p>
+
+        {/* Close */}
+        <button
+          onClick={handleClose}
+          className="mt-1 text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Progress bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gray-100 rounded-b-2xl overflow-hidden">
+          <div
+            className={`h-full ${config.progressColor} rounded-b-2xl`}
+            style={{
+              animation: "toastProgress 3.8s linear forwards",
+            }}
+          />
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes toastProgress {
+          from { width: 100%; }
+          to   { width: 0%; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function useToast() {
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+  let counter = 0;
+
+  const show = (message: string, type: ToastType = "success") => {
+    const id = Date.now() + counter++;
+    setToasts((prev) => [...prev, { id, type, message }]);
+  };
+
+  const remove = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
+
+  return { toasts, show, remove };
+}
+
+// ============================================================
+//  BookingPage
+// ============================================================
 interface BookingPageProps {
   tour?: Tour | null;
   onNavigate: (page: string, data?: any) => void;
@@ -23,7 +160,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1)); 
   const [selectedDate, setSelectedDate] = useState(""); 
   
-  // State สำหรับ Popup ยืนยันรอบเดินทาง
   const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string; }>({ isOpen: false, startDate: "", endDate: "" });
   
   const [travelers, setTravelers] = useState(1);
@@ -31,7 +167,9 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const [availableSeats, setAvailableSeats] = useState<number>(10);
   const [isFull, setIsFull] = useState<boolean>(false);
 
-  // คำนวณราคารวม
+  // 🔔 Toast
+  const { toasts, show: showToast, remove: removeToast } = useToast();
+
   const totalPrice = (localTour?.price || 0) * travelers;
 
   useEffect(() => {
@@ -87,51 +225,56 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     setContactInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ ใส่ Console.log ไว้สืบสวนว่าติดตรงไหน
+  // ✅ validateForm — ใช้ Toast แทน alert()
   const validateForm = () => {
     console.log("--- กำลังตรวจสอบข้อมูลฟอร์ม ---");
     if (!selectedDate) {
-      console.log("❌ ตรวจสอบไม่ผ่าน: ยังไม่ได้เลือกวันที่เดินทาง");
-      alert(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date."); 
+      console.log("❌ ยังไม่ได้เลือกวันที่เดินทาง");
+      showToast(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date.", "warning");
       return false;
     }
     if (isFull || travelers <= 0) {
-      console.log("❌ ตรวจสอบไม่ผ่าน: ทัวร์เต็มแล้ว");
-      alert(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date."); 
+      console.log("❌ ทัวร์เต็มแล้ว");
+      showToast(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date.", "error");
       return false;
     }
     if (!contactInfo.fullName || !contactInfo.email || !contactInfo.phone) {
-      console.log("❌ ตรวจสอบไม่ผ่าน: กรอกข้อมูลผู้ติดต่อไม่ครบ", contactInfo);
-      alert(language === "th" ? "กรุณากรอกข้อมูลผู้ติดต่อให้ครบถ้วน" : "Please fill in all contact information"); 
+      console.log("❌ กรอกข้อมูลผู้ติดต่อไม่ครบ", contactInfo);
+      showToast(language === "th" ? "กรุณากรอกข้อมูลผู้ติดต่อให้ครบถ้วน" : "Please fill in all contact information", "warning");
       return false;
     }
     console.log("✅ ตรวจสอบผ่านครบทุกข้อ!");
     return true;
   };
 
-  // ✅ ใส่ Console.log ตรวจสอบการกดปุ่มและ Props
+  // ✅ handleAddToCart — ใช้ Toast แทน alert()
   const handleAddToCart = () => {
     console.log("🖱️ ปุ่ม Add to Cart ถูกคลิกแล้ว!");
     
-    // 1. ตรวจสอบก่อนว่ากรอกข้อมูลครบไหม
     if (isFull || !validateForm()) {
-        console.log("⛔ การทำงานหยุดลง เพราะข้อมูลไม่ผ่านเงื่อนไข (ติด Validate)");
-        return;
+      console.log("⛔ การทำงานหยุดลง เพราะข้อมูลไม่ผ่านเงื่อนไข");
+      return;
     }
 
     console.log("🚀 ข้อมูลพร้อมส่งเข้าตะกร้า:", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
 
-    // 2. ถ้ามี prop onAddToCart ส่งมา ให้เรียกใช้งาน
     if (onAddToCart) {
       onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
       console.log("🎉 เรียกฟังก์ชัน onAddToCart สำเร็จ!");
-      alert(language === "th" ? "เพิ่มลงตะกร้าสำเร็จ!" : "Added to cart successfully!"); 
+      showToast(
+        language === "th"
+          ? `เพิ่มลงตะกร้าสำเร็จ! · ${travelers} ท่าน · ฿${totalPrice.toLocaleString()}`
+          : `Added to cart! · ${travelers} pax · ฿${totalPrice.toLocaleString()}`,
+        "success"
+      );
     } else {
-      // 3. แจ้งเตือนในกรณีที่ลืมส่งฟังก์ชันมาจากไฟล์หลัก
-      console.log("⚠️ ไม่มีฟังก์ชัน onAddToCart ส่งมาจากไฟล์หลัก (Props)");
-      alert(language === "th" 
-        ? "ระบบตรวจสอบข้อมูลผ่านแล้ว! แต่ยังไม่ได้เชื่อมต่อ onAddToCart" 
-        : "Validation passed, but onAddToCart is missing.");
+      console.log("⚠️ ไม่มีฟังก์ชัน onAddToCart ส่งมาจากไฟล์หลัก");
+      showToast(
+        language === "th"
+          ? "ระบบตรวจสอบข้อมูลผ่านแล้ว! แต่ยังไม่ได้เชื่อมต่อ onAddToCart"
+          : "Validation passed, but onAddToCart is missing.",
+        "warning"
+      );
     }
   };
 
@@ -140,7 +283,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     onNavigate("payment", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
   };
 
-  // จัดการเมื่อคลิกเลือกวันในปฏิทิน
   const handleDateClick = (dateStr: string) => {
     if (!localTour) return;
     const tripDays = localTour.tripDays || 1;
@@ -155,7 +297,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     });
   };
 
-  // ยืนยันการเลือกวันจาก Popup
   const confirmDateSelection = () => {
     setSelectedDate(datePopup.startDate);
     setDatePopup(prev => ({ ...prev, isOpen: false }));
@@ -183,6 +324,10 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
 
   return (
     <div className="min-h-screen bg-[#F7F9FA] pb-28 font-sans">
+
+      {/* 🔔 Toast Container */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
       <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button onClick={() => onNavigate("tour-detail", localTour)} className="flex items-center gap-2 text-gray-500 hover:text-[#00A699] transition-colors mb-2 font-medium">

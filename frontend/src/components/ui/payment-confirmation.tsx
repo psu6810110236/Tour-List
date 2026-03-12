@@ -1,5 +1,5 @@
-import { CheckCircle2, Calendar, MapPin, Users, Home, ArrowRight } from 'lucide-react';
-import { useEffect } from 'react';
+import { CheckCircle2, Calendar, MapPin, Users, Home, ArrowRight, AlertTriangle, X, Copy } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 
@@ -16,11 +16,98 @@ export function PaymentConfirmation({ bookingData, onNavigate, language, cartIte
 
   const data = bookingData || (typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('bookingData') || 'null') : null);
 
-  useEffect(() => {
-    if (!data) onNavigate('home');
-  }, [data, onNavigate]);
+  // --- ระบบ Pop-up Modal ---
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "warning" | "error" | "success";
+    onConfirm?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "success",
+  });
 
-  if (!data) return null;
+  const showAlert = (title: string, message: string, type: "warning" | "error" | "success", onConfirm?: () => void) => {
+    setModalConfig({ isOpen: true, title, message, type, onConfirm });
+  };
+
+  const closeModal = () => {
+    const { onConfirm } = modalConfig;
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+    if (onConfirm) onConfirm();
+  };
+  // -----------------------
+
+  useEffect(() => {
+    if (!data) {
+      showAlert(
+        language === "th" ? "ไม่พบข้อมูล" : "Data Not Found",
+        language === "th" ? "ไม่พบข้อมูลการจองหรือเซสชันหมดอายุ จะพาท่านกลับสู่หน้าหลัก" : "Booking data not found or session expired. Redirecting to home.",
+        "warning",
+        () => onNavigate('home')
+      );
+    }
+  }, [data, onNavigate, language]);
+
+  // ฟังก์ชันสำหรับ Copy หมายเลขอ้างอิง
+  const handleCopyId = (id: string) => {
+    navigator.clipboard.writeText(id);
+    showAlert(
+      language === "th" ? "คัดลอกสำเร็จ" : "Copied!",
+      language === "th" ? `คัดลอกหมายเลขอ้างอิง ${id} แล้ว` : `Booking reference ${id} copied.`,
+      "success"
+    );
+  };
+
+  // UI Modal Component แยกออกมาเพื่อให้เรียกใช้ได้แม้ไม่มีข้อมูล data
+  const ModalUI = () => {
+    if (!modalConfig.isOpen) return null;
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-[2px] animate-in fade-in duration-200">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+          <div className="p-8 text-center relative">
+            <button onClick={closeModal} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className={`mx-auto flex items-center justify-center h-20 w-20 rounded-full mb-6 ${
+              modalConfig.type === 'warning' ? 'bg-orange-50 text-orange-500' : 
+              modalConfig.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-teal-50 text-[#00A699]'
+            }`}>
+              {modalConfig.type === 'warning' && <AlertTriangle className="h-10 w-10" />}
+              {modalConfig.type === 'error' && <X className="h-10 w-10" />}
+              {modalConfig.type === 'success' && <CheckCircle2 className="h-10 w-10" />}
+            </div>
+            
+            <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">
+              {modalConfig.title}
+            </h3>
+            <p className="text-gray-500 font-medium leading-relaxed mb-8">
+              {modalConfig.message}
+            </p>
+            
+            <button
+              onClick={closeModal}
+              className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-black transition-all active:scale-[0.97] shadow-lg shadow-gray-200"
+            >
+              {language === "th" ? "รับทราบ" : "Got it"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-[#F7F9FA] flex items-center justify-center p-4 font-sans">
+        <ModalUI />
+      </div>
+    );
+  }
 
   // รองรับข้อมูลทั้งแบบเก่า(mock) และจาก Backend API
   const bookingId = data.id || data.bookingId || "PENDING";
@@ -50,11 +137,20 @@ export function PaymentConfirmation({ bookingData, onNavigate, language, cartIte
           </div>
 
           <div className="p-8 md:p-10">
-            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-8 text-center">
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-8 text-center group">
               <p className="text-sm text-gray-500 font-medium uppercase tracking-wider mb-1">
                 {language === 'th' ? "หมายเลขอ้างอิง" : "Booking Reference"}
               </p>
-              <p className="text-3xl font-mono font-black text-gray-900 tracking-tight">{bookingId}</p>
+              <div className="flex justify-center items-center gap-3 mt-1">
+                <p className="text-3xl font-mono font-black text-gray-900 tracking-tight">{bookingId}</p>
+                <button 
+                  onClick={() => handleCopyId(bookingId)}
+                  className="p-2 text-gray-400 hover:text-[#00A699] hover:bg-teal-50 rounded-xl transition-all"
+                  title={language === 'th' ? "คัดลอก" : "Copy"}
+                >
+                  <Copy className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-6 mb-8">
@@ -126,6 +222,8 @@ export function PaymentConfirmation({ bookingData, onNavigate, language, cartIte
           </div>
         </div>
       </div>
+      
+      <ModalUI />
     </div>
   );
 }

@@ -4,10 +4,11 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Outle
 import { AuthProvider, useAuth } from './features/auth/context/AuthContext';
 import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
+import ScrollToTop from './components/ScrollToTop';
 
-import { CartProvider, useCart } from './context/CartContext'; 
+import { CartProvider, useCart } from './context/CartContext';
 
-import { Construction, UserCircle } from 'lucide-react';
+import { Construction, Ticket, UserCircle } from 'lucide-react';
 
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
@@ -42,10 +43,10 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
 );
 
 const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
-  <WorkInProgressTemplate 
-    title={language === 'th' ? "โปรไฟล์ผู้ใช้" : "User Profile"} 
-    desc={language === 'th' ? "ระบบจัดการข้อมูลส่วนตัวกำลังเปิดให้ใช้งานเร็วๆ นี้" : "Personal information management will be available soon."} 
-    icon={UserCircle} 
+  <WorkInProgressTemplate
+    title={language === 'th' ? "โปรไฟล์ผู้ใช้" : "User Profile"}
+    desc={language === 'th' ? "ระบบจัดการข้อมูลส่วนตัวกำลังเปิดให้ใช้งานเร็วๆ นี้" : "Personal information management will be available soon."}
+    icon={UserCircle}
   />
 );
 
@@ -64,9 +65,10 @@ const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
   useEffect(() => {
     const fetchProvince = async () => {
       try {
+        if (!id) return;
         const response = await tourService.getProvinces();
-        const found = response.data.find((p: any) => String(p.id) === String(id));
-        setProvinceData(found || null);
+        const province = response.data?.find((p: Province) => p.id === id) || null;
+        setProvinceData(province);
       } catch (error) {
         console.error("Error fetching province:", error);
       } finally {
@@ -98,8 +100,7 @@ function AppContent() {
   const [language, setLanguage] = useState<'th' | 'en'>('th');
   const [bookingData, setBookingData] = useState<any>(null);
 
-  // ✅ ดึงฟังก์ชัน addToCart ออกมาจาก useCart() ตรงนี้
-  const { cartItems, toggleDrawer, clearCart, addToCart } = useCart(); 
+  const { cartItems, toggleDrawer, clearCart, addToCart } = useCart();
   const totalItems = cartItems.length;
 
   useEffect(() => {
@@ -127,18 +128,18 @@ function AppContent() {
   const handleNavigate = (pageId: string, data?: any) => {
     if (pageId === 'payment') {
       setBookingData(data);
-      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { }
       navigate('/payment');
       return;
     }
     if (pageId === 'payment-confirmation') {
       setBookingData(data);
-      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { }
       navigate('/payment-confirmation');
       return;
     }
     if (pageId === 'home') {
-      try { sessionStorage.removeItem('bookingData'); } catch {};
+      try { sessionStorage.removeItem('bookingData'); } catch { }
       setBookingData(null);
       navigate('/');
       return;
@@ -161,8 +162,8 @@ function AppContent() {
           onNavigate={handleNavigate}
           userName={user?.fullName || "Guest User"}
           onShowTutorial={() => alert("Tutorial Coming Soon!")}
-          cartCount={totalItems} 
-          onOpenCart={toggleDrawer} 
+          cartCount={totalItems}
+          onOpenCart={toggleDrawer}
           language={language}
           onToggleLanguage={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
         />
@@ -179,34 +180,33 @@ function AppContent() {
 
           {/* Private (User) */}
           <Route element={<PrivateRoute />}>
-            {/* ✅ ส่ง onAddToCart={addToCart} ไปที่หน้า BookingPage */}
             <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} onAddToCart={addToCart} />} />
             <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} onAddToCart={addToCart} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
             <Route path="/profile" element={<UserProfile language={language} />} />
-            
-            <Route 
-              path="/payment" 
+
+            <Route
+              path="/payment"
               element={
-                <PaymentPage 
-                  bookingData={bookingData || { isFromCart: true }} 
-                  cartItems={cartItems} 
-                  onClearCart={clearCart} 
-                  onNavigate={handleNavigate} 
-                  language={language} 
+                <PaymentPage
+                  bookingData={bookingData || { isFromCart: true }}
+                  cartItems={cartItems}
+                  onClearCart={clearCart}
+                  onNavigate={handleNavigate}
+                  language={language}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/payment-confirmation" 
+            <Route
+              path="/payment-confirmation"
               element={
-                <PaymentConfirmation 
-                  bookingData={bookingData || { isFromCart: true }} 
-                  cartItems={cartItems} 
-                  onNavigate={handleNavigate} 
-                  language={language} 
+                <PaymentConfirmation
+                  bookingData={bookingData || { isFromCart: true }}
+                  cartItems={cartItems}
+                  onNavigate={handleNavigate}
+                  language={language}
                 />
-              } 
+              }
             />
           </Route>
 
@@ -218,10 +218,10 @@ function AppContent() {
 
           {/* 404 Page */}
           <Route path="*" element={
-            <WorkInProgressTemplate 
-              title="404" 
-              desc={language === 'th' ? 'ขออภัย ไม่พบหน้าที่คุณค้นหา หรือหน้านี้กำลังอยู่ระหว่างการปรับปรุง' : 'Sorry, the page you are looking for does not exist or is under construction.'} 
-              icon={Construction} 
+            <WorkInProgressTemplate
+              title="404"
+              desc={language === 'th' ? 'ขออภัย ไม่พบหน้าที่คุณค้นหา หรือหน้านี้กำลังอยู่ระหว่างการปรับปรุง' : 'Sorry, the page you are looking for does not exist or is under construction.'}
+              icon={Construction}
             />
           } />
         </Routes>
@@ -230,7 +230,7 @@ function AppContent() {
       {showChatWidget && <ChatWidget />}
 
       <CartDrawer />
-      
+
     </div>
   );
 }
@@ -240,6 +240,7 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <AppContent />
         </BrowserRouter>
       </CartProvider>

@@ -269,7 +269,7 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {tours.map((tour) => (
+            {tours.filter(tour => !tour.isHidden).map((tour) => (
               <button
                 key={tour.id}
                 onClick={() => onNavigate("tour-detail", tour)}
