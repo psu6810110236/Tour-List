@@ -323,7 +323,7 @@ export function MyBookingsPage({
             const isToPay = paymentLower === 'pending' && !isRejected;
             const isProcessing = !isFullyApproved && !isRejected && !isToPay;
 
-            let borderColor = "border-[#00A699]"; 
+            let borderColor = "border-[#005a87]/20"; 
             if (isRejected) borderColor = "border-red-400";
             if (isFullyApproved) borderColor = "border-green-400";
             if (isToPay) borderColor = "border-yellow-400";
