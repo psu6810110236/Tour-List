@@ -1390,51 +1390,57 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         </div>
       )}
       {viewingCustomersForTour && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-6 border-b pb-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{language === 'th' ? 'รายชื่อลูกค้าที่จอง' : 'Customer List'}</h2>
                 <p className="text-[#00A699] font-medium mt-1">{getLang(viewingCustomersForTour, 'name', language)}</p>
               </div>
-              <button onClick={() => setViewingCustomersForTour(null)} className="text-gray-400 hover:text-gray-600 transition">
+              <button onClick={() => setViewingCustomersForTour(null)} className="text-gray-400 hover:text-gray-900 bg-gray-100 p-2 rounded-full transition">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-gray-50 text-sm text-gray-600">
+                <thead className="bg-gray-50 text-sm text-gray-600 border-b border-gray-200">
                   <tr>
-                    <th className="p-4 rounded-tl-xl">Booking ID</th>
-                    <th className="p-4">วันที่จอง</th>
-                    <th className="p-4">วันที่เดินทาง</th>
-                    <th className="p-4 text-center">จำนวนผู้เดินทาง</th>
-                    <th className="p-4 text-right">สถานะการจ่ายเงิน</th>
+                    <th className="p-4 font-semibold">Booking ID</th>
+                    <th className="p-4 font-semibold">วันที่จอง</th>
+                    <th className="p-4 font-semibold">วันที่เดินทาง</th>
+                    <th className="p-4 text-center font-semibold">จำนวนผู้เดินทาง</th>
+                    <th className="p-4 text-right font-semibold">สถานะการจ่ายเงิน</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {bookingsList
-                    .filter(b => String(b.tourId) === String(viewingCustomersForTour?.id))
+                    // 🟢 แก้ไขตรงนี้: ให้เช็คทั้ง b.tour?.id และ b.tourId
+                    .filter(b => String((b.tour as any)?.id || b.tourId) === String(viewingCustomersForTour.id))
                     .map(b => (
-                    <tr key={b.id} className="hover:bg-gray-50">
-                      <td className="p-4 font-medium">{b.id}</td>
-                      <td className="p-4">{new Date(b.bookingDate || '').toLocaleDateString('th-TH')}</td>
-                      <td className="p-4">{new Date((b as any).travelDate || '').toLocaleDateString('th-TH')}</td>
-                      <td className="p-4 text-center font-bold text-blue-600">{b.travelers} ท่าน</td>
+                    <tr key={b.id} className="hover:bg-gray-50 transition">
+                      <td className="p-4 font-bold text-gray-900">{b.id}</td>
+                      <td className="p-4 text-sm">{new Date(b.bookingDate || (b as any).createdAt || '').toLocaleDateString('th-TH')}</td>
+                      <td className="p-4 text-sm text-[#00A699] font-medium">{new Date((b as any).travelDate || (b as any).date || '').toLocaleDateString('th-TH')}</td>
+                      <td className="p-4 text-center font-bold text-blue-600 bg-blue-50/50 rounded-lg">{b.travelers} ท่าน</td>
                       <td className="p-4 text-right">
-                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                           b.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                         <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold ${
+                           b.paymentStatus?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
                          }`}>
-                           {b.status === 'approved' ? 'จ่ายแล้ว (ตัดยอด)' : 'รอชำระเงิน'}
+                           {b.paymentStatus?.toLowerCase() === 'completed' ? 'จ่ายแล้ว' : 'รอตรวจสอบ'}
                          </span>
                       </td>
                     </tr>
                   ))}
-                  {bookingsList.filter(b => String(b.tourId) === String(viewingCustomersForTour?.id)).length === 0 && (
+                  
+                  {/* 🟢 แก้ไขเงื่อนไขตรงนี้ด้วยเหมือนกัน */}
+                  {bookingsList.filter(b => String((b.tour as any)?.id || b.tourId) === String(viewingCustomersForTour.id)).length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-gray-500">
-                        ยังไม่มีลูกค้าจองแพ็กเกจนี้
+                      <td colSpan={5} className="p-12 text-center">
+                        <div className="flex flex-col items-center justify-center text-gray-400">
+                          <Users className="w-12 h-12 mb-3 text-gray-300" />
+                          <p className="text-lg font-medium text-gray-500">ยังไม่มีลูกค้าจองแพ็กเกจนี้</p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -1444,8 +1450,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         </div>
       )}
-
     </div>
   );
 }
+
 
