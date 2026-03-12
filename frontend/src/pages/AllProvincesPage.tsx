@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, ArrowRight, Search, Compass } from "lucide-react";
+import { MapPin, ArrowRight, Search, Compass, Map, Filter, X } from "lucide-react"; // 🟢 เพิ่ม Filter, X เข้ามา
 
 interface Province {
   id: string;
@@ -12,17 +12,30 @@ interface Province {
   description_th?: string;
   image?: string;
   tourCount?: number;
+  region?: string;
 }
 
 interface AllProvincesPageProps {
   language?: "th" | "en";
 }
 
+const REGIONS = [
+  { id: "all", name: "All Regions", name_th: "ทุกภูมิภาค" },
+  { id: "north", name: "North", name_th: "ภาคเหนือ" },
+  { id: "central", name: "Central", name_th: "ภาคกลาง" },
+  { id: "northeast", name: "Northeast", name_th: "ภาคอีสาน" },
+  { id: "east", name: "East", name_th: "ภาคตะวันออก" },
+  { id: "west", name: "West", name_th: "ภาคตะวันตก" },
+  { id: "south", name: "South", name_th: "ภาคใต้" },
+];
+
 export default function AllProvincesPage({ language = "th" }: AllProvincesPageProps) {
   const navigate = useNavigate();
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("all");
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false); // 🟢 State ควบคุมการกาง/หุบปุ่มกรอง
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,23 +43,20 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
       setLoading(true);
       setErrorMsg(null);
       try {
-        // 🟢 ยิง API ไปที่ Backend ของเรา (เช็ค URL ให้ตรงกับพอร์ต Backend)
         const response = await fetch("http://localhost:3000/provinces");
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
-        console.log("ข้อมูลจังหวัดที่ได้จาก API:", data); // ปริ้นดูข้อมูลใน Console (F12)
 
-        // ตรวจสอบว่า Backend ส่งมาเป็น Array ตรงๆ หรือมี Object ครอบ
+        const data = await response.json();
+
         if (Array.isArray(data)) {
           setProvinces(data);
         } else if (data && Array.isArray(data.data)) {
           setProvinces(data.data);
         } else {
-           setProvinces([]);
+          setProvinces([]);
         }
 
       } catch (error: any) {
@@ -60,20 +70,40 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
     fetchProvinces();
   }, []);
 
+  const getRegionForProvince = (provinceId: string) => {
+    const id = provinceId.toLowerCase();
+    if (["chiang-mai", "chiang-rai", "lampang", "phayao", "nan"].some(p => id.includes(p))) return "north";
+    if (["bangkok", "ayutthaya", "nonthaburi", "pathum-thani"].some(p => id.includes(p))) return "central";
+    if (["phuket", "krabi", "surat-thani", "songkhla", "phang-nga"].some(p => id.includes(p))) return "south";
+    if (["kanchanaburi", "ratchaburi", "phetchaburi"].some(p => id.includes(p))) return "west";
+    if (["chonburi", "pattaya", "trat", "rayong"].some(p => id.includes(p))) return "east";
+    if (["khon-kaen", "udon-thani", "nakhon-ratchasima"].some(p => id.includes(p))) return "northeast";
+    return "central";
+  };
+
   const filteredProvinces = provinces.filter((province) => {
     const searchLower = searchQuery.toLowerCase();
-    return (
+    const matchSearch =
       (province.name && province.name.toLowerCase().includes(searchLower)) ||
-      (province.name_th && province.name_th.includes(searchLower))
-    );
+      (province.name_th && province.name_th.includes(searchLower));
+
+    const provinceRegion = province.region || getRegionForProvince(province.id);
+    const matchRegion = selectedRegion === "all" || provinceRegion === selectedRegion;
+
+    return matchSearch && matchRegion;
   });
+
+  // หาชื่อภูมิภาคที่กำลังถูกเลือกอยู่เพื่อมาโชว์ที่ปุ่มหลัก
+  const currentRegionName = language === "th"
+    ? REGIONS.find(r => r.id === selectedRegion)?.name_th
+    : REGIONS.find(r => r.id === selectedRegion)?.name;
 
   return (
     <div className="min-h-screen bg-gray-50 pt-10 pb-20 mt-16">
       {/* Header Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 text-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-[#00A699]/10 rounded-full mb-6 text-[#00A699]">
-          <Compass className="w-8 h-8" />
+          <Map className="w-8 h-8" />
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
           {language === "th" ? "จุดหมายปลายทางทั้งหมด" : "All Destinations"}
@@ -85,7 +115,7 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
         </p>
 
         {/* Search Bar */}
-        <div className="max-w-xl mx-auto relative">
+        <div className="max-w-xl mx-auto relative mb-8">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
           </div>
@@ -97,18 +127,67 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
             className="block w-full pl-11 pr-4 py-4 border border-gray-200 rounded-2xl focus:ring-[#00A699] focus:border-[#00A699] transition-all shadow-sm text-lg"
           />
         </div>
+
+        {/* 🟢 Expandable Region Filter (แกน X) */}
+        <div className="flex flex-row items-center justify-center w-full max-w-4xl mx-auto h-12">
+          {/* ปุ่มหลัก (Main Toggle Button) */}
+          <button
+            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 z-10 shrink-0 ${isFilterExpanded || selectedRegion !== "all"
+              ? "bg-[#00A699] text-white shadow-md"
+              : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 shadow-sm"
+              }`}
+          >
+            {isFilterExpanded ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
+            <span>
+              {isFilterExpanded
+                ? (language === "th" ? "ปิดตัวกรอง" : "Close Filter")
+                : (language === "th" ? "ภูมิภาค:" : "Region:")}
+            </span>
+            {/* แสดงชื่อภาคที่เลือกไว้ตอนที่ปุ่มหุบอยู่ */}
+            {!isFilterExpanded && (
+              <span className={`ml-1 ${selectedRegion !== "all" ? "font-bold" : "font-normal"}`}>
+                {currentRegionName}
+              </span>
+            )}
+          </button>
+
+          {/* แกน X ที่กางออก (Expanded Area) */}
+          
+          <div
+            className={`flex items-center overflow-hidden transition-all duration-500 ease-in-out ${isFilterExpanded ? "max-w-[1000px] opacity-100 ml-3" : "max-w-0 opacity-0 ml-0"
+              }`}
+          >
+            <div className="flex gap-2 overflow-x-auto py-1 pl-1 pr-2 [&::-webkit-scrollbar]:hidden whitespace-nowrap">
+              {REGIONS.map((region) => (
+                <button
+                  key={region.id}
+                  onClick={() => {
+                    setSelectedRegion(region.id);
+                  }}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 shrink-0 shadow-[0_4px_20px_rgb(0,0,0,0.03)] ${selectedRegion === region.id
+                      ? "bg-blue-400/20 backdrop-blur-md border border-white/60 text-blue-800" /* 💧 กระจกสีน้ำเงินจางๆ */
+                      : "bg-white/40 backdrop-blur-md border border-white/50 text-gray-600 hover:bg-blue-50/50 hover:border-blue-200/50" /* 💧 กระจกใสธรรมดา Hover แล้วอมฟ้า */
+                    }`}
+                >
+                  {language === "th" ? region.name_th : region.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00A699]"></div>
           </div>
         ) : errorMsg ? (
           <div className="text-center py-20 bg-red-50 rounded-3xl border border-red-100 shadow-sm text-red-600">
-             <h3 className="text-xl font-bold mb-2">เกิดข้อผิดพลาดในการดึงข้อมูล</h3>
-             <p>กรุณาตรวจสอบว่า Backend (NestJS) เปิดอยู่หรือไม่ (Error: {errorMsg})</p>
+            <h3 className="text-xl font-bold mb-2">เกิดข้อผิดพลาดในการดึงข้อมูล</h3>
+            <p>กรุณาตรวจสอบว่า Backend (NestJS) เปิดอยู่หรือไม่ (Error: {errorMsg})</p>
           </div>
         ) : filteredProvinces.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
@@ -125,7 +204,7 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 bg-gray-200"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
-                  
+
                   <div className="absolute bottom-5 left-5 right-5">
                     <h3 className="text-2xl font-bold text-white tracking-wide flex items-center gap-2">
                       <MapPin className="w-5 h-5 text-[#00A699]" />
@@ -138,7 +217,7 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
                   <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed mb-4 flex-1">
                     {language === "th" ? province.description_th : province.description}
                   </p>
-                  
+
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
                     <span className="text-[#00A699] font-medium text-sm bg-[#00A699]/10 px-3 py-1 rounded-full">
                       {province.tourCount || 0} {language === "th" ? "ทัวร์ที่เปิดให้บริการ" : "Tours Available"}
@@ -158,7 +237,7 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
               {language === "th" ? "ไม่พบจังหวัดที่คุณค้นหา" : "No provinces found"}
             </h3>
             <p className="text-gray-500">
-              {language === "th" ? "อาจจะยังไม่มีข้อมูลจังหวัดในระบบ" : "No province data available."}
+              {language === "th" ? "ทดลองเปลี่ยนคำค้นหา หรือเลือกภูมิภาคอื่นดูสิ" : "Try changing your search term or selecting a different region."}
             </p>
           </div>
         )}
