@@ -22,7 +22,8 @@ import {
   AlertCircle,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  EyeOff
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
 import type { Province } from '../../data/mockData';
@@ -243,6 +244,34 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully."); closePopup();
       } catch (error) { showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Failed to delete tour."); closePopup(); }
     });
+  };
+
+  // 🟢 ฟังก์ชันซ่อน/แสดงทัวร์
+  const handleToggleVisibility = (tour: Tour) => {
+    const isCurrentlyHidden = tour.isHidden;
+    const actionText = isCurrentlyHidden ? 'แสดง' : 'ซ่อน';
+    
+    showConfirm(
+      language === 'th' ? `ยืนยันการ${actionText}ทัวร์` : `Confirm ${actionText} Tour`,
+      language === 'th' 
+        ? `คุณต้องการ${actionText}ทัวร์ "${getLang(tour, 'name', language)}" บนหน้าเว็บใช่หรือไม่?` 
+        : `Are you sure you want to ${actionText.toLowerCase()} this tour?`,
+      async () => {
+        try {
+          // ส่งค่าไปอัปเดตที่ Backend
+          await tourService.updateTour(tour.id, { isHidden: !isCurrentlyHidden });
+          fetchAdminData(); // โหลดข้อมูลตารางใหม่
+          showAlert(
+            language === 'th' ? "สำเร็จ" : "Success", 
+            language === 'th' ? `อัปเดตสถานะทัวร์เรียบร้อยแล้ว` : `Tour visibility updated.`
+          );
+          closePopup();
+        } catch (error) {
+          showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", "ไม่สามารถอัปเดตสถานะได้");
+          closePopup();
+        }
+      }
+    );
   };
 
   const handleSelectProvince = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -830,6 +859,16 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                                 <button onClick={() => setViewingCustomersForTour(tour)} className="text-blue-500 hover:text-blue-600 transition p-2" title={language === 'th' ? "ดูรายชื่อลูกค้า" : "View Customers"}>
                                   <Users className="w-5 h-5" />
                                 </button>
+                                <button 
+      onClick={() => handleToggleVisibility(tour)} 
+      className={`transition p-2 ${tour.isHidden ? 'text-gray-400 hover:text-gray-600' : 'text-green-500 hover:text-green-600'}`}
+      title={tour.isHidden ? "คลิกเพื่อแสดงทัวร์" : "คลิกเพื่อซ่อนทัวร์"}
+    >
+      {tour.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+    </button>
+                                
+
+                                
 
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />

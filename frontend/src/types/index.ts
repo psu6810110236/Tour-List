@@ -26,12 +26,12 @@ export interface Tour {
   price: number;
   duration: string;
   duration_th: string;
+  isHidden?: boolean;
   
   vehicleType?: string;
   maxCapacity?: number;
 
   tripType?: string;
-  // 🌟 [เพิ่มใหม่]
   tripDays?: number;
   availableDates?: string[];
 
