@@ -834,11 +834,8 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                                 <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
                                   <Edit className="w-5 h-5" />
                                 </button>
-
-                                <button onClick={() => handleEditClick(tour)} className="text-[#00A699] hover:text-[#008c81] transition p-2">
-                                  <Edit className="w-5 h-5" />
-                                </button>
                                 <button onClick={() => handleDeleteTour(tour.id)} className="text-red-500 hover:text-red-600 transition p-2">
+   
                                   <Trash2 className="w-5 h-5" />
                                 </button>
                               </div>
