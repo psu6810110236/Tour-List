@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Outle
 import { AuthProvider, useAuth } from './features/auth/context/AuthContext';
 import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
-
+import ScrollToTop from './components/ScrollToTop';
 // --- Icons ---
 import { Construction, Ticket, UserCircle } from 'lucide-react';
 
@@ -41,18 +41,18 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
 );
 
 const BookingsHistoryPage = ({ language }: { language: 'th' | 'en' }) => (
-  <WorkInProgressTemplate 
-    title={language === 'th' ? "ประวัติการจอง" : "My Bookings"} 
-    desc={language === 'th' ? "หน้ารวมรายการทัวร์ที่คุณจองไว้กำลังก่อสร้าง" : "The page for your booked tours history is under construction."} 
-    icon={Ticket} 
+  <WorkInProgressTemplate
+    title={language === 'th' ? "ประวัติการจอง" : "My Bookings"}
+    desc={language === 'th' ? "หน้ารวมรายการทัวร์ที่คุณจองไว้กำลังก่อสร้าง" : "The page for your booked tours history is under construction."}
+    icon={Ticket}
   />
 );
 
 const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
-  <WorkInProgressTemplate 
-    title={language === 'th' ? "โปรไฟล์ผู้ใช้" : "User Profile"} 
-    desc={language === 'th' ? "ระบบจัดการข้อมูลส่วนตัวกำลังเปิดให้ใช้งานเร็วๆ นี้" : "Personal information management will be available soon."} 
-    icon={UserCircle} 
+  <WorkInProgressTemplate
+    title={language === 'th' ? "โปรไฟล์ผู้ใช้" : "User Profile"}
+    desc={language === 'th' ? "ระบบจัดการข้อมูลส่วนตัวกำลังเปิดให้ใช้งานเร็วๆ นี้" : "Personal information management will be available soon."}
+    icon={UserCircle}
   />
 );
 
@@ -134,18 +134,18 @@ function AppContent() {
   const handleNavigate = (pageId: string, data?: any) => {
     if (pageId === 'payment') {
       setBookingData(data);
-      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { };
       navigate('/payment');
       return;
     }
     if (pageId === 'payment-confirmation') {
       setBookingData(data);
-      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {};
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { };
       navigate('/payment-confirmation');
       return;
     }
     if (pageId === 'home') {
-      try { sessionStorage.removeItem('bookingData'); } catch {};
+      try { sessionStorage.removeItem('bookingData'); } catch { };
       setBookingData(null);
       navigate('/');
       return;
@@ -202,10 +202,10 @@ function AppContent() {
 
           {/* 404 Page */}
           <Route path="*" element={
-            <WorkInProgressTemplate 
-              title="404" 
-              desc={language === 'th' ? 'ขออภัย ไม่พบหน้าที่คุณค้นหา หรือหน้านี้กำลังอยู่ระหว่างการปรับปรุง' : 'Sorry, the page you are looking for does not exist or is under construction.'} 
-              icon={Construction} 
+            <WorkInProgressTemplate
+              title="404"
+              desc={language === 'th' ? 'ขออภัย ไม่พบหน้าที่คุณค้นหา หรือหน้านี้กำลังอยู่ระหว่างการปรับปรุง' : 'Sorry, the page you are looking for does not exist or is under construction.'}
+              icon={Construction}
             />
           } />
         </Routes>
@@ -220,6 +220,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <AppContent />
       </BrowserRouter>
     </AuthProvider>
