@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // ✅ เพิ่ม axios สำหรับดึงข้อมูลทัวร์
+import axios from "axios";
 import {
   Search,
   Map,
   MapPin,
   ArrowRight,
   Star,
-  TrendingUp
+  TrendingUp,
+  Flame // เพิ่ม Icon สำหรับยอดฮิต
 } from "lucide-react";
 
-// ✅ ใช้ Path นี้เพื่อให้ตรงกับโครงสร้างโฟลเดอร์ปัจจุบันของคุณ
 import { tourService } from "../../../services/api";
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
@@ -28,13 +28,16 @@ interface Province {
   description_th: string;
 }
 
-// ✅ 2. Interface สำหรับทัวร์
+// ✅ 2. Interface สำหรับทัวร์ (อัปเดตฟิลด์ให้ครบตามดีไซน์ใหม่)
 interface Tour {
   id: string | number;
   name: string;
-  province: string;
+  name_th?: string;
+  province?: any; // เผื่อกรณีดึง relation province มาด้วย
+  provinceId?: string;
   price: number;
-  date?: string;
+  image?: string;
+  bookedSeats?: number;
   description?: string;
 }
 
@@ -45,19 +48,15 @@ interface HomePageProps {
 export default function HomePage({ language }: HomePageProps) { 
   const navigate = useNavigate();
 
-  // ✅ State สำหรับเก็บข้อมูลจาก API
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [tours, setTours] = useState<Tour[]>([]); 
   
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingTours, setLoadingTours] = useState(true); 
 
-  // 🟢 State สำหรับเก็บคำค้นหา
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ ดึงข้อมูลจาก Backend เมื่อเปิดหน้าเว็บ
   useEffect(() => {
-    // 1. ดึงข้อมูลจังหวัด
     const fetchProvinces = async () => {
       try {
         const response = await tourService.getProvinces();
@@ -69,10 +68,10 @@ export default function HomePage({ language }: HomePageProps) {
       }
     };
 
-    // 2. ดึงข้อมูลทัวร์ เก็บหน้าแยก
     const fetchTours = async () => {
       try {
         const response = await axios.get('http://localhost:3000/tours'); 
+        // 🟢 เอามาแสดง 3 หรือ 6 อันดับแรก เพื่อความสวยงามใน Grid แบบ 3 คอลัมน์
         setTours(response.data.slice(0, 3)); 
       } catch (error) {
         console.error("Error fetching tours:", error);
@@ -90,34 +89,31 @@ export default function HomePage({ language }: HomePageProps) {
       navigate("/provinces");
     } else if (page === "province" && data) {
       navigate(`/province/${data.id}`);
+    } else if (page === "tour" && data) {
+      navigate(`/tour/${data}`);
     } else {
       console.log("Navigate to:", page);
     }
   };
 
-  // 🟢 ฟังก์ชันจัดการเมื่อผู้ใช้กดปุ่มค้นหาหรือกด Enter
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault(); // ป้องกันหน้าเว็บรีเฟรช
+    e.preventDefault();
 
     const trimmedQuery = searchQuery.trim().toLowerCase();
 
-    // ถ้าไม่ได้พิมพ์อะไรเลย ให้ไปหน้ารวมจังหวัด
     if (!trimmedQuery) {
       navigate('/provinces');
       return;
     }
 
-    // ค้นหาว่าคำที่พิมพ์ ตรงกับชื่อจังหวัดที่มีในระบบหรือไม่ (ทั้งภาษาไทยและอังกฤษ)
     const matchedProvince = provinces.find(p => 
       p.name.toLowerCase().includes(trimmedQuery) || 
       p.name_th.toLowerCase().includes(trimmedQuery)
     );
 
     if (matchedProvince) {
-      // ถ้าเจอจังหวัดที่ตรงกัน ให้เด้งไปหน้ารายละเอียดของจังหวัดนั้น
       navigate(`/province/${matchedProvince.id}`);
     } else {
-      // ถ้าไม่มีข้อมูลตรงกับที่พิมพ์เลย ให้ไปหน้ารวมจังหวัด
       navigate('/provinces');
     }
   };
@@ -179,7 +175,6 @@ export default function HomePage({ language }: HomePageProps) {
                 {t.searchBtn}
               </button>
             </form>
-
           </div>
         </div>
       </div>
@@ -187,9 +182,7 @@ export default function HomePage({ language }: HomePageProps) {
       {/* ================= STATS SECTION (Glowing Layout) ================= */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-8 md:-mt-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
-
           {/* Card 1: ซ้าย */}
-          {/* 🟢 เพิ่มเอฟเฟกต์เรืองแสงสีฟ้าอ่อนรอบทิศทาง และสว่างขึ้นเมื่อเอาเมาส์ชี้ */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
@@ -200,7 +193,6 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
 
           {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย) */}
-          {/* 🟢 กล่องกลางจะเรืองแสงสว่างกว่าเพื่อนเล็กน้อย เพื่อให้ดูโดดเด่น */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_35px_rgba(56,189,248,0.4)] hover:shadow-[0_0_50px_rgba(56,189,248,0.7)] border border-sky-200 md:-mt-6 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center relative z-10">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
               <MapPin className="w-8 h-8" />
@@ -222,11 +214,103 @@ export default function HomePage({ language }: HomePageProps) {
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</h3>
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'จากนักท่องเที่ยวตัวจริง' : 'From verified travelers'}</p>
           </div>
-
         </div>
-      </div>หไ
-      {/* Province Selection */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-6">
+      </div>
+
+      {/* ===== 🌟 RECOMMENDED TOURS SECTION (ย้ายขึ้นมาบนสุด และปรับดีไซน์) ===== */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10">
+        <div className="mb-10 flex flex-col md:flex-row justify-between items-end gap-4">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+              {language === 'th' ? '🔥 ทัวร์แนะนำสำหรับคุณ' : '🔥 Recommended Tours'}
+            </h2>
+            <p className="text-gray-500 text-base md:text-lg">
+              {language === 'th' ? 'แพ็กเกจทัวร์ยอดฮิตที่เปิดจองในขณะนี้' : 'Popular tour packages highly booked right now'}
+            </p>
+          </div>
+          <button 
+            onClick={() => onNavigate("provinces")}
+            className="text-[#00A699] font-semibold hover:text-[#008c81] flex items-center gap-1 transition"
+          >
+            {language === 'th' ? 'ดูทัวร์ทั้งหมด' : 'View all tours'} <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {loadingTours ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#00A699]"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {tours.map((tour) => {
+              // จัดการเรื่องชื่อจังหวัด (ถ้ามี relation มาด้วย ให้ใช้ชื่อไทย/อังกฤษ ตามภาษา)
+              const provinceName = tour.province?.name_th && language === 'th' ? tour.province.name_th :
+                                   tour.province?.name && language === 'en' ? tour.province.name :
+                                   tour.provinceId || 'จุดหมายยอดฮิต';
+
+              const tourName = language === 'th' && tour.name_th ? tour.name_th : tour.name;
+
+              return (
+                <div 
+                  key={tour.id} 
+                  className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
+                >
+                  {/* ภาพทัวร์ และ Badge ยอดจอง */}
+                  <div className="relative h-56 overflow-hidden bg-gray-100">
+                    {tour.image ? (
+                      <img 
+                        src={tour.image} 
+                        alt={tourName} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex justify-center items-center text-gray-400 bg-gray-200">
+                        {language === 'th' ? 'ไม่มีรูปภาพ' : 'No Image'}
+                      </div>
+                    )}
+                    
+                    {/* Badge ยอดคนจอง */}
+                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
+                      <Flame className="w-3.5 h-3.5" />
+                      {language === 'th' ? `จองแล้ว ${tour.bookedSeats || 0} ที่` : `${tour.bookedSeats || 0} Booked`}
+                    </div>
+                  </div>
+
+                  {/* ข้อมูลทัวร์ */}
+                  <div className="p-6 flex-1 flex flex-col">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2" title={tourName}>
+                      {tourName}
+                    </h3>
+                    
+                    <p className="text-gray-500 text-sm mb-4 flex items-center gap-1.5 font-medium">
+                      <MapPin className="w-4 h-4 text-[#00A699]" />
+                      {provinceName}
+                    </p>
+                    
+                    <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col justify-end">
+                      <p className="text-gray-500 text-xs mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
+                      <p className="text-[#FF6B4A] font-bold text-2xl mb-4">
+                        ฿{tour.price.toLocaleString()}
+                      </p>
+                      
+                      <button
+                        onClick={() => onNavigate("tour", tour.id as any)}
+                        className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2.5 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
+                      >
+                        {language === 'th' ? 'ดูรายละเอียดทัวร์' : 'View Tour Details'}
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ===== Province Selection ===== */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div className="max-w-2xl">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
@@ -295,49 +379,6 @@ export default function HomePage({ language }: HomePageProps) {
         )}
       </div>
 
-      {/* ===== RECOMMENDED TOURS SECTION ===== */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
-        <div className="mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            {language === 'th' ? 'ทัวร์แนะนำสำหรับคุณ' : 'Recommended Tours'}
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg">
-            {language === 'th' ? 'แพ็กเกจทัวร์ยอดฮิตที่เปิดจองในขณะนี้' : 'Popular tour packages available right now'}
-          </p>
-        </div>
-
-        {loadingTours ? (
-          <div className="flex justify-center items-center py-10">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#FF6B4A]"></div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {tours.map((tour) => (
-              <div key={tour.id} className="bg-white rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col">
-                <div className="p-6 flex-1 flex flex-col">
-                  <h3 className="text-xl font-bold mb-2 line-clamp-2">{tour.name}</h3>
-                  <p className="text-gray-500 mb-4 flex items-center gap-2 font-medium">
-                    <MapPin className="w-4 h-4 text-[#00A699]" />
-                    {tour.province}
-                  </p>
-                  <div className="mt-auto pt-4 border-t border-gray-100">
-                    <p className="text-gray-500 text-sm mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
-                    <p className="text-[#FF6B4A] font-bold text-2xl mb-4">฿{tour.price.toLocaleString()}</p>
-                    <button
-                      onClick={() => navigate(`/tour/${tour.id}`)}
-                      className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-3 rounded-xl font-bold transition flex justify-center items-center gap-2"
-                    >
-                      {language === 'th' ? 'ดูรายละเอียดทัวร์' : 'View Tour Details'}
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Why Choose Us Section */}
       <div className="bg-white py-12 md:py-24 mt-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -392,104 +433,97 @@ export default function HomePage({ language }: HomePageProps) {
 
       {/* Footer */}
       <footer className="relative bg-[#0f172a] text-white pt-20 pb-10 overflow-hidden">
-  {/* 💡 เอฟเฟกต์แสงฟุ้งด้านหลัง (Glow Effect) */}
-  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00A699]/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-  
-  <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-16">
-      
-      {/* 🏛️ Column 1: Brand Identity (4 Units) */}
-      <div className="lg:col-span-4 space-y-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-white rounded-2xl shadow-xl shadow-[#00A699]/20 flex items-center justify-center p-2 transform hover:rotate-6 transition-transform">
-      
-          </div>
-          <div>
-            <h2 className="text-2xl-[#00A699] ">
-              RoamHub <span className="text-[#00A699]">Tour</span>
-            </h2>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#00A699] font-bold">Premium Travel Experience</p>
-          </div>
-        </div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00A699]/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
         
-        <p className="text-gray-400 leading-relaxed text-sm max-w-sm">
-          {language === 'th' 
-            ? 'ยกระดับการเดินทางของคุณด้วยบริการทัวร์ระดับพรีเมียม คัดสรรสถานที่ที่ดีที่สุดเพื่อสร้างความทรงจำที่ไม่รู้ลืม' 
-            : 'Elevate your journey with premium tour services, handpicking the best locations to create unforgettable memories.'}
-        </p>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-16">
+            
+            <div className="lg:col-span-4 space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white rounded-2xl shadow-xl shadow-[#00A699]/20 flex items-center justify-center p-2 transform hover:rotate-6 transition-transform">
+                </div>
+                <div>
+                  <h2 className="text-2xl text-[#00A699]">
+                    RoamHub <span className="text-white">Tour</span>
+                  </h2>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#00A699] font-bold">Premium Travel Experience</p>
+                </div>
+              </div>
+              
+              <p className="text-gray-400 leading-relaxed text-sm max-w-sm">
+                {language === 'th' 
+                  ? 'ยกระดับการเดินทางของคุณด้วยบริการทัวร์ระดับพรีเมียม คัดสรรสถานที่ที่ดีที่สุดเพื่อสร้างความทรงจำที่ไม่รู้ลืม' 
+                  : 'Elevate your journey with premium tour services, handpicking the best locations to create unforgettable memories.'}
+              </p>
 
-        {/* Social Icons with Glass effect */}
-        <div className="flex gap-4">
-          {['Facebook', 'Instagram', 'Youtube'].map((social) => (
-            <div key={social} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#00A699] hover:border-[#00A699] transition-all cursor-pointer group">
-              <span className="text-[10px] font-bold group-hover:scale-110 transition-transform">{social[0]}</span>
+              <div className="flex gap-4">
+                {['Facebook', 'Instagram', 'Youtube'].map((social) => (
+                  <div key={social} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#00A699] hover:border-[#00A699] transition-all cursor-pointer group">
+                    <span className="text-[10px] font-bold group-hover:scale-110 transition-transform">{social[0]}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* 🔗 Column 2 & 3: Navigation (4 Units) */}
-      <div className="lg:col-span-4 grid grid-cols-2 gap-8">
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
-            {language === 'th' ? 'สำรวจ' : 'Explore'}
-          </h4>
-          <ul className="space-y-4 text-gray-400 text-sm">
-            {['Destinations', 'Popular Tours', 'Private Trips', 'Activities'].map(item => (
-              <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
-                <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
-            {language === 'th' ? 'บริการ' : 'Services'}
-          </h4>
-          <ul className="space-y-4 text-gray-400 text-sm">
-            {['Booking Policy', 'Partner with Us', 'Help Center', 'Terms'].map(item => (
-              <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
-                <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+            <div className="lg:col-span-4 grid grid-cols-2 gap-8">
+              <div>
+                <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
+                  {language === 'th' ? 'สำรวจ' : 'Explore'}
+                </h4>
+                <ul className="space-y-4 text-gray-400 text-sm">
+                  {['Destinations', 'Popular Tours', 'Private Trips', 'Activities'].map(item => (
+                    <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
+                      <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold uppercase tracking-widest text-white mb-8 border-l-2 border-[#00A699] pl-4">
+                  {language === 'th' ? 'บริการ' : 'Services'}
+                </h4>
+                <ul className="space-y-4 text-gray-400 text-sm">
+                  {['Booking Policy', 'Partner with Us', 'Help Center', 'Terms'].map(item => (
+                    <li key={item} className="hover:text-[#00A699] hover:translate-x-2 transition-all cursor-pointer flex items-center gap-2 group">
+                      <span className="w-0 h-[1px] bg-[#00A699] group-hover:w-3 transition-all"></span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
 
-      {/* ✉️ Column 4: Premium Newsletter (4 Units) */}
-      <div className="lg:col-span-4 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-        <h4 className="text-lg font-bold mb-2">{language === 'th' ? 'รับสิทธิพิเศษก่อนใคร' : 'Exclusive Offers'}</h4>
-        <p className="text-gray-400 text-xs mb-6">
-          {language === 'th' ? 'สมัครสมาชิกเพื่อรับโปรโมชั่นลับเฉพาะคุณ' : 'Join our club for members-only deals and travel tips.'}
-        </p>
-        <form className="relative">
-          <input 
-            type="email" 
-            placeholder="your@email.com" 
-            className="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A699] transition-all"
-          />
-          <button className="absolute right-2 top-2 bottom-2 bg-[#00A699] hover:bg-[#008c81] px-6 rounded-xl font-bold text-sm shadow-lg shadow-[#00A699]/20 transition-all active:scale-95">
-            {language === 'th' ? 'สมัคร' : 'Join'}
-          </button>
-        </form>
-      </div>
-    </div>
+            <div className="lg:col-span-4 bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+              <h4 className="text-lg font-bold mb-2">{language === 'th' ? 'รับสิทธิพิเศษก่อนใคร' : 'Exclusive Offers'}</h4>
+              <p className="text-gray-400 text-xs mb-6">
+                {language === 'th' ? 'สมัครสมาชิกเพื่อรับโปรโมชั่นลับเฉพาะคุณ' : 'Join our club for members-only deals and travel tips.'}
+              </p>
+              <form className="relative" onSubmit={(e) => e.preventDefault()}>
+                <input 
+                  type="email" 
+                  placeholder="your@email.com" 
+                  className="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A699] transition-all"
+                />
+                <button type="submit" className="absolute right-2 top-2 bottom-2 bg-[#00A699] hover:bg-[#008c81] px-6 rounded-xl font-bold text-sm shadow-lg shadow-[#00A699]/20 transition-all active:scale-95">
+                  {language === 'th' ? 'สมัคร' : 'Join'}
+                </button>
+              </form>
+            </div>
+          </div>
 
-    {/* 📋 Footer Bottom */}
-    <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-      <div className="text-gray-500 text-[11px] font-medium tracking-wide">
-        © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
-      </div>
-      <div className="flex items-center gap-8">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" className="h-4 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-      </div>
-    </div>
-  </div>
-</footer>
+          <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="text-gray-500 text-[11px] font-medium tracking-wide">
+              © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
+            </div>
+            <div className="flex items-center gap-8">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" className="h-4 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

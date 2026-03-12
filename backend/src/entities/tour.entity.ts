@@ -112,7 +112,7 @@ export class Tour {
 
   // ชื่อที่พัก (nullable = true เพราะ one day trip จะไม่มีที่พัก)
   @Column({ type: 'varchar', length: 255, nullable: true })
-  accommodation: string;s
+  accommodation: string;
 
   // จำนวนคนที่จองและจ่ายเงินแล้ว (เพื่อเอาไว้ทำระบบตัดยอด)
   @Column({ type: 'int', default: 0 })

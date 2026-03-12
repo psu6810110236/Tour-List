@@ -31,7 +31,7 @@ export function MyBookingsPage({
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<"all" | "to_pay" | "processing" | "completed" | "cancelled">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "to_pay" | "Pending" | "completed" | "cancelled">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
 
@@ -169,7 +169,7 @@ export function MyBookingsPage({
     if (isProcessing) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold bg-teal-50 text-[#00A699] border border-teal-200">
-          <Clock className="w-4 h-4" /> {safeLanguage === "th" ? "รอดำเนินการ" : "Processing"}
+          <Clock className="w-4 h-4" /> {safeLanguage === "th" ? "รอดำเนินการ" : "Pending"}
         </span>
       );
     }
@@ -197,7 +197,7 @@ export function MyBookingsPage({
 
     let statusMatch = true;
     if (activeTab === "to_pay") statusMatch = isToPay;
-    if (activeTab === "processing") statusMatch = isProcessing;
+    if (activeTab === "Pending") statusMatch = isProcessing;
     if (activeTab === "completed") statusMatch = isFullyApproved;
     if (activeTab === "cancelled") statusMatch = isRejected;
 
@@ -293,10 +293,10 @@ export function MyBookingsPage({
             {safeLanguage === "th" ? "ที่ต้องชำระ" : "To Pay"} {countToPay > 0 && `(${countToPay})`}
           </button>
           <button
-            onClick={() => setActiveTab("processing")}
-            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "processing" ? "bg-[#00A699] text-white shadow-md" : "bg-white hover:bg-teal-50 text-gray-700 border border-gray-200"}`}
+            onClick={() => setActiveTab("Pending")}
+            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "Pending" ? "bg-[#00A699] text-white shadow-md" : "bg-white hover:bg-teal-50 text-gray-700 border border-gray-200"}`}
           >
-            {safeLanguage === "th" ? "รอดำเนินการ" : "Processing"} {countProcessing > 0 && `(${countProcessing})`}
+            {safeLanguage === "th" ? "รอดำเนินการ" : "Pending"} {countProcessing > 0 && `(${countProcessing})`}
           </button>
           <button
             onClick={() => setActiveTab("completed")}
@@ -463,7 +463,7 @@ export function MyBookingsPage({
                       <span className="text-2xl">⏳</span>
                       <div>
                         <div className="font-semibold text-teal-900 mb-1">
-                          {safeLanguage === "th" ? "รอดำเนินการจากแอดมิน" : "Processing"}
+                          {safeLanguage === "th" ? "รอดำเนินการจากแอดมิน" : "Pending"}
                         </div>
                         <p className="text-sm text-teal-800">
                           {safeLanguage === "th"
