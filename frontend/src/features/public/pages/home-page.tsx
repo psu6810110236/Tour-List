@@ -72,7 +72,7 @@ export default function HomePage({ language }: HomePageProps) {
 
     const fetchTours = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/tours');
+        const response = await axios.get('http://localhost:3000/api/tours/search');
         setAllTours(response.data); // 🟢 ให้มันจำทัวร์ทั้งหมดที่มีในระบบไว้เพื่อนับเลข
         setTours(response.data.slice(0, 3));
       } catch (error) {
@@ -365,7 +365,9 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-white/90 text-xs md:text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                        {allTours.filter(t => String(t.provinceId || t.province?.id || t.province) === String(province.id)).length} {h.toursAvailable}
+                        {allTours.filter(t =>
+                          String(t.provinceId || t.province?.id || t.province) === String(province.id) && !t.isHidden
+                        ).length} {h.toursAvailable}
                       </span>
                       <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="w-4 h-4" />
