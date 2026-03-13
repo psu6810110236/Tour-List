@@ -9,7 +9,8 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  // แก้ไขให้ nullable: true สำหรับ Google Login
+  @Column({ nullable: true })
   passwordHash: string;
 
   @Column()
@@ -28,7 +29,6 @@ export class User {
   @CreateDateColumn()
   createdAt: Date;
 
-  // เพิ่มคอลัมน์ใหม่สำหรับ Auth Features
   @Column({ default: false })
   isEmailVerified: boolean;
 
