@@ -50,7 +50,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     phone: displayPhone,
   });
 
-  // ✅ แก้ Error 1: บังคับใส่ Type ให้กับ passwordForm อย่างชัดเจน
   const [passwordForm, setPasswordForm] = useState<{
     oldPassword: string;
     newPassword: string;
@@ -168,7 +167,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       return;
     }
     try {
-      // ✅ แก้ Error 2: บังคับข้ามการเช็ค Type ของ TypeScript ป้องกันการ Error จากไฟล์ API
       // @ts-ignore
       await userService.changePassword({
         oldPassword: passwordForm.oldPassword,
@@ -201,44 +199,46 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen bg-gray-50 font-sans pb-12">
 
       {/* Hero Banner */}
-      <div className="bg-[#00A699] relative overflow-hidden pb-20 pt-10">
+      <div className="bg-[#00A699] relative overflow-hidden pb-24 pt-12">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
 
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-6">
               <div className="relative group shrink-0">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center">
+                {/* ขยายขนาดรูป Profile */}
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white flex items-center justify-center">
                   {profileImage ? (
                     <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-3xl sm:text-4xl font-black text-[#00A699]">{avatar}</span>
+                    <span className="text-4xl sm:text-5xl font-black text-[#00A699]">{avatar}</span>
                   )}
                 </div>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors border border-gray-100 cursor-pointer group-hover:scale-105"
+                  className="absolute bottom-1 right-1 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors border border-gray-100 cursor-pointer group-hover:scale-105"
                 >
-                  <Camera className="w-4 h-4 text-[#00A699]" />
+                  <Camera className="w-5 h-5 text-[#00A699]" />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </div>
 
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-1">
+                {/* ขยายขนาดชื่อและอีเมล */}
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-2">
                   {displayFullName}
                 </h1>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-white/90 text-sm flex items-center gap-2 font-medium">
-                    <Mail className="w-4 h-4 opacity-70" /> {user?.email || "user@example.com"}
+                <div className="flex flex-col gap-2">
+                  <p className="text-white/90 text-base flex items-center gap-2 font-medium">
+                    <Mail className="w-5 h-5 opacity-70" /> {user?.email || "user@example.com"}
                   </p>
-                  <div className="text-white/80 text-xs flex items-center gap-2">
-                    <Calendar className="w-4 h-4 opacity-70" />
+                  <div className="text-white/80 text-sm flex items-center gap-2">
+                    <Calendar className="w-5 h-5 opacity-70" />
                     <span>{language === "th" ? `เป็นสมาชิกตั้งแต่ ${memberYear}` : `Member since ${memberYear}`}</span>
                   </div>
                 </div>
@@ -247,9 +247,9 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
             <button
               onClick={() => { if (logout) logout(); onNavigate("home"); }}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm backdrop-blur-md self-start sm:self-center"
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-6 py-3 rounded-xl transition-all text-base backdrop-blur-md self-start sm:self-center"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5" />
               {language === "th" ? "ออกจากระบบ" : "Sign Out"}
             </button>
           </div>
@@ -257,24 +257,25 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       </div>
 
       {/* Stats Cards */}
-      <div className="max-w-6xl mx-auto px-6 -mt-12 relative z-20 mb-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="max-w-6xl mx-auto px-6 -mt-16 relative z-20 mb-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-8">
           {[
             { label_th: "การจองทั้งหมด", label_en: "Total Bookings", value: totalBookings, icon: Calendar, color: "text-[#00A699]", iconBg: "bg-[#00A699]/10" },
             { label_th: "รอตรวจสอบ",    label_en: "Pending",         value: pendingCount,  icon: Hourglass, color: "text-amber-500", iconBg: "bg-amber-100" },
             { label_th: "อนุมัติแล้ว",  label_en: "Approved",        value: approvedCount, icon: BadgeCheck, color: "text-green-500", iconBg: "bg-green-100" },
             { label_th: "ยอดใช้จ่ายรวม", label_en: "Total Spent",   value: `฿${totalSpent.toLocaleString()}`, icon: CreditCard, color: "text-blue-500", iconBg: "bg-blue-100" },
           ].map(({ label_th, label_en, value, icon: Icon, color, iconBg }) => (
-            <div key={label_th} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col justify-between h-full">
+            // ขยาย Padding และขนาดตัวอักษร
+            <div key={label_th} className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:shadow-lg transition-shadow flex flex-col justify-between h-full">
               <div className="flex items-start justify-between mb-4">
-                <span className="text-sm text-gray-500 font-medium leading-tight">
+                <span className="text-base text-gray-500 font-semibold leading-tight">
                   {language === "th" ? label_th : label_en}
                 </span>
-                <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center shrink-0`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
+                <div className={`w-12 h-12 ${iconBg} rounded-xl flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-6 h-6 ${color}`} />
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-800 tracking-tight">
+              <div className="text-4xl font-black text-gray-800 tracking-tight">
                 {value}
               </div>
             </div>
@@ -283,40 +284,41 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-6xl mx-auto px-6 py-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8"> {/* ขยายระยะห่างคอลัมน์ */}
 
           {/* Left: Bookings + Profile Display */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-8">
 
             {/* Recent Bookings */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-                <h2 className="text-lg font-extrabold text-gray-900">
+              <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100">
+                <h2 className="text-xl font-extrabold text-gray-900">
                   {language === "th" ? "การจองล่าสุด" : "Recent Bookings"}
                 </h2>
                 <button
                   onClick={() => onNavigate("bookings")}
-                  className="text-[#00A699] text-sm font-bold hover:underline flex items-center gap-1"
+                  className="text-[#00A699] text-base font-bold hover:underline flex items-center gap-1"
                 >
                   {language === "th" ? "ดูทั้งหมด" : "View all"} →
                 </button>
               </div>
 
               {loadingBookings ? (
-                <div className="px-6 py-10 text-center text-gray-400 text-sm">
-                  <div className="w-6 h-6 border-2 border-[#00A699] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <div className="px-8 py-16 text-center text-gray-400 text-base">
+                  <div className="w-8 h-8 border-2 border-[#00A699] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                   {language === "th" ? "กำลังโหลด..." : "Loading..."}
                 </div>
               ) : recentBookings.length === 0 ? (
-                <div className="px-6 py-10 text-center">
-                  <Calendar className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                  <p className="text-gray-400 font-medium text-sm">
+                <div className="px-8 py-16 text-center">
+                  {/* ขยายไอคอนและตัวหนังสือหน้า Empty State */}
+                  <Calendar className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                  <p className="text-gray-400 font-medium text-base mb-4">
                     {language === "th" ? "ยังไม่มีประวัติการจอง" : "No bookings yet"}
                   </p>
                   <button
                     onClick={() => onNavigate("home")}
-                    className="mt-4 text-sm text-[#00A699] font-bold hover:underline"
+                    className="mt-2 text-base text-[#00A699] font-bold hover:underline"
                   >
                     {language === "th" ? "ค้นหาทัวร์" : "Explore Tours"}
                   </button>
@@ -327,34 +329,34 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                     const status = statusConfig[booking.status?.toUpperCase()] || statusConfig.PENDING;
                     const StatusIcon = status.icon;
                     return (
-                      <div key={booking.id} className="px-6 py-4 hover:bg-gray-50/50 transition-colors">
-                        <div className="flex items-start justify-between gap-3">
+                      <div key={booking.id} className="px-8 py-5 hover:bg-gray-50/50 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-gray-900 text-sm truncate">
+                            <p className="font-bold text-gray-900 text-base truncate mb-1">
                               {booking.tourNameSnapshot_th && language === "th"
                                 ? booking.tourNameSnapshot_th
                                 : booking.tourNameSnapshot || `Tour #${booking.tourId}`}
                             </p>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3 h-3" />
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2 text-sm text-gray-500">
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="w-4 h-4" />
                                 {language === "th" ? `รหัส: ${booking.id?.toString().slice(-6) || "-"}` : `ID: ${booking.id?.toString().slice(-6) || "-"}`}
                               </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-4 h-4" />
                                 {formatDate(booking.travelDate || booking.date)}
                               </span>
-                              <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
+                              <span className="flex items-center gap-1.5">
+                                <Users className="w-4 h-4" />
                                 {booking.travelers || booking.pax} {language === "th" ? "ท่าน" : "pax"}
                               </span>
                             </div>
-                            <p className="text-[#00A699] font-black text-sm mt-1.5">
+                            <p className="text-[#00A699] font-black text-base mt-2">
                               ฿{Number(booking.totalPrice || 0).toLocaleString()}
                             </p>
                           </div>
-                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${status.bg} ${status.color} shrink-0`}>
-                            <StatusIcon className="w-3 h-3" />
+                          <span className={`inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-full border ${status.bg} ${status.color} shrink-0`}>
+                            <StatusIcon className="w-4 h-4" />
                             {language === "th" ? status.label_th : status.label_en}
                           </span>
                         </div>
@@ -367,33 +369,34 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
             {/* Profile Info Display Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-                <h2 className="text-lg font-extrabold text-gray-900">
+              <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100">
+                <h2 className="text-xl font-extrabold text-gray-900">
                   {language === "th" ? "ข้อมูลส่วนตัว" : "Personal Information"}
                 </h2>
                 <button
                   onClick={() => setShowSettingsModal(true)}
-                  className="text-sm font-bold text-[#00A699] bg-teal-50 px-4 py-1.5 rounded-xl hover:bg-teal-100 transition-colors flex items-center gap-1.5"
+                  className="text-base font-bold text-[#00A699] bg-teal-50 px-5 py-2 rounded-xl hover:bg-teal-100 transition-colors flex items-center gap-2"
                 >
                   ✏️ {language === "th" ? "แก้ไข" : "Edit"}
                 </button>
               </div>
 
-              <div className="px-6 py-5 space-y-4">
+              <div className="px-8 py-6 space-y-5">
                 {[
                   { key: "fullName", label_th: "ชื่อ-นามสกุล", label_en: "Full Name",    icon: User,  value: displayFullName },
                   { key: "email",    label_th: "อีเมล",         label_en: "Email",        icon: Mail,  value: user?.email },
                   { key: "phone",    label_th: "เบอร์โทรศัพท์", label_en: "Phone Number", icon: Phone, value: displayPhone },
                 ].map(({ key, label_th, label_en, icon: Icon, value }) => (
                   <div key={key}>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                    <label className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2 block">
                       {language === "th" ? label_th : label_en}
                     </label>
-                    <div className="flex items-center gap-3 px-4 py-3.5 bg-gray-50 rounded-xl border border-gray-100">
-                      <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
-                        <Icon className="w-4 h-4 text-[#00A699]" />
+                    <div className="flex items-center gap-4 px-5 py-4 bg-gray-50 rounded-xl border border-gray-100">
+                      {/* ขยายไอคอนและตัวหนังสือด้านใน */}
+                      <div className="w-10 h-10 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
+                        <Icon className="w-5 h-5 text-[#00A699]" />
                       </div>
-                      <span className="font-semibold text-gray-900 text-sm">
+                      <span className="font-semibold text-gray-900 text-base">
                         {value || (key === "phone" ? (language === "th" ? "ยังไม่ได้ระบุ" : "Not specified") : "-")}
                       </span>
                     </div>
@@ -404,10 +407,10 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
           </div>
 
           {/* Right: Quick Menu */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-100">
-                <h2 className="text-base font-extrabold text-gray-900">
+              <div className="px-8 py-6 border-b border-gray-100">
+                <h2 className="text-xl font-extrabold text-gray-900">
                   {language === "th" ? "เมนูด่วน" : "Quick Menu"}
                 </h2>
               </div>
@@ -416,31 +419,32 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                   <button
                     key={label_th}
                     onClick={action}
-                    className="w-full flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors group text-left"
+                    className="w-full flex items-center gap-4 px-8 py-5 hover:bg-gray-50 transition-colors group text-left"
                   >
-                    <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
-                      <Icon className={`w-5 h-5 ${color}`} />
+                    {/* ขยายไอคอนในเมนู */}
+                    <div className={`w-12 h-12 ${bg} rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                      <Icon className={`w-6 h-6 ${color}`} />
                     </div>
-                    <span className="font-semibold text-gray-700 text-sm flex-1">
+                    <span className="font-bold text-gray-700 text-base flex-1">
                       {language === "th" ? label_th : label_en}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500 transition-colors" />
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Need Help */}
-            <div className="bg-gradient-to-br from-[#00A699] to-teal-400 rounded-2xl p-6 text-white">
-              <h3 className="font-extrabold text-base mb-1">
+            <div className="bg-gradient-to-br from-[#00A699] to-teal-400 rounded-2xl p-8 text-white">
+              <h3 className="font-extrabold text-lg mb-2">
                 {language === "th" ? "ต้องการความช่วยเหลือ?" : "Need Help?"}
               </h3>
-              <p className="text-white/80 text-xs mb-4 leading-relaxed">
+              <p className="text-white/90 text-sm mb-6 leading-relaxed">
                 {language === "th"
                   ? "ทีมสนับสนุนของเราพร้อมให้บริการตลอด 24 ชั่วโมง"
                   : "Our support team is available 24/7"}
               </p>
-              <button className="bg-white/20 hover:bg-white/30 border border-white/30 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-colors w-full">
+              <button className="bg-white/20 hover:bg-white/30 border border-white/30 text-white font-bold text-base px-5 py-3 rounded-xl transition-colors w-full">
                 {language === "th" ? "ติดต่อเรา" : "Contact Us"}
               </button>
             </div>
@@ -448,12 +452,11 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       </div>
 
-      {/* ── Settings Modal (หน้าตั้งค่าบัญชี) ────────────────────────────── */}
+      {/* ── Settings Modal ────────────────────────────── */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-200">
             
-            {/* Header */}
             <div className="shrink-0 flex items-center justify-between px-7 py-5 border-b border-gray-100 bg-white z-20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center">
@@ -472,10 +475,8 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               </button>
             </div>
 
-            {/* Body */}
             <div className="flex-1 overflow-y-auto min-h-0 px-7 py-6 space-y-8 bg-gray-50/50">
               
-              {/* Section 1: Edit Profile */}
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <User className="w-4 h-4 text-gray-400" />
@@ -518,7 +519,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </div>
               </div>
 
-              {/* Section 2: Security & Password */}
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-gray-400" />
@@ -543,7 +543,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </div>
               </div>
 
-              {/* Section 3: Danger Zone */}
               <div>
                 <h4 className="text-sm font-bold text-red-600 mb-4 flex items-center gap-2">
                   <Trash2 className="w-4 h-4 text-red-500" />
@@ -564,7 +563,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
             </div>
 
-            {/* Footer / Actions */}
             <div className="shrink-0 p-5 border-t border-gray-100 bg-white z-20">
                {profileSuccess && (
                 <div className="mb-4 flex items-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-xl text-sm font-semibold border border-green-200">
