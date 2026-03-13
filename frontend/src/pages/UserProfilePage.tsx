@@ -4,7 +4,7 @@ import {
   User, Mail, Phone, Lock, Calendar, Settings, CreditCard,
   Bell, HelpCircle, ChevronRight, Check, X, Eye, EyeOff,
   Camera, LogOut, MapPin, Clock, Users, BadgeCheck, Hourglass,
-  Globe, Shield, Trash2 // ✅ เพิ่มไอคอนใหม่
+  Globe, Shield, Trash2
 } from "lucide-react";
 import { useAuth } from "../features/auth/context/AuthContext";
 import { bookingService, userService } from "../services/api";
@@ -30,9 +30,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const [bookings, setBookings] = useState<any[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
-  // ✅ State สำหรับ Modal ตั้งค่าบัญชี
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
 
@@ -55,7 +53,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     confirmPassword: "",
   });
 
-  // ── Fetch bookings ──────────────────────────────────────────
   useEffect(() => {
     const fetchBookings = async () => {
       try {
@@ -72,7 +69,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     if (user?.id) fetchBookings();
   }, [user?.id]);
 
-  // ── Stats ───────────────────────────────────────────────────
   const totalBookings = bookings.length;
   const pendingCount  = bookings.filter(b => b.status?.toUpperCase() === "PENDING").length;
   const approvedCount = bookings.filter(b => b.status?.toUpperCase() === "APPROVED").length;
@@ -89,7 +85,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     ? user.fullName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "U";
 
-  // ── Profile image upload ────────────────────────────────────
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || file.size > 5 * 1024 * 1024) return;
@@ -103,7 +98,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     reader.readAsDataURL(file);
   };
 
-  // ── Save profile ────────────────────────────────────────────
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
     try {
@@ -114,7 +108,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       setProfileSuccess(true);
       setTimeout(() => {
         setProfileSuccess(false);
-        setShowSettingsModal(false); // ปิดหน้าต่างตั้งค่าเมื่อเซฟเสร็จ
+        setShowSettingsModal(false);
       }, 1500);
     } catch {
       setProfileSuccess(true);
@@ -127,7 +121,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     }
   };
 
-  // ── Change password ─────────────────────────────────────────
   const handleChangePassword = async () => {
     setPasswordError("");
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
@@ -164,7 +157,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     } catch { return d; }
   };
 
-  // ── Quick menu ──────────────────────────────────────────────
   const quickMenuItems = [
     { icon: Calendar,    label_th: "ดูประวัติการจองทั้งหมด", label_en: "View All Bookings",     action: () => onNavigate("bookings"),  color: "text-[#00A699]", bg: "bg-teal-50" },
     { icon: Settings,    label_th: "ตั้งค่าบัญชี",             label_en: "Account Settings",        action: () => setShowSettingsModal(true), color: "text-blue-600",  bg: "bg-blue-50" },
@@ -176,7 +168,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
 
-      {/* ── Hero Banner ─────────────────────────────────────── */}
+      {/* Hero Banner */}
       <div className="bg-[#00A699] relative overflow-hidden pb-20 pt-10">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
@@ -229,7 +221,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       </div>
 
-      {/* ── Stats Cards ─────────────────────────────────────── */}
+      {/* Stats Cards */}
       <div className="max-w-6xl mx-auto px-6 -mt-12 relative z-20 mb-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {[
@@ -255,11 +247,11 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       </div>
 
-      {/* ── Main Content ─────────────────────────────────────── */}
+      {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Left: Bookings + Profile */}
+          {/* Left: Bookings + Profile Display */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Recent Bookings */}
@@ -378,8 +370,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
           {/* Right: Quick Menu */}
           <div className="space-y-6">
-
-            {/* Quick Menu */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-6 py-5 border-b border-gray-100">
                 <h2 className="text-base font-extrabold text-gray-900">
@@ -425,11 +415,12 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
       {/* ── Settings Modal (หน้าตั้งค่าบัญชี) ────────────────────────────── */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+        // ✅ เปลี่ยน z-40 เป็น z-[60] เพื่อให้อยู่เหนือ Navbar (z-50) แน่นอน
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-200">
             
-            {/* Header */}
-            <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100 bg-white z-10">
+            {/* Header ✅ ล็อคความสูงด้วย shrink-0 */}
+            <div className="shrink-0 flex items-center justify-between px-7 py-5 border-b border-gray-100 bg-white z-20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center">
                   <Settings className="w-5 h-5 text-[#00A699]" />
@@ -447,8 +438,8 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               </button>
             </div>
 
-            {/* Body */}
-            <div className="px-7 py-6 overflow-y-auto space-y-8 bg-gray-50/50">
+            {/* Body ✅ ใช้ flex-1 overflow-y-auto min-h-0 เพื่อให้เลื่อนได้สมูทโดยไม่ดัน Header/Footer */}
+            <div className="flex-1 overflow-y-auto min-h-0 px-7 py-6 space-y-8 bg-gray-50/50">
               
               {/* Section 1: Edit Profile */}
               <div>
@@ -531,7 +522,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                       {language === "th" ? "การกระทำนี้ไม่สามารถย้อนกลับได้ ข้อมูลของคุณจะถูกลบถาวร" : "Once you delete your account, there is no going back. Please be certain."}
                     </p>
                   </div>
-                  <button className="bg-white text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm">
+                  <button className="bg-white text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm shrink-0">
                     {language === "th" ? "ลบบัญชี" : "Delete"}
                   </button>
                 </div>
@@ -539,8 +530,8 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
             </div>
 
-            {/* Footer / Actions */}
-            <div className="p-5 border-t border-gray-100 bg-white mt-auto">
+            {/* Footer / Actions ✅ ล็อคความสูงด้วย shrink-0 */}
+            <div className="shrink-0 p-5 border-t border-gray-100 bg-white z-20">
                {profileSuccess && (
                 <div className="mb-4 flex items-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-xl text-sm font-semibold border border-green-200">
                   <Check className="w-4 h-4" />
@@ -567,7 +558,8 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
       {/* ── Change Password Modal ────────────────────────────── */}
       {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        // ✅ เปลี่ยน z-50 เป็น z-[70] เพื่อให้อยู่เหนือ Modal ตั้งค่าอีกทีเวลาซ้อนกัน
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
             <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
               <h3 className="text-xl font-extrabold text-gray-900">
@@ -615,7 +607,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </div>
               ))}
 
-              {/* Strength hints */}
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
                 {[
                   { label: language === "th" ? "อย่างน้อย 8 ตัวอักษร" : "At least 8 characters", met: passwordForm.newPassword.length >= 8 },
