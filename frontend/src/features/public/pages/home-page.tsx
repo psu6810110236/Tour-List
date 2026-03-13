@@ -47,6 +47,7 @@ interface HomePageProps {
 }
 
 export default function HomePage({ language }: HomePageProps) {
+  const FALLBACK_IMAGE_URL = 'https://raw.githubusercontent.com/psu6810110318/-/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png';
   const navigate = useNavigate();
 
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -261,20 +262,21 @@ export default function HomePage({ language }: HomePageProps) {
                   className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
                 >
                   {/* ภาพทัวร์ และ Badge ยอดจอง */}
-                  <div className="relative h-56 overflow-hidden bg-gray-100">
-                    {tour.image ? (
-                      <img
-                        src={tour.image}
-                        alt={tourName}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex justify-center items-center text-gray-400 bg-gray-200">
-                        {language === 'th' ? 'ไม่มีรูปภาพ' : 'No Image'}
-                      </div>
-                    )}
+                  <div className="relative h-56 overflow-hidden bg-[#00A699]"> {/* เปลี่ยนสีพื้นหลังรอไว้เลย */}
+                    <img
+                      src={tour.image || FALLBACK_IMAGE_URL}
+                      alt={tourName}
+                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${!tour.image ? 'object-contain p-6' : 'object-cover'
+                        }`}
+                      onError={(e) => {
+                        // ใส่เผื่อไว้กรณี tour.image มีค่าแต่ลิงก์เสีย
+                        const target = e.target as HTMLImageElement;
+                        target.src = FALLBACK_IMAGE_URL;
+                        target.className = "w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500";
+                      }}
+                    />
 
-                    {/* Badge ยอดคนจอง */}
+                    {/* Badge ยอดคนจอง (คงไว้เหมือนเดิม) */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
                       {language === 'th' ? `จองแล้ว ${tour.bookedSeats || 0} ที่` : `${tour.bookedSeats || 0} Booked`}
