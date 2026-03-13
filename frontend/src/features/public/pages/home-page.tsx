@@ -38,7 +38,7 @@ interface Tour {
   image?: string;
   bookedSeats?: number;
   description?: string;
-   isHidden?: boolean;
+  isHidden?: boolean;
 }
 
 interface HomePageProps {
@@ -50,6 +50,7 @@ export default function HomePage({ language }: HomePageProps) {
 
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [tours, setTours] = useState<Tour[]>([]);
+  const [allTours, setAllTours] = useState<Tour[]>([]); // 🟢 เพิ่มบรรทัดนี้เพื่อเก็บทัวร์ทั้งหมด
 
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingTours, setLoadingTours] = useState(true);
@@ -71,6 +72,7 @@ export default function HomePage({ language }: HomePageProps) {
     const fetchTours = async () => {
       try {
         const response = await axios.get('http://localhost:3000/tours');
+        setAllTours(response.data); // 🟢 ให้มันจำทัวร์ทั้งหมดที่มีในระบบไว้เพื่อนับเลข
         setTours(response.data.slice(0, 3));
       } catch (error) {
         console.error("Error fetching tours:", error);
@@ -185,16 +187,19 @@ export default function HomePage({ language }: HomePageProps) {
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
             </div>
-            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">83+</div>
-            <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'ทัวร์ยอดนิยม' : 'Popular Tours'}</h3>
-            <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'แพ็กเกจที่คัดสรรมาอย่างดี' : 'Carefully curated packages'}</p>
+            {/* แสดงตัวเลขทัวร์ทั้งหมดที่มีในระบบ */}
+            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">{allTours.length}</div>
+
+            {/* 🟢 แก้ไขข้อความตรงนี้ */}
+            <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'แพ็กเกจทัวร์' : 'Tour Packages'}</h3>
+            <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'พร้อมให้บริการในขณะนี้' : 'Available for booking'}</p>
           </div>
 
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_35px_rgba(56,189,248,0.4)] hover:shadow-[0_0_50px_rgba(56,189,248,0.7)] border border-sky-200 md:-mt-6 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center relative z-10">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
               <MapPin className="w-8 h-8" />
             </div>
-            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">77</div>
+            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">{provinces.length}</div>
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</h3>
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'ครอบคลุมทุกจุดหมายปลายทาง' : 'Covering all destinations'}</p>
           </div>
@@ -264,6 +269,7 @@ export default function HomePage({ language }: HomePageProps) {
                       </div>
                     )}
 
+                    {/* Badge ยอดคนจอง */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
                       {language === 'th' ? `จองแล้ว ${tour.bookedSeats || 0} ที่` : `${tour.bookedSeats || 0} Booked`}
@@ -280,11 +286,11 @@ export default function HomePage({ language }: HomePageProps) {
                       {provinceName}
                     </p>
 
-                    <div className="mt-auto pt-4 border-t border-gray-100">
-                      <div className="mb-4">
-                        <p className="text-gray-500 text-xs mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
-                        <p className="text-[#FF6B4A] font-bold text-2xl">฿{tour.price.toLocaleString()}</p>
-                      </div>
+                    <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col justify-end">
+                      <p className="text-gray-500 text-xs mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
+                      <p className="text-[#FF6B4A] font-bold text-2xl mb-4">
+                        ฿{tour.price.toLocaleString()}
+                      </p>
 
                       <button
                         onClick={() => onNavigate("tour", tour.id as any)}
@@ -353,7 +359,7 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-white/90 text-xs md:text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                        {province.tourCount} {h.toursAvailable}
+                        {allTours.filter(t => String(t.provinceId || t.province?.id || t.province) === String(province.id)).length} {h.toursAvailable}
                       </span>
                       <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="w-4 h-4" />

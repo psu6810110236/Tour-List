@@ -56,10 +56,9 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     const fetchBookings = async () => {
       try {
         setLoadingBookings(true);
-        // แก้ fetch bookings — ใช้ getMyBookings() แทน getAllBookings()
         const res = await bookingService.getMyBookings();
         const mine: any[] = res.data || [];
-        setBookings(mine);  // ไม่ต้อง filter แล้ว เพราะ API คืนเฉพาะของ user นี้
+        setBookings(mine);
       } catch {
         setBookings([]);
       } finally {
@@ -110,7 +109,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       setIsEditingProfile(false);
       setTimeout(() => setProfileSuccess(false), 3000);
     } catch {
-      setProfileSuccess(true); // fallback แสดง success ใน UI ก่อน
+      setProfileSuccess(true);
       setIsEditingProfile(false);
       setTimeout(() => setProfileSuccess(false), 3000);
     } finally {
@@ -169,48 +168,47 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     <div className="min-h-screen bg-gray-50 font-sans">
 
       {/* ── Hero Banner ─────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-[#00A699] via-teal-500 to-blue-500 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+      <div className="bg-[#00A699] relative overflow-hidden pb-20 pt-10">
+        {/* ลวดลายพื้นหลังให้ดูมีมิติเบาๆ */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
-        <div className="max-w-6xl mx-auto px-6 py-8 relative">
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
 
             {/* Avatar + Info */}
             <div className="flex items-center gap-5">
               <div className="relative group shrink-0">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 border-white/30 shadow-2xl overflow-hidden bg-white/20 flex items-center justify-center">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center">
                   {profileImage ? (
                     <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-3xl sm:text-4xl font-black text-white">{avatar}</span>
+                    <span className="text-3xl sm:text-4xl font-black text-[#00A699]">{avatar}</span>
                   )}
                 </div>
+                
+                {/* ปุ่มเปลี่ยนรูปภาพ */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center cursor-pointer"
+                  className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors border border-gray-100 cursor-pointer group-hover:scale-105"
                 >
-                  <Camera className="w-6 h-6 text-white" />
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors border border-gray-200"
-                >
-                  <Camera className="w-3.5 h-3.5 text-[#00A699]" />
+                  <Camera className="w-4 h-4 text-[#00A699]" />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
               </div>
 
               <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-1">
                   {user?.fullName || "User"}
                 </h1>
-                <p className="text-white/80 text-sm mt-0.5 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5" /> {user?.email}
-                </p>
-                <div className="flex items-center gap-1.5 mt-2 text-white/70 text-xs">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>{language === "th" ? `เป็นสมาชิกตั้งแต่ ${memberYear}` : `Member since ${memberYear}`}</span>
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-white/90 text-sm flex items-center gap-2 font-medium">
+                    <Mail className="w-4 h-4 opacity-70" /> {user?.email || "user@example.com"}
+                  </p>
+                  <div className="text-white/80 text-xs flex items-center gap-2">
+                    <Calendar className="w-4 h-4 opacity-70" />
+                    <span>{language === "th" ? `เป็นสมาชิกตั้งแต่ ${memberYear}` : `Member since ${memberYear}`}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -218,7 +216,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
             {/* Logout */}
             <button
               onClick={() => { if (logout) logout(); onNavigate("home"); }}
-              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold px-5 py-2.5 rounded-xl transition-all active:scale-95 text-sm w-fit backdrop-blur-sm"
+              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm backdrop-blur-md self-start sm:self-center"
             >
               <LogOut className="w-4 h-4" />
               {language === "th" ? "ออกจากระบบ" : "Sign Out"}
@@ -228,22 +226,28 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       </div>
 
       {/* ── Stats Cards ─────────────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-6 -mt-6 relative z-10">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="max-w-6xl mx-auto px-6 -mt-12 relative z-20 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {[
-            { label_th: "การจองทั้งหมด", label_en: "Total Bookings", value: totalBookings, icon: Calendar, color: "text-[#00A699]", iconBg: "bg-teal-50" },
-            { label_th: "รอตรวจสอบ",    label_en: "Pending",         value: pendingCount,  icon: Hourglass, color: "text-amber-500", iconBg: "bg-amber-50" },
-            { label_th: "อนุมัติแล้ว",  label_en: "Approved",        value: approvedCount, icon: BadgeCheck, color: "text-green-600", iconBg: "bg-green-50" },
-            { label_th: "ยอดใช้จ่ายรวม", label_en: "Total Spent",   value: `฿${totalSpent.toLocaleString()}`, icon: CreditCard, color: "text-blue-600", iconBg: "bg-blue-50" },
+            { label_th: "การจองทั้งหมด", label_en: "Total Bookings", value: totalBookings, icon: Calendar, color: "text-[#00A699]", iconBg: "bg-[#00A699]/10" },
+            { label_th: "รอตรวจสอบ",    label_en: "Pending",         value: pendingCount,  icon: Hourglass, color: "text-amber-500", iconBg: "bg-amber-100" },
+            { label_th: "อนุมัติแล้ว",  label_en: "Approved",        value: approvedCount, icon: BadgeCheck, color: "text-green-500", iconBg: "bg-green-100" },
+            { label_th: "ยอดใช้จ่ายรวม", label_en: "Total Spent",   value: `฿${totalSpent.toLocaleString()}`, icon: CreditCard, color: "text-blue-500", iconBg: "bg-blue-100" },
           ].map(({ label_th, label_en, value, icon: Icon, color, iconBg }) => (
-            <div key={label_th} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-gray-500 font-medium">{language === "th" ? label_th : label_en}</span>
-                <div className={`w-8 h-8 ${iconBg} rounded-xl flex items-center justify-center`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
+            <div key={label_th} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col justify-between h-full">
+              <div className="flex items-start justify-between mb-4">
+                <span className="text-sm text-gray-500 font-medium leading-tight">
+                  {language === "th" ? label_th : label_en}
+                </span>
+                {/* เอาสีสันไปไว้ที่กล่องไอคอนแทน */}
+                <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-5 h-5 ${color}`} />
                 </div>
               </div>
-              <div className={`text-2xl font-black ${color}`}>{value}</div>
+              {/* เปลี่ยนตัวเลขให้เป็นสีเทาเข้ม ดูเรียบหรู */}
+              <div className="text-3xl font-bold text-gray-800 tracking-tight">
+                {value}
+              </div>
             </div>
           ))}
         </div>

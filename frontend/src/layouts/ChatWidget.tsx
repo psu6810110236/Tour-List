@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { MessageCircle, Send, Image as ImageIcon, Minus } from 'lucide-react';
-// 1. นำเข้า useAuth เพื่อดึงข้อมูล user จริงที่ Login อยู่
+import { MessageCircle, Send, Image as ImageIcon, Minus, X } from 'lucide-react'; // 🟢 นำเข้า X icon เพิ่ม
 import { useAuth } from '../features/auth/context/AuthContext';
 
 interface ChatMessage {
@@ -13,7 +12,7 @@ interface ChatMessage {
 }
 
 export default function ChatWidget() {
-  const { user } = useAuth(); // 2. ดึงข้อมูล User จากระบบ
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -25,12 +24,12 @@ export default function ChatWidget() {
     }
   ]);
   const [input, setInput] = useState('');
+  const [previewImage, setPreviewImage] = useState<string | null>(null); // 🟢 เพิ่ม State สำหรับรูปพรีวิว
   const [socket, setSocket] = useState<Socket | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 3. เชื่อมต่อ Socket และจัดการการรับข้อความ
   useEffect(() => {
     const newSocket = io('http://localhost:3000', {
       query: { role: 'user', userId: user?.id },
@@ -39,21 +38,14 @@ export default function ChatWidget() {
 
     newSocket.on('receiveMessage', (msg: any) => {
       if (!user?.id) return;
-
-      // เช็คว่าใครเป็นคนส่ง
       const isMe = msg.senderId === user.id || msg.sender?.id === user.id;
 
       setMessages((prev) => {
-        // 1. ตรวจสอบว่ามีข้อความ id นี้อยู่ใน list หรือยัง (กันซ้ำ)
-        if (prev.some(m => m.id === msg.id)) {
-          return prev;
-        }
+        if (prev.some(m => m.id === msg.id)) return prev;
 
         const isImg = msg.content && msg.content.startsWith('data:image');
-
-        // 2. เพิ่มข้อความใหม่เข้าไปใน State
         return [...prev, {
-          id: msg.id, // ใช้ ID จริงจาก Database
+          id: msg.id,
           senderType: isMe ? 'user' : 'admin',
           text: msg.content,
           timestamp: new Date(msg.createdAt || Date.now()),
@@ -63,7 +55,7 @@ export default function ChatWidget() {
     });
 
     return () => { newSocket.disconnect(); };
-  }, [user?.id]); // Re-connect เมื่อ User ID เปลี่ยน
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -78,8 +70,7 @@ export default function ChatWidget() {
           timestamp: new Date(msg.createdAt),
           isImage: msg.content.startsWith('data:image')
         }));
-
-        setMessages(mapped); // ⭐ ห้ามลืมเด็ดขาด
+        setMessages(mapped);
       })
       .catch(err => console.error('โหลดแชทล้มเหลว:', err));
   }, [user?.id]);
@@ -88,39 +79,29 @@ export default function ChatWidget() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, previewImage]); // 🟢 เลื่อนลงเมื่อมีพรีวิว
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || !socket || !user) return;
+    if ((!input.trim() && !previewImage) || !socket || !user) return; // 🟢 ส่งได้ถ้ามีข้อความหรือรูปภาพ
 
-    socket.emit('sendMessage', {
-      content: input,
-      senderId: user.id,
-      // ❌ ลบ receiverId ออกไปเลย
-    });
-
-    const localMsg: ChatMessage = {
-      id: Date.now().toString(),
-      senderType: 'user',
-      text: input,
-      timestamp: new Date(),
-    };
-
-
-    setInput('');
-  };
-  const sendMessage = (content: string) => {
-    if (!user?.id) {
-      alert("กรุณาเข้าสู่ระบบก่อนใช้งานแชท");
-      return;
+    // 🟢 ถ้ามีรูปให้ส่งรูปก่อน
+    if (previewImage) {
+      socket.emit('sendMessage', {
+        content: previewImage,
+        senderId: user.id,
+      });
+      setPreviewImage(null); // ล้างพรีวิว
     }
 
-
-    socket?.emit('sendMessage', {
-      content,
-      senderId: user.id,
-    });
+    // 🟢 ถ้ามีข้อความให้ส่งข้อความตามไป
+    if (input.trim()) {
+      socket.emit('sendMessage', {
+        content: input,
+        senderId: user.id,
+      });
+      setInput(''); // ล้างข้อความ
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,20 +115,14 @@ export default function ChatWidget() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64String = reader.result as string;
-
-      // ❗ ไม่ต้อง setMessages ที่นี่แล้ว
-      socket?.emit('sendMessage', {
-        content: base64String,
-        senderId: user.id,
-      });
+      // 🟢 นำรูปไปเก็บใน State ไว้พรีวิวก่อน ยังไม่ส่ง
+      setPreviewImage(reader.result as string);
     };
 
     reader.readAsDataURL(file);
     e.target.value = '';
   };
 
-  // ถ้ายังไม่ Login ไม่ต้องโชว์ปุ่มแชท (หรือจะโชว์แล้วเด้งไปหน้า Login ก็ได้)
   if (!user) return null;
 
   if (!isOpen) {
@@ -164,7 +139,6 @@ export default function ChatWidget() {
   return (
     <div className="fixed bottom-6 right-6 w-[360px] h-[550px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden border border-gray-100 z-50 font-sans animate-in slide-in-from-bottom-5 duration-300">
 
-      {/* Header - เปลี่ยนสีให้เข้ากับธีมหลัก */}
       <div className="bg-[#00A699] p-5 flex justify-between items-center text-white shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -183,7 +157,6 @@ export default function ChatWidget() {
         </button>
       </div>
 
-      {/* Chat Area */}
       <div className="flex-1 bg-[#F9FAFB] p-4 overflow-y-auto flex flex-col gap-3" ref={scrollRef}>
         {messages.map((msg, idx) => {
           const isUser = msg.senderType === 'user';
@@ -192,7 +165,6 @@ export default function ChatWidget() {
               {!isUser && (
                 <div className="w-7 h-7 rounded-full bg-[#00A699]/10 flex items-center justify-center text-[10px] text-[#00A699] font-bold mr-2 mt-auto mb-1">RH</div>
               )}
-
               <div className={`max-w-[80%] p-3 text-[13px] leading-relaxed shadow-sm ${isUser
                 ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
                 : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
@@ -202,7 +174,6 @@ export default function ChatWidget() {
                 ) : (
                   msg.text
                 )}
-
                 <div className={`text-[9px] mt-1 text-right opacity-70 ${isUser ? 'text-white' : 'text-gray-400'}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
@@ -212,45 +183,63 @@ export default function ChatWidget() {
         })}
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-white border-t border-gray-50 shrink-0">
-        <form onSubmit={handleSend} className="flex items-center gap-2">
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-gray-400 hover:text-[#00A699] transition"
-          >
-            <ImageIcon size={22} />
-          </button>
-
-          <div className="flex-1 bg-gray-100 rounded-full px-4 py-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="สอบถามข้อมูลเพิ่มเติม..."
-              className="bg-transparent w-full text-xs focus:outline-none text-gray-700 placeholder-gray-400"
-            />
+      {/* 🟢 พื้นที่สำหรับ Input และ พรีวิวรูปภาพ */}
+      <div className="bg-white border-t border-gray-50 shrink-0 flex flex-col">
+        {/* กล่องแสดงพรีวิว */}
+        {previewImage && (
+          <div className="px-4 pt-3 pb-1">
+            <div className="relative inline-block">
+              <img src={previewImage} alt="Preview" className="h-20 rounded-lg shadow-sm border border-gray-200 object-cover" />
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition"
+              >
+                <X size={12} strokeWidth={3} />
+              </button>
+            </div>
           </div>
+        )}
 
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${input.trim() ? 'bg-[#00A699] text-white shadow-lg' : 'bg-gray-200 text-gray-400'
+        <div className="p-4 pt-3">
+          <form onSubmit={handleSend} className="flex items-center gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 text-gray-400 hover:text-[#00A699] transition"
+            >
+              <ImageIcon size={22} />
+            </button>
+
+            <div className="flex-1 bg-gray-100 rounded-full px-4 py-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={previewImage ? "พิมพ์ข้อความแนบไปกับรูป..." : "สอบถามข้อมูลเพิ่มเติม..."}
+                className="bg-transparent w-full text-xs focus:outline-none text-gray-700 placeholder-gray-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={!input.trim() && !previewImage} // 🟢 เช็คให้ปุ่มไม่เบลอเมื่อมีรูปพรีวิว
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                input.trim() || previewImage ? 'bg-[#00A699] text-white shadow-lg' : 'bg-gray-200 text-gray-400'
               }`}
-          >
-            <Send size={18} className={input.trim() ? 'translate-x-0.5' : ''} />
-          </button>
-        </form>
+            >
+              <Send size={18} className={input.trim() || previewImage ? 'translate-x-0.5' : ''} />
+            </button>
+          </form>
+        </div>
       </div>
-
     </div>
   );
 }

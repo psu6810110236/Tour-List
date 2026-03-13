@@ -7,7 +7,6 @@ import ChatWidget from './layouts/ChatWidget';
 import ScrollToTop from './components/ScrollToTop';
 
 import { CartProvider, useCart } from './context/CartContext';
-
 import { Construction } from 'lucide-react';
 
 import Login from './features/auth/Login';
@@ -23,13 +22,14 @@ import { BookingPage } from './components/ui/booking-page';
 import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
 import { MyBookingsPage } from './pages/MyBookingsPage';
-import { UserProfilePage } from './pages/UserProfilePage'; // ✅ import ใหม่
-
+import { UserProfilePage } from './pages/UserProfilePage'; // ✅ ตัวจริง
 import CartDrawer from './components/ui/CartDrawer';
 
+// Service & Types
 import { tourService } from './services/api';
 import type { Province } from './data/mockData';
 
+// --- UI Helper Components ---
 const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, desc: string, icon: any }) => (
   <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 bg-gray-50/50">
     <div className="bg-white p-10 md:p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 max-w-md w-full text-center border border-gray-100 relative overflow-hidden animate-in fade-in zoom-in duration-500">
@@ -43,6 +43,7 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
   </div>
 );
 
+// --- PrivateRoute Helper ---
 const PrivateRoute = () => {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-[#00A699]">กำลังตรวจสอบสิทธิ์...</div>;
@@ -177,7 +178,7 @@ function AppContent() {
             <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
 
-            {/* ✅ เปลี่ยนจาก UserProfile placeholder เป็น UserProfilePage จริง */}
+            {/* ✅ ใช้ UserProfilePage จริง */}
             <Route path="/profile" element={<UserProfilePage language={language} onNavigate={handleNavigate} />} />
 
             <Route
