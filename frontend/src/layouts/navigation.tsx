@@ -87,7 +87,7 @@ export function Navigation({
         <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm sticky top-0 z-50 transition-all duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
                 <div className="flex items-center justify-between h-20 sm:h-24">
-                    
+
                     {/* LOGO */}
                     <button onClick={() => onNavigate("home")} className="flex items-center gap-3 sm:gap-5 group hover:opacity-95 transition-all">
                         <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-white border border-gray-100 shadow-md flex items-center justify-center p-1 group-hover:shadow-lg group-hover:border-[#00A699]/30 transition-all duration-300">
@@ -106,11 +106,10 @@ export function Navigation({
                             <button
                                 key={item.id}
                                 onClick={() => onNavigate(item.id)}
-                                className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${
-                                    currentPage === item.id || (item.id === "provinces" && currentPage.startsWith("province"))
-                                    ? "bg-white text-[#00A699] shadow-md ring-1 ring-black/5"
-                                    : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
-                                }`}
+                                className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${currentPage === item.id || (item.id === "provinces" && currentPage.startsWith("province"))
+                                        ? "bg-white text-[#00A699] shadow-md ring-1 ring-black/5"
+                                        : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
+                                    }`}
                             >
                                 {item.icon}
                                 <span>{item.label}</span>
@@ -119,7 +118,7 @@ export function Navigation({
                     </div>
 
                     {/* ACTIONS */}
-                    <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 -mr-4 lg:-mr-8">
                         {/* CART */}
                         <button onClick={onOpenCart} title={tCart.title} className="relative p-3 text-gray-600 hover:text-[#00A699] hover:bg-[#00A699]/5 rounded-2xl transition-all border border-transparent hover:border-[#00A699]/20">
                             <ShoppingBag className="w-6 h-6" />
@@ -137,7 +136,7 @@ export function Navigation({
                         </button>
 
                         {/* USER DROPDOWN */}
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                                 <button className="flex items-center gap-3 pl-2 pr-2 sm:pr-4 py-2 hover:bg-gray-50 rounded-full transition-all group">
                                     <Avatar className="w-11 h-11 border-2 border-white shadow-md group-hover:scale-105 transition-transform">
@@ -153,9 +152,9 @@ export function Navigation({
                                 </button>
                             </DropdownMenuTrigger>
 
-                            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-gray-100">
-                                <DropdownMenuLabel className="font-bold text-gray-400 text-[10px] px-3 py-2 uppercase">Account Management</DropdownMenuLabel>
-                                
+                            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl border-gray-100 bg-white translate-x-4">
+                                <DropdownMenuLabel className="font-bold text-gray-400 text-[13px] px-3 py-2 uppercase">Account Management</DropdownMenuLabel>
+
                                 {/* แสดง Admin Panel เฉพาะ User ที่มีสิทธิ์ ADMIN */}
                                 {user?.role === 'ADMIN' && (
                                     <DropdownMenuItem
@@ -169,13 +168,13 @@ export function Navigation({
                                 <DropdownMenuItem onClick={() => onNavigate("dashboard")} className="rounded-xl p-3 cursor-pointer font-bold">
                                     <User className="w-4 h-4 mr-3" /> Profile
                                 </DropdownMenuItem>
-                                
+
                                 <DropdownMenuItem onClick={onShowTutorial} className="rounded-xl p-3 cursor-pointer font-bold">
                                     <HelpCircle className="w-4 h-4 mr-3" /> Tutorial
                                 </DropdownMenuItem>
-                                
+
                                 <DropdownMenuSeparator className="my-2" />
-                                
+
                                 <DropdownMenuItem onClick={handleLogout} className="rounded-xl p-3 cursor-pointer text-red-500 font-bold hover:bg-red-50">
                                     <LogOut className="w-4 h-4 mr-3" /> Logout
                                 </DropdownMenuItem>
@@ -202,7 +201,7 @@ export function Navigation({
                             {item.icon} {item.label}
                         </button>
                     ))}
-                    
+
                     {/* Mobile Admin Link */}
                     {user?.role === 'ADMIN' && (
                         <button
