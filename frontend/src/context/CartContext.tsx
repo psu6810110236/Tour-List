@@ -1,15 +1,20 @@
 // src/context/CartContext.tsx
 import { createContext, useContext, useState, useEffect } from 'react';
-import type { ReactNode } from 'react'; 
-import { useAuth } from '../features/auth/context/AuthContext'; 
+import type { ReactNode } from 'react';
+import { useAuth } from '../features/auth/context/AuthContext';
 
-interface CartItem {
+export interface CartItem {
   id: string;
   tour: any;
+  tourName?: string;
+  tourName_th?: string;
+  image?: string;
   selectedDate: string;
+  travelDate?: string;
   travelers: number;
+  pax?: number;
   totalPrice: number;
-  contactInfo: any;
+  contactInfo?: any;
 }
 
 interface CartContextType {
@@ -18,59 +23,54 @@ interface CartContextType {
   toggleDrawer: () => void;
   clearCart: () => void;
   addToCart: (item: any) => void;
-  removeFromCart: (id: string) => void; // ✅ เพิ่มตรงนี้
+  removeFromCart: (id: string) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('roamhub_cart');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('roamhub_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
-  
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { user } = useAuth(); 
+  const { user } = useAuth();
 
   useEffect(() => {
     localStorage.setItem('roamhub_cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const toggleDrawer = () => setIsDrawerOpen(!isDrawerOpen);
-  
+  const toggleDrawer = () => setIsDrawerOpen((prev) => !prev);
+
   const clearCart = () => setCartItems([]);
 
-  // ✅ ลบทีละรายการ
   const removeFromCart = (id: string) => {
     setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   const addToCart = (item: any) => {
-    setIsDrawerOpen(true);
-
     const newItem: CartItem = {
       id: Date.now().toString(),
       tour: item.tour,
-      selectedDate: item.date,
-      travelers: item.travelers,
+      tourName: item.tour?.name || item.tourName,
+      tourName_th: item.tour?.name_th || item.tourName_th,
+      image: item.tour?.image || item.image,
+      selectedDate: item.date || item.selectedDate || item.travelDate,
+      travelDate: item.date || item.selectedDate || item.travelDate,
+      travelers: item.travelers || item.pax,
+      pax: item.travelers || item.pax,
       totalPrice: item.totalPrice,
-      contactInfo: item.contactInfo
+      contactInfo: item.contactInfo,
     };
 
-    setCartItems((prevItems) => {
-      const existingItemIndex = prevItems.findIndex(
-        (cartItem) => cartItem.tour.id === newItem.tour.id && cartItem.selectedDate === newItem.selectedDate
-      );
-
-      if (existingItemIndex >= 0) {
-        const updatedItems = [...prevItems];
-        updatedItems[existingItemIndex].travelers += newItem.travelers;
-        updatedItems[existingItemIndex].totalPrice += newItem.totalPrice;
-        return updatedItems;
-      } else {
-        return [...prevItems, newItem];
-      }
-    });
+    // ✅ เพิ่มใหม่ทุกครั้ง ไม่ merge เพื่อกันการบวกซ้ำ
+    setCartItems((prev) => [...prev, newItem]);
+    setIsDrawerOpen(true);
   };
 
   return (
@@ -82,8 +82,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
 export const useCart = () => {
   const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
+  if (!context) throw new Error('useCart must be used within a CartProvider');
   return context;
 };

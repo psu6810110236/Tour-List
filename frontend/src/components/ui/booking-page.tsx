@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, X } from "lucide-react";
-import type { Tour } from "../../types/index"; 
+import type { Tour } from "../../types/index";
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
-
+import { useCart } from "../../context/CartContext";
 import { tourService, bookingService } from "../../services/api";
 
 // ============================================================
@@ -33,9 +33,7 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    // Mount → slide in
     const enterTimer = setTimeout(() => setVisible(true), 10);
-    // Auto-dismiss
     const leaveTimer = setTimeout(() => handleClose(), 3800);
     return () => { clearTimeout(enterTimer); clearTimeout(leaveTimer); };
   }, []);
@@ -47,31 +45,16 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
 
   const config = {
     success: {
-      bg: "bg-white",
-      border: "border-[#00A699]/25",
-      accent: "bg-[#00A699]",
-      iconBg: "bg-[#00A699]/10",
-      iconColor: "text-[#00A699]",
-      Icon: CheckCircle,
-      progressColor: "bg-[#00A699]",
+      bg: "bg-white", border: "border-[#00A699]/25", accent: "bg-[#00A699]",
+      iconBg: "bg-[#00A699]/10", iconColor: "text-[#00A699]", Icon: CheckCircle, progressColor: "bg-[#00A699]",
     },
     error: {
-      bg: "bg-white",
-      border: "border-red-200",
-      accent: "bg-red-500",
-      iconBg: "bg-red-50",
-      iconColor: "text-red-500",
-      Icon: XCircle,
-      progressColor: "bg-red-500",
+      bg: "bg-white", border: "border-red-200", accent: "bg-red-500",
+      iconBg: "bg-red-50", iconColor: "text-red-500", Icon: XCircle, progressColor: "bg-red-500",
     },
     warning: {
-      bg: "bg-white",
-      border: "border-amber-200",
-      accent: "bg-amber-400",
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-500",
-      Icon: AlertCircle,
-      progressColor: "bg-amber-400",
+      bg: "bg-white", border: "border-amber-200", accent: "bg-amber-400",
+      iconBg: "bg-amber-50", iconColor: "text-amber-500", Icon: AlertCircle, progressColor: "bg-amber-400",
     },
   }[toast.type];
 
@@ -87,42 +70,19 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
       }}
     >
       <div className={`relative flex items-start gap-3 ${config.bg} border ${config.border} rounded-2xl px-4 py-3.5 shadow-xl shadow-black/8 overflow-hidden`}>
-        {/* Left accent bar */}
         <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.accent} rounded-l-2xl`} />
-
-        {/* Icon */}
         <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config.iconBg}`}>
           <Icon className={`w-5 h-5 ${config.iconColor}`} />
         </div>
-
-        {/* Message */}
         <p className="flex-1 text-sm font-semibold text-gray-800 leading-snug pt-1.5">{toast.message}</p>
-
-        {/* Close */}
-        <button
-          onClick={handleClose}
-          className="mt-1 text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0"
-        >
+        <button onClick={handleClose} className="mt-1 text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0">
           <X className="w-4 h-4" />
         </button>
-
-        {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gray-100 rounded-b-2xl overflow-hidden">
-          <div
-            className={`h-full ${config.progressColor} rounded-b-2xl`}
-            style={{
-              animation: "toastProgress 3.8s linear forwards",
-            }}
-          />
+          <div className={`h-full ${config.progressColor} rounded-b-2xl`} style={{ animation: "toastProgress 3.8s linear forwards" }} />
         </div>
       </div>
-
-      <style>{`
-        @keyframes toastProgress {
-          from { width: 100%; }
-          to   { width: 0%; }
-        }
-      `}</style>
+      <style>{`@keyframes toastProgress { from { width: 100%; } to { width: 0%; } }`}</style>
     </div>
   );
 }
@@ -130,14 +90,11 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
 function useToast() {
   const [toasts, setToasts] = useState<ToastData[]>([]);
   let counter = 0;
-
   const show = (message: string, type: ToastType = "success") => {
     const id = Date.now() + counter++;
     setToasts((prev) => [...prev, { id, type, message }]);
   };
-
   const remove = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
-
   return { toasts, show, remove };
 }
 
@@ -151,25 +108,22 @@ interface BookingPageProps {
   onAddToCart?: (item: any) => void;
 }
 
-export function BookingPage({ tour, onNavigate, language, onAddToCart }: BookingPageProps) {
+export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
+  // ✅ ลบ onAddToCart ออกจาก destructure — ใช้ addToCart จาก Context อย่างเดียว
+  const { addToCart } = useCart();
   const t = translations[language].booking;
   const params = useParams();
   const [localTour, setLocalTour] = useState<Tour | null>(tour || null);
   const [loading, setLoading] = useState(false);
-  
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1)); 
-  const [selectedDate, setSelectedDate] = useState(""); 
-  
-  const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string; }>({ isOpen: false, startDate: "", endDate: "" });
-  
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1));
+  const [selectedDate, setSelectedDate] = useState("");
+  const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string }>({ isOpen: false, startDate: "", endDate: "" });
   const [travelers, setTravelers] = useState(1);
   const [contactInfo, setContactInfo] = useState({ fullName: "", email: "", phone: "", specialRequests: "" });
   const [availableSeats, setAvailableSeats] = useState<number>(10);
   const [isFull, setIsFull] = useState<boolean>(false);
 
-  // 🔔 Toast
   const { toasts, show: showToast, remove: removeToast } = useToast();
-
   const totalPrice = (localTour?.price || 0) * travelers;
 
   useEffect(() => {
@@ -203,9 +157,13 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
         const res = await bookingService.getAllBookings();
         const bookings = res.data || [];
         const bookedCount = bookings
-          .filter((b: any) => (String(b.tourId) === String(localTour.id)) && (b.travelDate === selectedDate || b.date === selectedDate) && !['REJECTED', 'CANCELLED', 'FAILED'].includes(b.status?.toUpperCase()))
+          .filter((b: any) =>
+            String(b.tourId) === String(localTour.id) &&
+            (b.travelDate === selectedDate || b.date === selectedDate) &&
+            !['REJECTED', 'CANCELLED', 'FAILED'].includes(b.status?.toUpperCase())
+          )
           .reduce((sum: number, b: any) => sum + Number(b.travelers || 0), 0);
-        
+
         const remain = max - bookedCount;
         setAvailableSeats(remain > 0 ? remain : 0);
         setIsFull(remain <= 0);
@@ -213,69 +171,52 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
         if (travelers > remain && remain > 0) setTravelers(remain);
         else if (remain <= 0) setTravelers(0);
         else if (travelers === 0 && remain > 0) setTravelers(1);
-      } catch (err) {
+      } catch {
         setAvailableSeats(localTour?.maxCapacity || 10);
       }
     };
     fetchSeats();
-  }, [localTour, selectedDate, travelers]);
+  }, [localTour, selectedDate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setContactInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ validateForm — ใช้ Toast แทน alert()
   const validateForm = () => {
-    console.log("--- กำลังตรวจสอบข้อมูลฟอร์ม ---");
     if (!selectedDate) {
-      console.log("❌ ยังไม่ได้เลือกวันที่เดินทาง");
       showToast(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date.", "warning");
       return false;
     }
     if (isFull || travelers <= 0) {
-      console.log("❌ ทัวร์เต็มแล้ว");
       showToast(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date.", "error");
       return false;
     }
     if (!contactInfo.fullName || !contactInfo.email || !contactInfo.phone) {
-      console.log("❌ กรอกข้อมูลผู้ติดต่อไม่ครบ", contactInfo);
       showToast(language === "th" ? "กรุณากรอกข้อมูลผู้ติดต่อให้ครบถ้วน" : "Please fill in all contact information", "warning");
       return false;
     }
-    console.log("✅ ตรวจสอบผ่านครบทุกข้อ!");
     return true;
   };
 
-  // ✅ handleAddToCart — ใช้ Toast แทน alert()
+  // ✅ เรียก addToCart ครั้งเดียว ไม่มี onAddToCart ซ้ำอีกต่อไป
   const handleAddToCart = () => {
-    console.log("🖱️ ปุ่ม Add to Cart ถูกคลิกแล้ว!");
-    
-    if (isFull || !validateForm()) {
-      console.log("⛔ การทำงานหยุดลง เพราะข้อมูลไม่ผ่านเงื่อนไข");
-      return;
-    }
+    if (isFull || !validateForm()) return;
 
-    console.log("🚀 ข้อมูลพร้อมส่งเข้าตะกร้า:", { tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
+    addToCart({
+      tour: localTour,
+      date: selectedDate,
+      travelers,
+      totalPrice,
+      contactInfo,
+    });
 
-    if (onAddToCart) {
-      onAddToCart({ tour: localTour, date: selectedDate, travelers, totalPrice, contactInfo });
-      console.log("🎉 เรียกฟังก์ชัน onAddToCart สำเร็จ!");
-      showToast(
-        language === "th"
-          ? `เพิ่มลงตะกร้าสำเร็จ! · ${travelers} ท่าน · ฿${totalPrice.toLocaleString()}`
-          : `Added to cart! · ${travelers} pax · ฿${totalPrice.toLocaleString()}`,
-        "success"
-      );
-    } else {
-      console.log("⚠️ ไม่มีฟังก์ชัน onAddToCart ส่งมาจากไฟล์หลัก");
-      showToast(
-        language === "th"
-          ? "ระบบตรวจสอบข้อมูลผ่านแล้ว! แต่ยังไม่ได้เชื่อมต่อ onAddToCart"
-          : "Validation passed, but onAddToCart is missing.",
-        "warning"
-      );
-    }
+    showToast(
+      language === "th"
+        ? `เพิ่มลงตะกร้าสำเร็จ! · ${travelers} ท่าน · ฿${totalPrice.toLocaleString()}`
+        : `Added to cart! · ${travelers} pax · ฿${totalPrice.toLocaleString()}`,
+      "success"
+    );
   };
 
   const handleContinue = () => {
@@ -289,12 +230,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     const start = new Date(dateStr);
     const end = new Date(start);
     end.setDate(end.getDate() + tripDays - 1);
-    
-    setDatePopup({
-      isOpen: true,
-      startDate: dateStr,
-      endDate: end.toISOString().split('T')[0]
-    });
+    setDatePopup({ isOpen: true, startDate: dateStr, endDate: end.toISOString().split('T')[0] });
   };
 
   const confirmDateSelection = () => {
@@ -302,8 +238,12 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     setDatePopup(prev => ({ ...prev, isOpen: false }));
   };
 
-  const weekDays = language === "th" ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-  const monthNames = language === "th" ? ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const weekDays = language === "th"
+    ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]
+    : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const monthNames = language === "th"
+    ? ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
+    : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
@@ -324,8 +264,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
 
   return (
     <div className="min-h-screen bg-[#F7F9FA] pb-28 font-sans">
-
-      {/* 🔔 Toast Container */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
@@ -335,10 +273,12 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <span>{t.back}</span>
           </button>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-             <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
-             <span className="bg-[#00A699]/10 text-[#00A699] px-4 py-1.5 rounded-full text-sm font-bold w-fit border border-[#00A699]/20">
-               {localTour.tripType === 'multiple-days' ? (language === 'th' ? `ทริป ${localTour.tripDays || 1} วัน` : `${localTour.tripDays || 1} Days Trip`) : (language === 'th' ? 'ทริปไปเช้าเย็นกลับ' : 'One Day Trip')}
-             </span>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
+            <span className="bg-[#00A699]/10 text-[#00A699] px-4 py-1.5 rounded-full text-sm font-bold w-fit border border-[#00A699]/20">
+              {localTour.tripType === 'multiple-days'
+                ? (language === 'th' ? `ทริป ${localTour.tripDays || 1} วัน` : `${localTour.tripDays || 1} Days Trip`)
+                : (language === 'th' ? 'ทริปไปเช้าเย็นกลับ' : 'One Day Trip')}
+            </span>
           </div>
           <p className="text-gray-500 mt-1">{language === "th" && localTour.name_th ? localTour.name_th : localTour.name}</p>
         </div>
@@ -347,7 +287,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            
+
+            {/* Calendar */}
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
@@ -356,11 +297,10 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                   </div>
                   <h2 className="text-xl font-bold text-gray-900">{t.selectDate}</h2>
                 </div>
-                
                 <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100 w-fit">
-                  <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronLeft className="w-5 h-5"/></button>
+                  <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronLeft className="w-5 h-5" /></button>
                   <div className="font-bold text-gray-900 min-w-[100px] text-center">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</div>
-                  <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronRight className="w-5 h-5"/></button>
+                  <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronRight className="w-5 h-5" /></button>
                 </div>
               </div>
 
@@ -370,11 +310,9 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                 </div>
                 <div className="grid grid-cols-7 gap-y-2 text-center">
                   {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
-                  
                   {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
                     const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                    
                     const isStart = selectedDate === dateStr;
                     const inRange = isDateInSelectedRange(dateStr);
                     const hasRule = localTour.availableDates && localTour.availableDates.length > 0;
@@ -387,8 +325,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
 
                     return (
                       <div key={i} className={`relative flex items-center justify-center h-full w-full ${inRange && !isStart ? 'bg-teal-50' : ''}`}>
-                        <button 
-                          onClick={() => { if(isAvailableStart) handleDateClick(dateStr); }}
+                        <button
+                          onClick={() => { if (isAvailableStart) handleDateClick(dateStr); }}
                           disabled={!isAvailableStart}
                           className={`aspect-square w-full flex flex-col items-center justify-center text-sm font-semibold transition-all duration-200 relative ${bgClass}`}
                         >
@@ -402,6 +340,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
               </div>
             </div>
 
+            {/* Travelers */}
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
@@ -418,37 +357,30 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                 </div>
               </div>
 
-              {isFull && selectedDate ? (
+              {isFull && selectedDate && (
                 <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl flex items-center justify-center gap-2 mb-4 animate-in fade-in">
                   <AlertCircle className="w-5 h-5" />
                   <span className="font-bold">{language === 'th' ? 'ขออภัย ทัวร์สำหรับวันที่เลือกรอบเต็มแล้ว' : 'Sorry, this date is fully booked.'}</span>
                 </div>
-              ) : null}
+              )}
 
               <div className={`flex items-center justify-between p-4 md:p-6 border rounded-2xl ${isFull || !selectedDate ? 'border-gray-200 bg-gray-50 opacity-70' : 'border-gray-100'}`}>
                 <div>
                   <div className="font-bold text-gray-900 text-lg">{language === "th" ? "ผู้เดินทาง" : "Travelers"}</div>
                   <div className="text-sm font-medium mt-1 text-[#00A699]">
-                    {selectedDate 
+                    {selectedDate
                       ? (language === "th" ? `(เหลือที่ว่าง ${availableSeats} ที่)` : `(${availableSeats} seats left)`)
-                      : (language === "th" ? "กรุณาเลือกวันที่ก่อน" : "Select a date first")
-                    }
+                      : (language === "th" ? "กรุณาเลือกวันที่ก่อน" : "Select a date first")}
                   </div>
                 </div>
                 <div className="flex items-center gap-5">
-                  <button 
-                    onClick={() => setTravelers(Math.max(1, travelers - 1))} 
-                    disabled={travelers <= 1 || isFull}
-                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
-                  >
+                  <button onClick={() => setTravelers(Math.max(1, travelers - 1))} disabled={travelers <= 1 || isFull}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200">
                     <Minus className="w-5 h-5" />
                   </button>
                   <span className="text-xl font-bold w-6 text-center text-gray-900">{travelers}</span>
-                  <button 
-                    onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} 
-                    disabled={travelers >= availableSeats || isFull}
-                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
-                  >
+                  <button onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} disabled={travelers >= availableSeats || isFull}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200">
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>
@@ -469,10 +401,11 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             </div>
           </div>
 
+          {/* Sidebar Summary */}
           <div className="lg:col-span-1 hidden lg:block">
             <div className="sticky top-32 bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 mb-4">{language === "th" ? "สรุปการจอง" : "Booking Summary"}</h2>
-                <div className="rounded-2xl overflow-hidden mb-5 relative">
+              <div className="rounded-2xl overflow-hidden mb-5 relative">
                 <img src={localTour.image} alt={localTour.name} className="w-full h-40 object-cover hover:scale-105 transition-transform duration-500" />
                 {isFull && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="text-white font-bold text-xl tracking-widest bg-red-600 px-4 py-1 rounded-lg">FULL</span></div>}
               </div>
@@ -481,8 +414,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                   <span className="text-gray-500">{language === "th" ? "วันที่เดินทาง:" : "Date:"}</span>
                   <div className="font-bold text-gray-900 text-right">
                     {selectedDate ? (
-                      localTour.tripDays && localTour.tripDays > 1 
-                        ? <>{selectedDate} <br/><span className="text-xs text-[#00A699]">ถึง {new Date(new Date(selectedDate).getTime() + (localTour.tripDays - 1) * 86400000).toISOString().split('T')[0]}</span></>
+                      localTour.tripDays && localTour.tripDays > 1
+                        ? <>{selectedDate}<br /><span className="text-xs text-[#00A699]">ถึง {new Date(new Date(selectedDate).getTime() + (localTour.tripDays - 1) * 86400000).toISOString().split('T')[0]}</span></>
                         : selectedDate
                     ) : "-"}
                   </div>
@@ -501,6 +434,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
         </div>
       </div>
 
+      {/* Bottom Bar */}
       <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-30">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div className="flex flex-col">
@@ -508,8 +442,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <span className="text-xl md:text-2xl font-black text-[#00A699]">฿{selectedDate ? totalPrice.toLocaleString() : 0}</span>
           </div>
           <div className="flex gap-3">
-            <button 
-              onClick={handleAddToCart} 
+            <button
+              onClick={handleAddToCart}
               disabled={isFull}
               className={`px-5 py-3 md:py-4 rounded-2xl border-2 font-bold flex items-center gap-2 transition-colors ${
                 isFull ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'border-teal-50 bg-teal-50 text-[#00A699] hover:bg-teal-100'
@@ -518,13 +452,12 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
               <ShoppingBag className="w-5 h-5" />
               <span className="hidden sm:inline">Add to Cart</span>
             </button>
-
-            <button 
-              onClick={handleContinue} 
+            <button
+              onClick={handleContinue}
               disabled={isFull}
               className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center gap-2 transition-all ${
-                isFull 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
+                isFull
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
                   : 'bg-[#FF6B4A] hover:bg-[#F25A38] text-white shadow-lg shadow-orange-200/50 active:scale-95'
               }`}
             >
@@ -535,7 +468,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
         </div>
       </div>
 
-      {/* Popup สรุปวันที่ที่เลือก */}
+      {/* Date Popup */}
       {datePopup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
@@ -544,7 +477,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             </div>
             <h3 className="text-2xl font-extrabold text-gray-900 mb-2 tracking-tight">{language === 'th' ? 'ยืนยันรอบเดินทาง' : 'Confirm Travel Dates'}</h3>
             <p className="text-gray-500 mb-6 text-sm">ทัวร์: {language === 'th' && localTour.name_th ? localTour.name_th : localTour.name}</p>
-            
             <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100 text-left">
               <div className="flex justify-between mb-3 border-b border-gray-200 pb-3">
                 <span className="text-gray-500 font-medium text-sm">{language === 'th' ? 'วันไป:' : 'Start:'}</span>
@@ -560,7 +492,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                 </div>
               )}
             </div>
-
             <div className="flex gap-3">
               <button onClick={() => setDatePopup({ isOpen: false, startDate: "", endDate: "" })} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl font-bold active:scale-95 transition">
                 {language === 'th' ? 'ยกเลิก' : 'Cancel'}
@@ -572,7 +503,6 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
           </div>
         </div>
       )}
-
     </div>
   );
 }

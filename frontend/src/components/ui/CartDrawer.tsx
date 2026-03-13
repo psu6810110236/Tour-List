@@ -12,7 +12,7 @@ const CartDrawer = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
-  const totalPrice = cartItems.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+  const totalPrice = cartItems.reduce((sum: number, item: any) => sum + Number(item.totalPrice), 0);
 
   const handleCheckout = () => {
     toggleDrawer();
@@ -157,7 +157,7 @@ const CartDrawer = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {cartItems.map((item) => {
+              {cartItems.map((item: any) => {
                 const isRemoving = removingIds.has(item.id);
                 const isSelected = selectedIds.has(item.id);
 
@@ -185,13 +185,13 @@ const CartDrawer = () => {
                       )}
 
                       <img
-                        src={item.tour?.image || '/placeholder-tour.jpg'}
-                        alt={item.tour?.name_th || item.tour?.name || 'Tour'}
+                        src={item.tour?.image || item.image || '/placeholder-tour.jpg'}
+                        alt={item.tour?.name_th || item.tour?.name || item.tourName || 'Tour'}
                         className="w-20 h-20 object-cover rounded-xl bg-gray-100 flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <h3 className="font-bold text-gray-900 text-sm md:text-base line-clamp-2 leading-tight">
-                          {item.tour?.name_th || item.tour?.name || 'ทัวร์ (ไม่พบชื่อ)'}
+                          {item.tour?.name_th || item.tour?.name || item.tourName_th || item.tourName || 'ทัวร์ (ไม่พบชื่อ)'}
                         </h3>
                         <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
@@ -213,13 +213,17 @@ const CartDrawer = () => {
                       <div className="space-y-1.5 text-sm text-gray-600">
                         <p className="flex items-center gap-2">
                           <span className="w-5 h-5 bg-white rounded flex items-center justify-center border border-gray-200 shadow-sm">📅</span>
-                          <span className="font-medium text-gray-900">{item.selectedDate}</span>
+                          <span className="font-medium text-gray-900">
+                            {item.selectedDate || item.travelDate}
+                          </span>
                         </p>
                         <p className="flex items-center gap-2">
                           <span className="w-5 h-5 bg-white rounded flex items-center justify-center border border-gray-200 shadow-sm">
                             <Users className="w-3 h-3 text-gray-500" />
                           </span>
-                          <span className="font-medium text-gray-900">{item.travelers} ท่าน</span>
+                          <span className="font-medium text-gray-900">
+                            {item.travelers || item.pax} ท่าน
+                          </span>
                         </p>
                       </div>
                       <p className="font-black text-[#00A699] text-lg">

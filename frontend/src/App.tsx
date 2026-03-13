@@ -8,7 +8,7 @@ import ScrollToTop from './components/ScrollToTop';
 
 import { CartProvider, useCart } from './context/CartContext';
 
-import { Construction, Ticket, UserCircle } from 'lucide-react';
+import { Construction, UserCircle } from 'lucide-react';
 
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
@@ -121,7 +121,7 @@ function AppContent() {
     const path = location.pathname;
     if (path === '/' || path.startsWith('/tour')) return 'home';
     if (path.startsWith('/province') || path === '/provinces') return 'provinces';
-    if (path.startsWith('/booking') || path.startsWith('/my-bookings')) return 'bookings';
+    if (path.startsWith('/booking') || path === '/my-bookings') return 'bookings';
     return '';
   };
 
@@ -230,7 +230,6 @@ function AppContent() {
       {showChatWidget && <ChatWidget />}
 
       <CartDrawer />
-
     </div>
   );
 }
