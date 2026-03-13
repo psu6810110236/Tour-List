@@ -39,21 +39,22 @@ interface Tour {
   image?: string;
   bookedSeats?: number;
   description?: string;
-   isHidden?: boolean;
+  isHidden?: boolean;
 }
 
 interface HomePageProps {
   language: Language;
 }
 
-export default function HomePage({ language }: HomePageProps) { 
+export default function HomePage({ language }: HomePageProps) {
   const navigate = useNavigate();
 
   const [provinces, setProvinces] = useState<Province[]>([]);
-  const [tours, setTours] = useState<Tour[]>([]); 
-  
+  const [tours, setTours] = useState<Tour[]>([]);
+  const [allTours, setAllTours] = useState<Tour[]>([]); // 🟢 เพิ่มบรรทัดนี้เพื่อเก็บทัวร์ทั้งหมด
+
   const [loadingProvinces, setLoadingProvinces] = useState(true);
-  const [loadingTours, setLoadingTours] = useState(true); 
+  const [loadingTours, setLoadingTours] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -71,9 +72,9 @@ export default function HomePage({ language }: HomePageProps) {
 
     const fetchTours = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/tours'); 
-        // 🟢 เอามาแสดง 3 หรือ 6 อันดับแรก เพื่อความสวยงามใน Grid แบบ 3 คอลัมน์
-        setTours(response.data.slice(0, 3)); 
+        const response = await axios.get('http://localhost:3000/tours');
+        setAllTours(response.data); // 🟢 ให้มันจำทัวร์ทั้งหมดที่มีในระบบไว้เพื่อนับเลข
+        setTours(response.data.slice(0, 3));
       } catch (error) {
         console.error("Error fetching tours:", error);
       } finally {
@@ -107,8 +108,8 @@ export default function HomePage({ language }: HomePageProps) {
       return;
     }
 
-    const matchedProvince = provinces.find(p => 
-      p.name.toLowerCase().includes(trimmedQuery) || 
+    const matchedProvince = provinces.find(p =>
+      p.name.toLowerCase().includes(trimmedQuery) ||
       p.name_th.toLowerCase().includes(trimmedQuery)
     );
 
@@ -121,18 +122,18 @@ export default function HomePage({ language }: HomePageProps) {
 
   const t = translations[language].hero;
   const h = translations[language].home;
-  
+
   const HERO_BG = "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?q=80&w=2639&auto=format&fit=crop";
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden relative">
-      
+
       {/* ===== HERO SECTION ===== */}
       <div className="relative min-h-[550px] md:h-[600px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0">
         <div className="absolute inset-0 z-0">
-          <img 
-            src={HERO_BG} 
-            alt="Amazing Thailand" 
+          <img
+            src={HERO_BG}
+            alt="Amazing Thailand"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
@@ -145,15 +146,15 @@ export default function HomePage({ language }: HomePageProps) {
               <span>✈️</span>
               <span>{language === 'th' ? 'พร้อมสำหรับการเดินทางหรือยัง?' : 'Ready for your next journey?'}</span>
             </div>
-            
+
             <h1 className="text-3xl md:text-7xl font-bold mb-6 tracking-tight drop-shadow-lg leading-tight">
               {language === 'th' ? (
-                <>ค้นพบความมหัศจรรย์ <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">ประเทศไทย</span></>
+                <>ค้นพบความมหัศจรรย์ <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">ประเทศไทย</span></>
               ) : (
-                <>Discover Amazing <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">Thailand</span></>
+                <>Discover Amazing <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">Thailand</span></>
               )}
             </h1>
-            
+
             <p className="text-base md:text-xl text-white/90 mb-10 leading-relaxed drop-shadow-md px-2">
               {t.subtitle}
             </p>
@@ -169,7 +170,7 @@ export default function HomePage({ language }: HomePageProps) {
                   className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
                 />
               </div>
-              <button 
+              <button
                 type="submit"
                 className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
               >
@@ -188,9 +189,12 @@ export default function HomePage({ language }: HomePageProps) {
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
             </div>
-            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">83+</div>
-            <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'ทัวร์ยอดนิยม' : 'Popular Tours'}</h3>
-            <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'แพ็กเกจที่คัดสรรมาอย่างดี' : 'Carefully curated packages'}</p>
+            {/* แสดงตัวเลขทัวร์ทั้งหมดที่มีในระบบ */}
+            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">{allTours.length}</div>
+
+            {/* 🟢 แก้ไขข้อความตรงนี้ */}
+            <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'แพ็กเกจทัวร์' : 'Tour Packages'}</h3>
+            <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'พร้อมให้บริการในขณะนี้' : 'Available for booking'}</p>
           </div>
 
           {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย) */}
@@ -198,7 +202,7 @@ export default function HomePage({ language }: HomePageProps) {
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
               <MapPin className="w-8 h-8" />
             </div>
-            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">77</div>
+            <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">{provinces.length}</div>
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'จังหวัดทั่วไทย' : 'Provinces'}</h3>
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'ครอบคลุมทุกจุดหมายปลายทาง' : 'Covering all destinations'}</p>
           </div>
@@ -229,7 +233,7 @@ export default function HomePage({ language }: HomePageProps) {
               {language === 'th' ? 'แพ็กเกจทัวร์ยอดฮิตที่เปิดจองในขณะนี้' : 'Popular tour packages highly booked right now'}
             </p>
           </div>
-          <button 
+          <button
             onClick={() => onNavigate("provinces")}
             className="text-[#00A699] font-semibold hover:text-[#008c81] flex items-center gap-1 transition"
           >
@@ -246,22 +250,22 @@ export default function HomePage({ language }: HomePageProps) {
             {tours.filter(tour => !tour.isHidden).map((tour) => {
               // จัดการเรื่องชื่อจังหวัด (ถ้ามี relation มาด้วย ให้ใช้ชื่อไทย/อังกฤษ ตามภาษา)
               const provinceName = tour.province?.name_th && language === 'th' ? tour.province.name_th :
-                                   tour.province?.name && language === 'en' ? tour.province.name :
-                                   tour.provinceId || 'จุดหมายยอดฮิต';
+                tour.province?.name && language === 'en' ? tour.province.name :
+                  tour.provinceId || 'จุดหมายยอดฮิต';
 
               const tourName = language === 'th' && tour.name_th ? tour.name_th : tour.name;
 
               return (
-                <div 
-                  key={tour.id} 
+                <div
+                  key={tour.id}
                   className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
                 >
                   {/* ภาพทัวร์ และ Badge ยอดจอง */}
                   <div className="relative h-56 overflow-hidden bg-gray-100">
                     {tour.image ? (
-                      <img 
-                        src={tour.image} 
-                        alt={tourName} 
+                      <img
+                        src={tour.image}
+                        alt={tourName}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
@@ -269,7 +273,7 @@ export default function HomePage({ language }: HomePageProps) {
                         {language === 'th' ? 'ไม่มีรูปภาพ' : 'No Image'}
                       </div>
                     )}
-                    
+
                     {/* Badge ยอดคนจอง */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
@@ -282,18 +286,18 @@ export default function HomePage({ language }: HomePageProps) {
                     <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2" title={tourName}>
                       {tourName}
                     </h3>
-                    
+
                     <p className="text-gray-500 text-sm mb-4 flex items-center gap-1.5 font-medium">
                       <MapPin className="w-4 h-4 text-[#00A699]" />
                       {provinceName}
                     </p>
-                    
+
                     <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col justify-end">
                       <p className="text-gray-500 text-xs mb-1">{language === 'th' ? 'ราคาเริ่มต้น' : 'Starting from'}</p>
                       <p className="text-[#FF6B4A] font-bold text-2xl mb-4">
                         ฿{tour.price.toLocaleString()}
                       </p>
-                      
+
                       <button
                         onClick={() => onNavigate("tour", tour.id as any)}
                         className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2.5 rounded-xl font-medium transition-colors flex justify-center items-center gap-2"
@@ -321,7 +325,7 @@ export default function HomePage({ language }: HomePageProps) {
               {language === 'th' ? 'เลือกจังหวัดที่คุณสนใจเพื่อค้นหาทัวร์และประสบการณ์สุดพิเศษ' : 'Select a province to discover its unique tours and experiences'}
             </p>
           </div>
-          <button 
+          <button
             onClick={() => onNavigate("provinces")}
             className="flex items-center self-start md:self-auto gap-2 text-[#00A699] font-bold hover:text-[#008c81] transition px-4 py-2 hover:bg-[#00A699]/5 rounded-xl border border-[#00A699]/10"
           >
@@ -361,7 +365,7 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-white/90 text-xs md:text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                        {province.tourCount} {h.toursAvailable}
+                        {allTours.filter(t => String(t.provinceId || t.province?.id || t.province) === String(province.id)).length} {h.toursAvailable}
                       </span>
                       <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="w-4 h-4" />
@@ -414,8 +418,8 @@ export default function HomePage({ language }: HomePageProps) {
       {/* CTA Section */}
       <div className="relative py-16 md:py-24 overflow-hidden px-4">
         <div className="absolute inset-0 z-0">
-           <img src="https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?q=80&w=2670&auto=format&fit=crop" alt="CTA" className="w-full h-full object-cover"/>
-           <div className="absolute inset-0 bg-[#00A699]/90 mix-blend-multiply" />
+          <img src="https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?q=80&w=2670&auto=format&fit=crop" alt="CTA" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-[#00A699]/90 mix-blend-multiply" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto text-center text-white">
@@ -435,10 +439,10 @@ export default function HomePage({ language }: HomePageProps) {
       {/* Footer */}
       <footer className="relative bg-[#0f172a] text-white pt-20 pb-10 overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00A699]/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-        
+
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-16">
-            
+
             <div className="lg:col-span-4 space-y-8">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-xl shadow-[#00A699]/20 flex items-center justify-center p-2 transform hover:rotate-6 transition-transform">
@@ -450,10 +454,10 @@ export default function HomePage({ language }: HomePageProps) {
                   <p className="text-[10px] uppercase tracking-[0.2em] text-[#00A699] font-bold">Premium Travel Experience</p>
                 </div>
               </div>
-              
+
               <p className="text-gray-400 leading-relaxed text-sm max-w-sm">
-                {language === 'th' 
-                  ? 'ยกระดับการเดินทางของคุณด้วยบริการทัวร์ระดับพรีเมียม คัดสรรสถานที่ที่ดีที่สุดเพื่อสร้างความทรงจำที่ไม่รู้ลืม' 
+                {language === 'th'
+                  ? 'ยกระดับการเดินทางของคุณด้วยบริการทัวร์ระดับพรีเมียม คัดสรรสถานที่ที่ดีที่สุดเพื่อสร้างความทรงจำที่ไม่รู้ลืม'
                   : 'Elevate your journey with premium tour services, handpicking the best locations to create unforgettable memories.'}
               </p>
 
@@ -501,9 +505,9 @@ export default function HomePage({ language }: HomePageProps) {
                 {language === 'th' ? 'สมัครสมาชิกเพื่อรับโปรโมชั่นลับเฉพาะคุณ' : 'Join our club for members-only deals and travel tips.'}
               </p>
               <form className="relative" onSubmit={(e) => e.preventDefault()}>
-                <input 
-                  type="email" 
-                  placeholder="your@email.com" 
+                <input
+                  type="email"
+                  placeholder="your@email.com"
                   className="w-full bg-[#1e293b] border border-white/10 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A699] transition-all"
                 />
                 <button type="submit" className="absolute right-2 top-2 bottom-2 bg-[#00A699] hover:bg-[#008c81] px-6 rounded-xl font-bold text-sm shadow-lg shadow-[#00A699]/20 transition-all active:scale-95">
