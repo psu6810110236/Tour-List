@@ -29,7 +29,7 @@ export default function ChatWidget() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const newSocket = io('http://localhost:3000', {
       query: { role: 'user', userId: user?.id },
@@ -136,6 +136,16 @@ export default function ChatWidget() {
     );
   }
 
+
+  // ฟังก์ชันปรับความสูงอัตโนมัติ
+  const adjustHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'; // รีเซ็ตก่อนคำนวณ
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // ปรับตามเนื้อหาจริง
+    }
+  };
+
+
   return (
     <div className="fixed bottom-6 right-6 w-[360px] h-[550px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden border border-gray-100 z-50 font-sans animate-in slide-in-from-bottom-5 duration-300">
 
@@ -172,7 +182,7 @@ export default function ChatWidget() {
                 {msg.isImage ? (
                   <img src={msg.text} alt="sent image" className="rounded-lg max-w-full" />
                 ) : (
-                  msg.text
+                  <p className="break-all">{msg.text}</p> // 🟢 ใส่ p tag พร้อม break-all
                 )}
                 <div className={`text-[9px] mt-1 text-right opacity-70 ${isUser ? 'text-white' : 'text-gray-400'}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -213,27 +223,45 @@ export default function ChatWidget() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-gray-400 hover:text-[#00A699] transition"
+              className="p-2 text-gray-400 hover:text-[#00A699] transition flex-shrink-0" // 🟢 เพิ่ม flex-shrink-0
             >
               <ImageIcon size={22} />
             </button>
 
-            <div className="flex-1 bg-gray-100 rounded-full px-4 py-2">
-              <input
-                type="text"
+            {/* ปรับแต่ง Container สีเทาให้ใส่ตัวนับได้ */}
+            <div className="flex-1 bg-gray-100 rounded-[20px] px-4 py-2 flex items-center">
+              <textarea
+                ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                maxLength={500}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  adjustHeight();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                    // รีเซ็ตความสูงกลับไปเริ่มต้น
+                    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+                  }
+                }}
+                rows={1}
                 placeholder={previewImage ? "พิมพ์ข้อความแนบไปกับรูป..." : "สอบถามข้อมูลเพิ่มเติม..."}
-                className="bg-transparent w-full text-xs focus:outline-none text-gray-700 placeholder-gray-400"
+                // 🟢 เปลี่ยนเป็น overflow-y-auto และเพิ่ม max-h เพื่อให้เลื่อนได้เมื่อถึงจุดที่กำหนด
+                className="bg-transparent flex-1 text-xs focus:outline-none text-gray-700 placeholder-gray-400 resize-none min-h-[24px] max-h-[120px] overflow-y-auto py-1 scrollbar-hide"
               />
+
+              <span className={`text-[9px] font-mono ml-2 shrink-0 self-end mb-1 ${input.length >= 500 ? 'text-red-500' : 'text-gray-400'}`}>
+                {input.length}/500
+              </span>
             </div>
 
             <button
               type="submit"
-              disabled={!input.trim() && !previewImage} // 🟢 เช็คให้ปุ่มไม่เบลอเมื่อมีรูปพรีวิว
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                input.trim() || previewImage ? 'bg-[#00A699] text-white shadow-lg' : 'bg-gray-200 text-gray-400'
-              }`}
+              disabled={!input.trim() && !previewImage}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${input.trim() || previewImage ? 'bg-[#00A699] text-white shadow-lg' : 'bg-gray-200 text-gray-400'
+                }`}
             >
               <Send size={18} className={input.trim() || previewImage ? 'translate-x-0.5' : ''} />
             </button>

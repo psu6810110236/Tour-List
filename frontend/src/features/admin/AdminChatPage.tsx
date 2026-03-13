@@ -29,7 +29,15 @@ export default function AdminChatPage() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const textareaRef = useRef<HTMLTextAreaElement>(null); // 🟢 เพิ่มตัวนี้
+
+  const adjustHeight = () => { // 🟢 และเพิ่มฟังก์ชันนี้
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 150);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  };
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const fetchContacts = useCallback(() => {
@@ -38,6 +46,8 @@ export default function AdminChatPage() {
       .then(data => setContacts(data))
       .catch(err => console.error("Error fetching contacts:", err));
   }, []);
+
+  // 1. เพิ่ม Ref สำหรับช่องพิมพ์
 
   useEffect(() => {
     if (!user) return;
@@ -50,13 +60,13 @@ export default function AdminChatPage() {
 
     newSocket.on('receiveMessage', (msg: any) => {
       setSelectedUser(currentSelected => {
-        const isCurrentChat = currentSelected && 
+        const isCurrentChat = currentSelected &&
           (msg.senderId === currentSelected.id || msg.receiverId === currentSelected.id);
 
         if (isCurrentChat) {
           setMessages(prev => {
-             if (prev.some(m => m.id === msg.id)) return prev;
-             return [...prev, msg];
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [...prev, msg];
           });
         } else {
           if (msg.senderId !== user.id) {
@@ -112,6 +122,7 @@ export default function AdminChatPage() {
         receiverId: selectedUser.id
       });
       setInput(''); // เคลียร์ข้อความ
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
     }
   };
 
@@ -137,12 +148,12 @@ export default function AdminChatPage() {
     <div className="flex h-screen bg-[#F4F7F6] font-sans text-slate-800">
       {/* Sidebar - รายชื่อลูกค้า */}
       <div className="w-[320px] bg-white border-r border-slate-200/60 flex flex-col shadow-[2px_0_15px_rgba(0,0,0,0.02)] z-10 relative">
-        
+
         {/* Header ของ Sidebar */}
         <div className="p-6 bg-[#00A699]">
           <div className="flex items-center gap-4 mb-2">
-            <button 
-              onClick={() => navigate('/admin/dashboard')} 
+            <button
+              onClick={() => navigate('/admin/dashboard')}
               className="p-2 text-white/90 bg-black/10 hover:bg-black/20 rounded-full transition-colors"
               title="กลับไปหน้าหลัก"
             >
@@ -163,16 +174,14 @@ export default function AdminChatPage() {
               <div
                 key={contact.id}
                 onClick={() => setSelectedUser(contact)}
-                className={`p-3 rounded-2xl cursor-pointer flex items-center gap-3.5 transition-all duration-200 group ${
-                  isSelected 
-                    ? 'bg-white shadow-[0_4px_20px_rgba(0,166,153,0.12)] ring-1 ring-[#00A699]/20' 
-                    : 'hover:bg-slate-50 border border-transparent'
-                }`}
+                className={`p-3 rounded-2xl cursor-pointer flex items-center gap-3.5 transition-all duration-200 group ${isSelected
+                  ? 'bg-white shadow-[0_4px_20px_rgba(0,166,153,0.12)] ring-1 ring-[#00A699]/20'
+                  : 'hover:bg-slate-50 border border-transparent'
+                  }`}
               >
                 <div className="relative">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-colors ${
-                    isSelected ? 'bg-[#00A699] text-white shadow-md' : 'bg-teal-50 text-[#00A699] group-hover:bg-teal-100'
-                  }`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-colors ${isSelected ? 'bg-[#00A699] text-white shadow-md' : 'bg-teal-50 text-[#00A699] group-hover:bg-teal-100'
+                    }`}>
                     {contact.fullName?.charAt(0).toUpperCase()}
                   </div>
                   {/* Status Dot */}
@@ -223,23 +232,22 @@ export default function AdminChatPage() {
               {messages.map((msg, idx) => {
                 const isAdmin = msg.senderId !== selectedUser.id;
                 const isImage = msg.content.startsWith('data:image');
-                
+
                 return (
                   <div key={msg.id || idx} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
                     <div className="flex flex-col max-w-[65%]">
-                      <div className={`px-5 py-3.5 shadow-sm ${
-                        isAdmin 
-                          ? 'bg-[#00A699] text-white rounded-[20px] rounded-br-sm shadow-teal-500/10' 
-                          : 'bg-white text-slate-700 border border-slate-100 rounded-[20px] rounded-bl-sm shadow-slate-200/50'
-                      }`}>
+                      <div className={`px-5 py-3.5 shadow-sm ${isAdmin
+                        ? 'bg-[#00A699] text-white rounded-[20px] rounded-br-sm shadow-teal-500/10'
+                        : 'bg-white text-slate-700 border border-slate-100 rounded-[20px] rounded-bl-sm shadow-slate-200/50'
+                        }`}>
                         {isImage ? (
-                          <img 
-                            src={msg.content} 
-                            alt="sent" 
-                            className="rounded-xl max-w-full max-h-72 object-cover border border-white/10" 
+                          <img
+                            src={msg.content}
+                            alt="sent"
+                            className="rounded-xl max-w-full max-h-72 object-cover border border-white/10"
                           />
                         ) : (
-                          <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+                          <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-all">{msg.content}</p>
                         )}
                       </div>
                       <span className={`text-[11px] font-medium mt-1.5 text-slate-400 ${isAdmin ? 'text-right mr-1' : 'text-left ml-1'}`}>
@@ -253,15 +261,15 @@ export default function AdminChatPage() {
 
             {/* ช่องพิมพ์ข้อความ (แบบ Pill Shape) พร้อม Preview รูป */}
             <div className="bg-white border-t border-slate-100 z-10 flex flex-col">
-              
+
               {/* 🟢 ส่วนแสดงรูปพรีวิวก่อนส่ง */}
               {previewImage && (
                 <div className="px-8 pt-4 pb-1">
                   <div className="relative inline-block">
-                    <img 
-                      src={previewImage} 
-                      alt="Preview" 
-                      className="h-24 rounded-xl shadow-sm border border-slate-200 object-cover" 
+                    <img
+                      src={previewImage}
+                      alt="Preview"
+                      className="h-24 rounded-xl shadow-sm border border-slate-200 object-cover"
                     />
                     <button
                       type="button"
@@ -277,43 +285,41 @@ export default function AdminChatPage() {
 
               <div className="p-6 pt-4">
                 <form onSubmit={handleSend} className="max-w-4xl mx-auto">
-                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full p-1.5 focus-within:bg-white focus-within:ring-4 focus-within:ring-[#00A699]/10 focus-within:border-[#00A699]/40 transition-all duration-300">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                    
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-2.5 ml-1 text-slate-400 hover:text-[#00A699] hover:bg-teal-50 rounded-full transition-colors flex-shrink-0"
-                      title="แนบรูปภาพ"
-                    >
+                  <div className="flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-[24px] p-2 focus-within:bg-white focus-within:ring-4 focus-within:ring-[#00A699]/10 focus-within:border-[#00A699]/40 transition-all duration-300">
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2.5 ml-1 text-slate-400 hover:text-[#00A699] hover:bg-teal-50 rounded-full mb-1 shrink-0">
                       <Paperclip size={20} />
                     </button>
 
-                    <div className="w-[1px] h-6 bg-slate-200 mx-1"></div>
-
-                    <input
-                      type="text"
+                    {/* 🟢 นี่คือส่วนที่เปลี่ยนจาก input เป็น textarea */}
+                    <textarea
+                      ref={textareaRef}
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      // 🟢 ปรับข้อความ placeholder เมื่อมีการแนบรูป
+                      rows={1}
+                      maxLength={500}
+                      onChange={(e) => {
+                        setInput(e.target.value);
+                        adjustHeight();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend(e);
+                        }
+                      }}
                       placeholder={previewImage ? "พิมพ์ข้อความแนบไปกับรูปภาพ..." : "พิมพ์ข้อความตอบกลับ..."}
-                      className="flex-1 bg-transparent text-slate-700 px-3 py-2 outline-none placeholder-slate-400 text-[15px]"
+                      className="flex-1 bg-transparent text-slate-700 px-3 py-2 outline-none resize-none overflow-y-auto max-h-[150px] text-[15px] scrollbar-hide"
                     />
-                    
+
+                    <div className="text-[10px] text-slate-400 mb-3 px-1 font-mono shrink-0">
+                      {input.length}/500
+                    </div>
+
                     <button
                       type="submit"
-                      disabled={!input.trim() && !previewImage} // 🟢 ส่งได้เมื่อมีรูปหรือมีข้อความ
-                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mr-0.5 transition-all ${
-                        input.trim() || previewImage 
-                          ? 'bg-[#00A699] text-white hover:bg-[#008c82] hover:shadow-md' 
-                          : 'bg-slate-200 text-slate-400 disabled:shadow-none'
-                      }`}
+                      disabled={!input.trim() && !previewImage}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-1 transition-all ${input.trim() || previewImage ? 'bg-[#00A699] text-white shadow-md' : 'bg-slate-200 text-slate-400'}`}
                     >
                       <Send size={18} className={input.trim() || previewImage ? "ml-0.5" : ""} />
                     </button>
@@ -328,7 +334,7 @@ export default function AdminChatPage() {
             <div className="relative mb-6">
               <div className="absolute inset-0 bg-[#00A699] blur-2xl opacity-10 rounded-full"></div>
               <div className="w-24 h-24 bg-white shadow-lg shadow-slate-200/50 border border-slate-100 rounded-full flex items-center justify-center relative z-10">
-                 <MessageSquare size={44} className="text-[#00A699]" strokeWidth={1.5} />
+                <MessageSquare size={44} className="text-[#00A699]" strokeWidth={1.5} />
               </div>
             </div>
             <h3 className="text-xl font-bold text-slate-700 mb-2">เลือกลูกค้าเพื่อเริ่มแชท</h3>
