@@ -24,7 +24,9 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const { user, logout } = useAuth() as any;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  // 1. แก้ไขตรงนี้ให้ดึงรูปจาก localStorage มาใช้
+  const [profileImage, setProfileImage] = useState<string | null>(localStorage.getItem("userProfileImage"));
+  
   const [bookings, setBookings] = useState<any[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
@@ -89,11 +91,17 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     : "U";
 
   // ── Profile image upload ────────────────────────────────────
+  // 2. แก้ไขฟังก์ชันอัปโหลดให้บันทึกลง localStorage และส่ง Event
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || file.size > 5 * 1024 * 1024) return;
     const reader = new FileReader();
-    reader.onloadend = () => setProfileImage(reader.result as string);
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setProfileImage(result);
+      localStorage.setItem("userProfileImage", result); // เซฟลงเบราว์เซอร์
+      window.dispatchEvent(new Event("profileImageUpdated")); // ส่งสัญญาณบอก Navbar ให้เปลี่ยนตาม
+    };
     reader.readAsDataURL(file);
   };
 
