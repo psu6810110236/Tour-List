@@ -22,7 +22,8 @@ import { BookingPage } from './components/ui/booking-page';
 import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
 import { MyBookingsPage } from './pages/MyBookingsPage';
-import { UserProfilePage } from './pages/UserProfilePage'; // ✅ ตัวจริง
+import { UserProfilePage } from './pages/UserProfilePage';
+import { PaymentMethodsPage } from './pages/PaymentMethodsPage'; // ✅ 1. เพิ่ม Import หน้าวิธีการชำระเงิน
 import CartDrawer from './components/ui/CartDrawer';
 
 // Service & Types
@@ -142,6 +143,7 @@ function AppContent() {
       case 'provinces': navigate('/provinces'); break;
       case 'bookings': navigate('/my-bookings'); break;
       case 'dashboard': navigate('/profile'); break;
+      case 'payment-methods': navigate('/payment-methods'); break; // ✅ 2. เพิ่ม case สำหรับไปหน้าวิธีการชำระเงิน
       case 'admin/dashboard': navigate('/admin/dashboard'); break;
       case 'admin/chat': navigate('/admin/chat'); break;
       default: navigate(`/${pageId}`);
@@ -177,9 +179,10 @@ function AppContent() {
             <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
-
-            {/* ✅ ใช้ UserProfilePage จริง */}
             <Route path="/profile" element={<UserProfilePage language={language} onNavigate={handleNavigate} />} />
+            
+            {/* ✅ 3. เพิ่ม Route สำหรับหน้าวิธีการชำระเงิน */}
+            <Route path="/payment-methods" element={<PaymentMethodsPage language={language} onNavigate={handleNavigate} />} />
 
             <Route
               path="/payment"

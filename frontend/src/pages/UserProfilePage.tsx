@@ -4,7 +4,7 @@ import {
   User, Mail, Phone, Lock, Calendar, Settings, CreditCard,
   Bell, HelpCircle, ChevronRight, Check, X, Eye, EyeOff,
   Camera, LogOut, MapPin, Clock, Users, BadgeCheck, Hourglass,
-  Globe, Shield, Trash2
+  Shield, Trash2
 } from "lucide-react";
 import { useAuth } from "../features/auth/context/AuthContext";
 import { bookingService, userService } from "../services/api";
@@ -190,10 +190,11 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     } catch { return d; }
   };
 
+  // ✅ เปลี่ยน Action ของปุ่มวิธีการชำระเงิน ให้เปลี่ยนหน้าได้
   const quickMenuItems = [
     { icon: Calendar,    label_th: "ดูประวัติการจองทั้งหมด", label_en: "View All Bookings",     action: () => onNavigate("bookings"),  color: "text-[#00A699]", bg: "bg-teal-50" },
     { icon: Settings,    label_th: "ตั้งค่าบัญชี",             label_en: "Account Settings",        action: () => setShowSettingsModal(true), color: "text-blue-600",  bg: "bg-blue-50" },
-    { icon: CreditCard,  label_th: "วิธีการชำระเงิน",         label_en: "Payment Methods",        action: () => {},                      color: "text-purple-600", bg: "bg-purple-50" },
+    { icon: CreditCard,  label_th: "วิธีการชำระเงิน",         label_en: "Payment Methods",        action: () => onNavigate("payment-methods"), color: "text-purple-600", bg: "bg-purple-50" },
     { icon: Bell,        label_th: "การแจ้งเตือน",             label_en: "Notifications",          action: () => {},                      color: "text-orange-600", bg: "bg-orange-50" },
     { icon: HelpCircle,  label_th: "ช่วยเหลือและสนับสนุน",    label_en: "Help & Support",         action: () => {},                      color: "text-gray-600",   bg: "bg-gray-100" },
   ];
@@ -550,13 +551,13 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </h4>
                 <div className="bg-red-50 p-5 rounded-2xl border border-red-100 flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-red-900 text-sm">{language === "th" ? "ลบบัญชีผู้ใช้" : "Delete Account"}</p>
+                    <p className="font-bold text-red-900 text-sm">{language === "th" ? "ลบบบัญชีผู้ใช้" : "Delete Account"}</p>
                     <p className="text-xs text-red-600/80 mt-1 max-w-[250px]">
                       {language === "th" ? "การกระทำนี้ไม่สามารถย้อนกลับได้ ข้อมูลของคุณจะถูกลบถาวร" : "Once you delete your account, there is no going back. Please be certain."}
                     </p>
                   </div>
                   <button className="bg-white text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm shrink-0">
-                    {language === "th" ? "ลบบัญชี" : "Delete"}
+                    {language === "th" ? "ลบบบัญชี" : "Delete"}
                   </button>
                 </div>
               </div>
