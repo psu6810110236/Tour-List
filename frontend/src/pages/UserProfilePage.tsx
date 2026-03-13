@@ -3,7 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import {
   User, Mail, Phone, Lock, Calendar, Settings, CreditCard,
   Bell, HelpCircle, ChevronRight, Check, X, Eye, EyeOff,
-  Camera, LogOut, MapPin, Clock, Users, BadgeCheck, Hourglass
+  Camera, LogOut, MapPin, Clock, Users, BadgeCheck, Hourglass,
+  Globe, Shield, Trash2 // ✅ เพิ่มไอคอนใหม่
 } from "lucide-react";
 import { useAuth } from "../features/auth/context/AuthContext";
 import { bookingService, userService } from "../services/api";
@@ -24,13 +25,14 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const { user, logout } = useAuth() as any;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. แก้ไขตรงนี้ให้ดึงรูปจาก localStorage มาใช้
   const [profileImage, setProfileImage] = useState<string | null>(localStorage.getItem("userProfileImage"));
   
   const [bookings, setBookings] = useState<any[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  // ✅ State สำหรับ Modal ตั้งค่าบัญชี
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
 
@@ -81,17 +83,13 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
   ).slice(0, 3);
 
-  const memberYear = user?.createdAt
-    ? new Date(user.createdAt).getFullYear()
-    : new Date().getFullYear();
+  const memberYear = user?.createdAt ? new Date(user.createdAt).getFullYear() : new Date().getFullYear();
 
-  // ── Avatar ──────────────────────────────────────────────────
   const avatar = user?.fullName
     ? user.fullName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "U";
 
   // ── Profile image upload ────────────────────────────────────
-  // 2. แก้ไขฟังก์ชันอัปโหลดให้บันทึกลง localStorage และส่ง Event
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || file.size > 5 * 1024 * 1024) return;
@@ -99,8 +97,8 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     reader.onloadend = () => {
       const result = reader.result as string;
       setProfileImage(result);
-      localStorage.setItem("userProfileImage", result); // เซฟลงเบราว์เซอร์
-      window.dispatchEvent(new Event("profileImageUpdated")); // ส่งสัญญาณบอก Navbar ให้เปลี่ยนตาม
+      localStorage.setItem("userProfileImage", result);
+      window.dispatchEvent(new Event("profileImageUpdated"));
     };
     reader.readAsDataURL(file);
   };
@@ -114,12 +112,16 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         phone: editForm.phone,
       });
       setProfileSuccess(true);
-      setIsEditingProfile(false);
-      setTimeout(() => setProfileSuccess(false), 3000);
+      setTimeout(() => {
+        setProfileSuccess(false);
+        setShowSettingsModal(false); // ปิดหน้าต่างตั้งค่าเมื่อเซฟเสร็จ
+      }, 1500);
     } catch {
       setProfileSuccess(true);
-      setIsEditingProfile(false);
-      setTimeout(() => setProfileSuccess(false), 3000);
+      setTimeout(() => {
+        setProfileSuccess(false);
+        setShowSettingsModal(false);
+      }, 1500);
     } finally {
       setIsSavingProfile(false);
     }
@@ -153,7 +155,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     }
   };
 
-  // ── Format date ─────────────────────────────────────────────
   const formatDate = (d: string) => {
     if (!d) return "-";
     try {
@@ -166,7 +167,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   // ── Quick menu ──────────────────────────────────────────────
   const quickMenuItems = [
     { icon: Calendar,    label_th: "ดูประวัติการจองทั้งหมด", label_en: "View All Bookings",     action: () => onNavigate("bookings"),  color: "text-[#00A699]", bg: "bg-teal-50" },
-    { icon: Settings,    label_th: "ตั้งค่าบัญชี",             label_en: "Account Settings",        action: () => setIsEditingProfile(true), color: "text-blue-600",  bg: "bg-blue-50" },
+    { icon: Settings,    label_th: "ตั้งค่าบัญชี",             label_en: "Account Settings",        action: () => setShowSettingsModal(true), color: "text-blue-600",  bg: "bg-blue-50" },
     { icon: CreditCard,  label_th: "วิธีการชำระเงิน",         label_en: "Payment Methods",        action: () => {},                      color: "text-purple-600", bg: "bg-purple-50" },
     { icon: Bell,        label_th: "การแจ้งเตือน",             label_en: "Notifications",          action: () => {},                      color: "text-orange-600", bg: "bg-orange-50" },
     { icon: HelpCircle,  label_th: "ช่วยเหลือและสนับสนุน",    label_en: "Help & Support",         action: () => {},                      color: "text-gray-600",   bg: "bg-gray-100" },
@@ -177,14 +178,12 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
       {/* ── Hero Banner ─────────────────────────────────────── */}
       <div className="bg-[#00A699] relative overflow-hidden pb-20 pt-10">
-        {/* ลวดลายพื้นหลังให้ดูมีมิติเบาๆ */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
 
-            {/* Avatar + Info */}
             <div className="flex items-center gap-5">
               <div className="relative group shrink-0">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white flex items-center justify-center">
@@ -194,8 +193,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                     <span className="text-3xl sm:text-4xl font-black text-[#00A699]">{avatar}</span>
                   )}
                 </div>
-                
-                {/* ปุ่มเปลี่ยนรูปภาพ */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors border border-gray-100 cursor-pointer group-hover:scale-105"
@@ -221,7 +218,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               </div>
             </div>
 
-            {/* Logout */}
             <button
               onClick={() => { if (logout) logout(); onNavigate("home"); }}
               className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm backdrop-blur-md self-start sm:self-center"
@@ -247,12 +243,10 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 <span className="text-sm text-gray-500 font-medium leading-tight">
                   {language === "th" ? label_th : label_en}
                 </span>
-                {/* เอาสีสันไปไว้ที่กล่องไอคอนแทน */}
                 <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center shrink-0`}>
                   <Icon className={`w-5 h-5 ${color}`} />
                 </div>
               </div>
-              {/* เปลี่ยนตัวเลขให้เป็นสีเทาเข้ม ดูเรียบหรู */}
               <div className="text-3xl font-bold text-gray-800 tracking-tight">
                 {value}
               </div>
@@ -267,14 +261,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
           {/* Left: Bookings + Profile */}
           <div className="lg:col-span-2 space-y-6">
-
-            {/* Success toast */}
-            {profileSuccess && (
-              <div className="flex items-center gap-3 bg-[#00A699] text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-teal-200/50 text-sm font-semibold">
-                <Check className="w-5 h-5 shrink-0" />
-                {language === "th" ? "บันทึกข้อมูลสำเร็จ!" : "Saved successfully!"}
-              </div>
-            )}
 
             {/* Recent Bookings */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -352,78 +338,40 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               )}
             </div>
 
-            {/* Profile Info */}
+            {/* Profile Info Display Only */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
                 <h2 className="text-lg font-extrabold text-gray-900">
                   {language === "th" ? "ข้อมูลส่วนตัว" : "Personal Information"}
                 </h2>
-                {!isEditingProfile ? (
-                  <button
-                    onClick={() => setIsEditingProfile(true)}
-                    className="text-sm font-bold text-[#00A699] bg-teal-50 px-4 py-1.5 rounded-xl hover:bg-teal-100 transition-colors"
-                  >
-                    ✏️ {language === "th" ? "แก้ไข" : "Edit"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { setIsEditingProfile(false); setEditForm({ fullName: user?.fullName || "", email: user?.email || "", phone: (user as any)?.phone || "" }); }}
-                    className="text-sm font-bold text-gray-500 bg-gray-100 px-4 py-1.5 rounded-xl hover:bg-gray-200 transition-colors"
-                  >
-                    {language === "th" ? "ยกเลิก" : "Cancel"}
-                  </button>
-                )}
+                <button
+                  onClick={() => setShowSettingsModal(true)}
+                  className="text-sm font-bold text-[#00A699] bg-teal-50 px-4 py-1.5 rounded-xl hover:bg-teal-100 transition-colors flex items-center gap-1.5"
+                >
+                  ✏️ {language === "th" ? "แก้ไข" : "Edit"}
+                </button>
               </div>
 
               <div className="px-6 py-5 space-y-4">
                 {[
-                  { key: "fullName", label_th: "ชื่อ-นามสกุล", label_en: "Full Name",    icon: User,  type: "text",  value: user?.fullName },
-                  { key: "email",    label_th: "อีเมล",         label_en: "Email",        icon: Mail,  type: "email", value: user?.email, readonly: true },
-                  { key: "phone",    label_th: "เบอร์โทรศัพท์", label_en: "Phone Number", icon: Phone, type: "tel",   value: (user as any)?.phone },
-                ].map(({ key, label_th, label_en, icon: Icon, type, value, readonly }) => (
+                  { key: "fullName", label_th: "ชื่อ-นามสกุล", label_en: "Full Name",    icon: User,  value: user?.fullName },
+                  { key: "email",    label_th: "อีเมล",         label_en: "Email",        icon: Mail,  value: user?.email },
+                  { key: "phone",    label_th: "เบอร์โทรศัพท์", label_en: "Phone Number", icon: Phone, value: (user as any)?.phone },
+                ].map(({ key, label_th, label_en, icon: Icon, value }) => (
                   <div key={key}>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
                       {language === "th" ? label_th : label_en}
                     </label>
-                    {isEditingProfile && !readonly ? (
-                      <input
-                        type={type}
-                        value={editForm[key as keyof typeof editForm]}
-                        onChange={e => setEditForm(p => ({ ...p, [key]: e.target.value }))}
-                        className="w-full px-4 py-3.5 bg-gray-50 border-2 border-gray-100 rounded-xl outline-none focus:bg-white focus:border-[#00A699] transition-all font-semibold text-gray-900"
-                      />
-                    ) : (
-                      <div className="flex items-center gap-3 px-4 py-3.5 bg-gray-50 rounded-xl border-2 border-gray-100">
-                        <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
-                          <Icon className="w-4 h-4 text-[#00A699]" />
-                        </div>
-                        <span className="font-semibold text-gray-900 text-sm">
-                          {value || (key === "phone" ? (language === "th" ? "ยังไม่ได้ระบุ" : "Not specified") : "-")}
-                        </span>
-                        {readonly && (
-                          <span className="ml-auto text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-lg">
-                            {language === "th" ? "ไม่สามารถแก้ไขได้" : "Cannot edit"}
-                          </span>
-                        )}
+                    <div className="flex items-center gap-3 px-4 py-3.5 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
+                        <Icon className="w-4 h-4 text-[#00A699]" />
                       </div>
-                    )}
+                      <span className="font-semibold text-gray-900 text-sm">
+                        {value || (key === "phone" ? (language === "th" ? "ยังไม่ได้ระบุ" : "Not specified") : "-")}
+                      </span>
+                    </div>
                   </div>
                 ))}
-
-                {isEditingProfile && (
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={isSavingProfile}
-                    className="w-full bg-gradient-to-r from-[#00A699] to-teal-400 text-white font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
-                  >
-                    {isSavingProfile ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Check className="w-5 h-5" />
-                    )}
-                    {language === "th" ? "บันทึกการเปลี่ยนแปลง" : "Save Changes"}
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -457,24 +405,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               </div>
             </div>
 
-            {/* Change Password */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-base font-extrabold text-gray-900 mb-1">
-                {language === "th" ? "ความปลอดภัย" : "Security"}
-              </h3>
-              <p className="text-xs text-gray-400 mb-4">
-                {language === "th" ? "จัดการรหัสผ่านของบัญชีคุณ" : "Manage your account password"}
-              </p>
-              <button
-                onClick={() => setShowPasswordModal(true)}
-                className="w-full flex items-center gap-3 bg-gray-900 hover:bg-black text-white font-bold px-5 py-3.5 rounded-xl transition-all active:scale-95 text-sm"
-              >
-                <Lock className="w-4 h-4" />
-                {language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}
-                <ChevronRight className="w-4 h-4 ml-auto" />
-              </button>
-            </div>
-
             {/* Need Help */}
             <div className="bg-gradient-to-br from-[#00A699] to-teal-400 rounded-2xl p-6 text-white">
               <h3 className="font-extrabold text-base mb-1">
@@ -493,10 +423,152 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       </div>
 
+      {/* ── Settings Modal (หน้าตั้งค่าบัญชี) ────────────────────────────── */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100 bg-white z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-[#00A699]" />
+                </div>
+                <h3 className="text-xl font-extrabold text-gray-900">
+                  {language === "th" ? "ตั้งค่าบัญชี" : "Account Settings"}
+                </h3>
+              </div>
+              <button onClick={() => {
+                  setShowSettingsModal(false);
+                  setEditForm({ fullName: user?.fullName || "", email: user?.email || "", phone: (user as any)?.phone || "" });
+                }}
+                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-7 py-6 overflow-y-auto space-y-8 bg-gray-50/50">
+              
+              {/* Section 1: Edit Profile */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  {language === "th" ? "ข้อมูลส่วนตัว" : "Personal Information"}
+                </h4>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                      {language === "th" ? "ชื่อ-นามสกุล" : "Full Name"}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.fullName}
+                      onChange={e => setEditForm(p => ({ ...p, fullName: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl outline-none focus:bg-white focus:border-[#00A699] transition-all font-semibold text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                      {language === "th" ? "อีเมล (ไม่สามารถแก้ไขได้)" : "Email (Read-only)"}
+                    </label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      readOnly
+                      className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-100 rounded-xl outline-none font-semibold text-gray-500 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">
+                      {language === "th" ? "เบอร์โทรศัพท์" : "Phone Number"}
+                    </label>
+                    <input
+                      type="tel"
+                      value={editForm.phone}
+                      onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-xl outline-none focus:bg-white focus:border-[#00A699] transition-all font-semibold text-gray-900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Security & Password */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-gray-400" />
+                  {language === "th" ? "ความปลอดภัย" : "Security"}
+                </h4>
+                <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-sm">
+                  <button
+                    onClick={() => setShowPasswordModal(true)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-white border border-transparent group-hover:border-gray-200 transition-all">
+                        <Lock className="w-5 h-5 text-gray-600" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-gray-900 text-sm">{language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}</p>
+                        <p className="text-xs text-gray-500">{language === "th" ? "อัปเดตรหัสผ่านเพื่อความปลอดภัย" : "Update your password to stay secure"}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Section 3: Danger Zone */}
+              <div>
+                <h4 className="text-sm font-bold text-red-600 mb-4 flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                  {language === "th" ? "พื้นที่อันตราย" : "Danger Zone"}
+                </h4>
+                <div className="bg-red-50 p-5 rounded-2xl border border-red-100 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-red-900 text-sm">{language === "th" ? "ลบบัญชีผู้ใช้" : "Delete Account"}</p>
+                    <p className="text-xs text-red-600/80 mt-1 max-w-[250px]">
+                      {language === "th" ? "การกระทำนี้ไม่สามารถย้อนกลับได้ ข้อมูลของคุณจะถูกลบถาวร" : "Once you delete your account, there is no going back. Please be certain."}
+                    </p>
+                  </div>
+                  <button className="bg-white text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm">
+                    {language === "th" ? "ลบบัญชี" : "Delete"}
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer / Actions */}
+            <div className="p-5 border-t border-gray-100 bg-white mt-auto">
+               {profileSuccess && (
+                <div className="mb-4 flex items-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-xl text-sm font-semibold border border-green-200">
+                  <Check className="w-4 h-4" />
+                  {language === "th" ? "บันทึกข้อมูลสำเร็จ!" : "Saved successfully!"}
+                </div>
+              )}
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="w-full bg-[#00A699] hover:bg-[#008c81] text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isSavingProfile ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Check className="w-5 h-5" />
+                )}
+                {language === "th" ? "บันทึกการเปลี่ยนแปลง" : "Save Changes"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* ── Change Password Modal ────────────────────────────── */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
             <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
               <h3 className="text-xl font-extrabold text-gray-900">
                 {language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}
