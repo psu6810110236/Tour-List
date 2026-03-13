@@ -58,3 +58,16 @@ export const addToCartAPI = async (payload: AddToCartPayload) => {
   const response = await api.post('/cart/add', payload);
   return response.data;
 };
+// เพิ่มต่อท้ายไฟล์เดิม
+export const userService = {
+  // GET โปรไฟล์ตัวเอง (ถ้า backend มี endpoint นี้)
+  getMe: () => api.get('/auth/me'),
+
+  // PATCH /users/me — แก้ชื่อ + เบอร์
+  updateProfile: (data: { fullName?: string; phone?: string }) =>
+    api.patch('/users/me', data),
+
+  // PATCH /users/me/password — เปลี่ยนรหัสผ่าน
+  changePassword: (data: { oldPassword: string; newPassword: string }) =>
+    api.patch('/users/me/password', data),
+};

@@ -8,7 +8,7 @@ import ScrollToTop from './components/ScrollToTop';
 
 import { CartProvider, useCart } from './context/CartContext';
 
-import { Construction, UserCircle } from 'lucide-react';
+import { Construction } from 'lucide-react';
 
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
@@ -23,6 +23,7 @@ import { BookingPage } from './components/ui/booking-page';
 import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
 import { MyBookingsPage } from './pages/MyBookingsPage';
+import { UserProfilePage } from './pages/UserProfilePage'; // ✅ import ใหม่
 
 import CartDrawer from './components/ui/CartDrawer';
 
@@ -40,14 +41,6 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
       <p className="text-gray-500 mb-10 leading-relaxed text-sm">{desc}</p>
     </div>
   </div>
-);
-
-const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
-  <WorkInProgressTemplate
-    title={language === 'th' ? "โปรไฟล์ผู้ใช้" : "User Profile"}
-    desc={language === 'th' ? "ระบบจัดการข้อมูลส่วนตัวกำลังเปิดให้ใช้งานเร็วๆ นี้" : "Personal information management will be available soon."}
-    icon={UserCircle}
-  />
 );
 
 const PrivateRoute = () => {
@@ -180,10 +173,12 @@ function AppContent() {
 
           {/* Private (User) */}
           <Route element={<PrivateRoute />}>
-            <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} onAddToCart={addToCart} />} />
-            <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} onAddToCart={addToCart} />} />
+            <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
+            <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
-            <Route path="/profile" element={<UserProfile language={language} />} />
+
+            {/* ✅ เปลี่ยนจาก UserProfile placeholder เป็น UserProfilePage จริง */}
+            <Route path="/profile" element={<UserProfilePage language={language} onNavigate={handleNavigate} />} />
 
             <Route
               path="/payment"
@@ -228,7 +223,6 @@ function AppContent() {
       </main>
 
       {showChatWidget && <ChatWidget />}
-
       <CartDrawer />
     </div>
   );

@@ -1,57 +1,59 @@
-// backend/src/users/users.service.ts
-import { Injectable, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, ConflictException, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { Role } from '../entities/role.entity'; // ✅ อย่าลืม import Role
+import { Role } from '../entities/role.entity';
 import { CreateUserDto } from '../auth/dto/create-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-
-    @InjectRepository(Role) // ✅ Inject Role Repository เพื่อหา Role 'user'
+    @InjectRepository(Role)
     private roleRepository: Repository<Role>,
-  ) { }
+  ) {}
 
   async findOneByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({
-      where: { email },
-      relations: ['role'],
-    });
+    return this.usersRepository.findOne({ where: { email }, relations: ['role'] });
   }
 
-  // ✅ ฟังก์ชันสร้าง User ใหม่แบบถูกต้อง
+  async findOneById(id: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { id }, relations: ['role'] });
+  }
+
   async create(createUserDto: CreateUserDto, passwordHash: string): Promise<User> {
     const { email, fullName } = createUserDto;
-
-    // 1. หา Role 'user' จาก Database
     const userRole = await this.roleRepository.findOne({ where: { name: 'USER' } });
-
-    // (Optional) ถ้าไม่มี Role user ให้ใช้ ID มั่วๆ หรือสร้างใหม่ (กัน Error)
-    // แต่ควรมี Role 'user' ใน DB อยู่แล้วนะ
-    if (!userRole) {
-      throw new InternalServerErrorException('Default role "USER" not found.');
-    }
-
-    // 2. สร้าง User Object
+    if (!userRole) throw new InternalServerErrorException('Default role "USER" not found.');
     const newUser = this.usersRepository.create({
-      email,
-      fullName,
-      passwordHash,
-      role: userRole, // ใส่ Role ที่หามาได้
-      provider: 'local',
+      email, fullName, passwordHash, role: userRole, provider: 'local',
     });
-
     try {
       return await this.usersRepository.save(newUser);
     } catch (error) {
-      if (error.code === '23505') { // รหัส Error ของ Postgres เวลามีข้อมูลซ้ำ
-        throw new ConflictException('Email already exists');
-      }
+      if (error.code === '23505') throw new ConflictException('Email already exists');
       throw new InternalServerErrorException();
     }
+  }
+
+  // ✅ อัปเดตโปรไฟล์ (ชื่อ + เบอร์)
+  async updateProfile(id: string, data: { fullName?: string; phone?: string }): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('ไม่พบผู้ใช้');
+    if (data.fullName) user.fullName = data.fullName;
+    if (data.phone !== undefined) (user as any).phone = data.phone;
+    return this.usersRepository.save(user);
+  }
+
+  // ✅ เปลี่ยนรหัสผ่าน
+  async changePassword(id: string, oldPassword: string, newPassword: string): Promise<void> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('ไม่พบผู้ใช้');
+    const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isMatch) throw new BadRequestException('รหัสผ่านเดิมไม่ถูกต้อง');
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.save(user);
   }
 }
