@@ -221,7 +221,7 @@ export default function AdminChatPage() {
             {/* กล่องข้อความ */}
             <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-5" ref={scrollRef}>
               {messages.map((msg, idx) => {
-                const isAdmin = msg.senderId === user?.id;
+                const isAdmin = msg.senderId !== selectedUser.id;
                 const isImage = msg.content.startsWith('data:image');
                 
                 return (
