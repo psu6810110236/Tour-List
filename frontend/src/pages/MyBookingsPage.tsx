@@ -18,7 +18,7 @@ import {
 import type { Language } from "../data/translations";
 import { translations } from "../data/translations";
 import { bookingService } from "../services/api";
-
+import { useScrollLock } from "../hooks/useScrollLock";
 interface BookingsPageProps {
   onNavigate: (page: string) => void;
   language: Language;
@@ -55,7 +55,7 @@ export function MyBookingsPage({
     startExploring: "Explore",
     status: "Status"
   };
-
+  useScrollLock(!!selectedBooking || popup.isOpen);
   useEffect(() => {
     const fetchMyBookings = async () => {
       try {

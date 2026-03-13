@@ -36,7 +36,7 @@ import {
 } from "../components/ui/avatar";
 
 import { Badge } from "../components/ui/badge";
-
+import { useScrollLock } from "../hooks/useScrollLock";
 interface NavigationProps {
     currentPage: string;
     onNavigate: (page: string) => void;
@@ -73,7 +73,7 @@ export function Navigation({
         logout(); // ล้างข้อมูล Token และ User ใน localStorage
         navigate("/login"); // ส่งผู้ใช้กลับไปหน้า Login
     };
-
+    useScrollLock(isMobileMenuOpen);
     const LOGO_ICON = "https://github.com/psu6810110318/-/blob/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png?raw=true";
     const LOGO_TEXT = "https://github.com/psu6810110318/-/blob/main/image-removebg-preview.png?raw=true";
 

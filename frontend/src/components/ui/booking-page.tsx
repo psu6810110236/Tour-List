@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock } from "lucide-react";
-import type { Tour } from "../../types/index"; 
+import type { Tour } from "../../types/index";
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 
 import { tourService, bookingService } from "../../services/api";
-
+import { useScrollLock } from "../../hooks/useScrollLock";
 interface BookingPageProps {
   tour?: Tour | null;
   onNavigate: (page: string, data?: any) => void;
@@ -19,13 +19,13 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
   const params = useParams();
   const [localTour, setLocalTour] = useState<Tour | null>(tour || null);
   const [loading, setLoading] = useState(false);
-  
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1)); 
-  const [selectedDate, setSelectedDate] = useState(""); 
-  
+
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1));
+  const [selectedDate, setSelectedDate] = useState("");
+
   // State สำหรับ Popup ยืนยันรอบเดินทาง
   const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string; }>({ isOpen: false, startDate: "", endDate: "" });
-  
+
   const [travelers, setTravelers] = useState(1);
   const [contactInfo, setContactInfo] = useState({ fullName: "", email: "", phone: "", specialRequests: "" });
   const [availableSeats, setAvailableSeats] = useState<number>(10);
@@ -33,7 +33,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
 
   // คำนวณราคารวม
   const totalPrice = (localTour?.price || 0) * travelers;
-
+  useScrollLock(datePopup.isOpen);
   useEffect(() => {
     if (!localTour && params?.id) {
       setLoading(true);
@@ -67,7 +67,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
         const bookedCount = bookings
           .filter((b: any) => (String(b.tourId) === String(localTour.id)) && (b.travelDate === selectedDate || b.date === selectedDate) && !['REJECTED', 'CANCELLED', 'FAILED'].includes(b.status?.toUpperCase()))
           .reduce((sum: number, b: any) => sum + Number(b.travelers || 0), 0);
-        
+
         const remain = max - bookedCount;
         setAvailableSeats(remain > 0 ? remain : 0);
         setIsFull(remain <= 0);
@@ -117,7 +117,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
     const start = new Date(dateStr);
     const end = new Date(start);
     end.setDate(end.getDate() + tripDays - 1);
-    
+
     setDatePopup({
       isOpen: true,
       startDate: dateStr,
@@ -160,10 +160,10 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <span>{t.back}</span>
           </button>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-             <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
-             <span className="bg-[#00A699]/10 text-[#00A699] px-4 py-1.5 rounded-full text-sm font-bold w-fit border border-[#00A699]/20">
-               {localTour.tripType === 'multiple-days' ? (language === 'th' ? `ทริป ${localTour.tripDays || 1} วัน` : `${localTour.tripDays || 1} Days Trip`) : (language === 'th' ? 'ทริปไปเช้าเย็นกลับ' : 'One Day Trip')}
-             </span>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
+            <span className="bg-[#00A699]/10 text-[#00A699] px-4 py-1.5 rounded-full text-sm font-bold w-fit border border-[#00A699]/20">
+              {localTour.tripType === 'multiple-days' ? (language === 'th' ? `ทริป ${localTour.tripDays || 1} วัน` : `${localTour.tripDays || 1} Days Trip`) : (language === 'th' ? 'ทริปไปเช้าเย็นกลับ' : 'One Day Trip')}
+            </span>
           </div>
           <p className="text-gray-500 mt-1">{language === "th" && localTour.name_th ? localTour.name_th : localTour.name}</p>
         </div>
@@ -172,7 +172,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            
+
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow hover:shadow-md">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
@@ -181,11 +181,11 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                   </div>
                   <h2 className="text-xl font-bold text-gray-900">{t.selectDate}</h2>
                 </div>
-                
+
                 <div className="flex items-center gap-3 bg-gray-50 p-1 rounded-xl border border-gray-100 w-fit">
-                  <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronLeft className="w-5 h-5"/></button>
+                  <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronLeft className="w-5 h-5" /></button>
                   <div className="font-bold text-gray-900 min-w-[100px] text-center">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</div>
-                  <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronRight className="w-5 h-5"/></button>
+                  <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition shadow-sm text-gray-600"><ChevronRight className="w-5 h-5" /></button>
                 </div>
               </div>
 
@@ -195,11 +195,11 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                 </div>
                 <div className="grid grid-cols-7 gap-y-2 text-center">
                   {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
-                  
+
                   {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
                     const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                    
+
                     const isStart = selectedDate === dateStr;
                     const inRange = isDateInSelectedRange(dateStr);
                     const hasRule = localTour.availableDates && localTour.availableDates.length > 0;
@@ -212,8 +212,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
 
                     return (
                       <div key={i} className={`relative flex items-center justify-center h-full w-full ${inRange && !isStart ? 'bg-teal-50' : ''}`}>
-                        <button 
-                          onClick={() => { if(isAvailableStart) handleDateClick(dateStr); }}
+                        <button
+                          onClick={() => { if (isAvailableStart) handleDateClick(dateStr); }}
                           disabled={!isAvailableStart}
                           className={`aspect-square w-full flex flex-col items-center justify-center text-sm font-semibold transition-all duration-200 relative ${bgClass}`}
                         >
@@ -254,23 +254,23 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                 <div>
                   <div className="font-bold text-gray-900 text-lg">{language === "th" ? "ผู้เดินทาง" : "Travelers"}</div>
                   <div className="text-sm font-medium mt-1 text-[#00A699]">
-                    {selectedDate 
+                    {selectedDate
                       ? (language === "th" ? `(เหลือที่ว่าง ${availableSeats} ที่)` : `(${availableSeats} seats left)`)
                       : (language === "th" ? "กรุณาเลือกวันที่ก่อน" : "Select a date first")
                     }
                   </div>
                 </div>
                 <div className="flex items-center gap-5">
-                  <button 
-                    onClick={() => setTravelers(Math.max(1, travelers - 1))} 
+                  <button
+                    onClick={() => setTravelers(Math.max(1, travelers - 1))}
                     disabled={travelers <= 1 || isFull}
                     className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
                   >
                     <Minus className="w-5 h-5" />
                   </button>
                   <span className="text-xl font-bold w-6 text-center text-gray-900">{travelers}</span>
-                  <button 
-                    onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} 
+                  <button
+                    onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))}
                     disabled={travelers >= availableSeats || isFull}
                     className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200"
                   >
@@ -297,7 +297,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
           <div className="lg:col-span-1 hidden lg:block">
             <div className="sticky top-32 bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 mb-4">{language === "th" ? "สรุปการจอง" : "Booking Summary"}</h2>
-                <div className="rounded-2xl overflow-hidden mb-5 relative">
+              <div className="rounded-2xl overflow-hidden mb-5 relative">
                 <img src={localTour.image} alt={localTour.name} className="w-full h-40 object-cover hover:scale-105 transition-transform duration-500" />
                 {isFull && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="text-white font-bold text-xl tracking-widest bg-red-600 px-4 py-1 rounded-lg">FULL</span></div>}
               </div>
@@ -306,8 +306,8 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
                   <span className="text-gray-500">{language === "th" ? "วันที่เดินทาง:" : "Date:"}</span>
                   <div className="font-bold text-gray-900 text-right">
                     {selectedDate ? (
-                      localTour.tripDays && localTour.tripDays > 1 
-                        ? <>{selectedDate} <br/><span className="text-xs text-[#00A699]">ถึง {new Date(new Date(selectedDate).getTime() + (localTour.tripDays - 1) * 86400000).toISOString().split('T')[0]}</span></>
+                      localTour.tripDays && localTour.tripDays > 1
+                        ? <>{selectedDate} <br /><span className="text-xs text-[#00A699]">ถึง {new Date(new Date(selectedDate).getTime() + (localTour.tripDays - 1) * 86400000).toISOString().split('T')[0]}</span></>
                         : selectedDate
                     ) : "-"}
                   </div>
@@ -333,25 +333,23 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             <span className="text-xl md:text-2xl font-black text-[#00A699]">฿{selectedDate ? totalPrice.toLocaleString() : 0}</span>
           </div>
           <div className="flex gap-3">
-            <button 
-              onClick={handleAddToCart} 
+            <button
+              onClick={handleAddToCart}
               disabled={isFull}
-              className={`px-5 py-3 md:py-4 rounded-2xl border-2 font-bold flex items-center gap-2 transition-colors ${
-                isFull ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'border-teal-50 bg-teal-50 text-[#00A699] hover:bg-teal-100'
-              }`}
+              className={`px-5 py-3 md:py-4 rounded-2xl border-2 font-bold flex items-center gap-2 transition-colors ${isFull ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'border-teal-50 bg-teal-50 text-[#00A699] hover:bg-teal-100'
+                }`}
             >
               <ShoppingBag className="w-5 h-5" />
               <span className="hidden sm:inline">Add to Cart</span>
             </button>
 
-            <button 
-              onClick={handleContinue} 
+            <button
+              onClick={handleContinue}
               disabled={isFull}
-              className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center gap-2 transition-all ${
-                isFull 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none' 
+              className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center gap-2 transition-all ${isFull
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
                   : 'bg-[#FF6B4A] hover:bg-[#F25A38] text-white shadow-lg shadow-orange-200/50 active:scale-95'
-              }`}
+                }`}
             >
               <span>{isFull ? (language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked') : t.proceedToPayment}</span>
               {!isFull && <ArrowRight className="w-5 h-5" />}
@@ -369,7 +367,7 @@ export function BookingPage({ tour, onNavigate, language, onAddToCart }: Booking
             </div>
             <h3 className="text-2xl font-extrabold text-gray-900 mb-2 tracking-tight">{language === 'th' ? 'ยืนยันรอบเดินทาง' : 'Confirm Travel Dates'}</h3>
             <p className="text-gray-500 mb-6 text-sm">ทัวร์: {language === 'th' && localTour.name_th ? localTour.name_th : localTour.name}</p>
-            
+
             <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100 text-left">
               <div className="flex justify-between mb-3 border-b border-gray-200 pb-3">
                 <span className="text-gray-500 font-medium text-sm">{language === 'th' ? 'วันไป:' : 'Start:'}</span>

@@ -5,7 +5,7 @@ import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 import { useAuth } from "../../features/auth/context/AuthContext";
 import { bookingService } from "../../services/api";
-
+import { useScrollLock } from "../../hooks/useScrollLock";
 interface PaymentPageProps {
   bookingData: any;
   onNavigate: (page: string, data?: any) => void;
@@ -44,7 +44,7 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
     if (onConfirm) onConfirm();
   };
   // -----------------------
-
+  useScrollLock(modalConfig.isOpen);
   useEffect(() => {
     if (!localBooking) {
       try {

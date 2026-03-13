@@ -9,7 +9,7 @@ import { tourService } from '../../../services/api';
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
-
+import { useScrollLock } from '../../../hooks/useScrollLock';
 // ✅ 1. สร้าง Interface สำหรับแผนการเดินทาง (Itinerary)
 interface ItineraryDay {
   day: number;
@@ -17,7 +17,7 @@ interface ItineraryDay {
   title_th?: string;
   activities?: string[];
   activities_th?: string[];
-  [key: string]: unknown; 
+  [key: string]: unknown;
 }
 
 // ✅ 2. สร้าง Interface สำหรับข้อมูลทัวร์ (Tour) ให้ตรงกับ Database
@@ -25,7 +25,7 @@ interface TourDetail {
   id: string | number;
   name?: string;
   name_th?: string;
-  province?: string | { name?: string; name_th?: string; [key: string]: unknown };
+  province?: string | { name?: string; name_th?: string;[key: string]: unknown };
   duration?: string;
   rating?: number;
   reviewCount?: number;
@@ -51,34 +51,34 @@ interface TourDetailPageProps {
 export default function TourDetailPage({ language = 'th' }: TourDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   // ✅ 3. เปลี่ยนจาก useState<any> เป็น useState<TourDetail | null>
   const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<number | null>(1);
   const [showVideo, setShowVideo] = useState(false);
-  
+
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
-
-// 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
+  useScrollLock(showVideo);
+  // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
   useEffect(() => {
     if (!id) return;
 
     const fetchTourDetail = async () => {
       setLoading(true);
       setError(null);
-      
+
       try { // <--- ต้องมีคำว่า try นำหน้าเสมอเมื่อใช้คู่กับ catch
-        
+
         const response = await tourService.getById(id);
-        
+
         // 🟢 ใช้ 'as unknown as TourDetail' เพื่อบอก TypeScript ว่า
         // เรารู้ว่า Type มันคืออะไร ให้แปลงเป็น TourDetail ซะ จะได้ไม่ Error
         setTour(response.data as unknown as TourDetail);
 
-      } catch (err: unknown) { 
+      } catch (err: unknown) {
         console.error("Error fetching tour details:", err);
         if (err instanceof Error) {
           setError(err.message);
@@ -115,7 +115,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
   // 🟢 จัดการข้อมูลให้ปลอดภัย
   const provinceName = typeof tour.province === 'object' && tour.province !== null
-    ? getLang(tour.province, 'name', language) 
+    ? getLang(tour.province, 'name', language)
     : getLang(tour, 'province', language);
 
   const currentHighlights = language === 'th' && tour.highlights_th && tour.highlights_th.length > 0 ? tour.highlights_th : (tour.highlights || []);
@@ -128,24 +128,24 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
       {/* --- Hero Section (Video Banner) --- */}
       <div className="relative h-[500px] overflow-hidden tour-card-tutorial">
         <div className="relative w-full h-full bg-gray-900">
-          <img 
-            src={tour.image || 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800'} 
-            alt={getLang(tour, 'name', language)} 
-            className="w-full h-full object-cover opacity-80 bg-gray-800" 
+          <img
+            src={tour.image || 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800'}
+            alt={getLang(tour, 'name', language)}
+            className="w-full h-full object-cover opacity-80 bg-gray-800"
           />
-           <button onClick={() => setShowVideo(true)} className="absolute inset-0 flex items-center justify-center group">
-             <div className="w-24 h-24 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl">
-                 <Play className="w-10 h-10 text-[#FF6B4A] ml-1" fill="currentColor" />
-               </div>
-             </div>
-           </button>
+          <button onClick={() => setShowVideo(true)} className="absolute inset-0 flex items-center justify-center group">
+            <div className="w-24 h-24 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl">
+                <Play className="w-10 h-10 text-[#FF6B4A] ml-1" fill="currentColor" />
+              </div>
+            </div>
+          </button>
         </div>
-        
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-        
-        <button 
-          onClick={() => navigate(-1)} 
+
+        <button
+          onClick={() => navigate(-1)}
           className="absolute top-8 left-8 md:top-8 md:left-8 flex items-center gap-2 text-white hover:text-white/80 transition bg-black/30 backdrop-blur-sm px-4 py-2 rounded-xl pointer-events-auto z-10"
         >
           <ArrowLeft className="w-5 h-5" /> <span>{tBook.back}</span>
@@ -174,10 +174,10 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
-          
+
           {/* --- Left Column: Content (2/3) --- */}
           <div className="lg:col-span-2 space-y-8">
-            
+
             {/* Description */}
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 mb-4 border-l-4 border-[#00A699] pl-4">{t.description}</h2>
@@ -208,8 +208,8 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                 <div className="space-y-4">
                   {currentItinerary.map((day: ItineraryDay) => (
                     <div key={day.day} className="border border-gray-200 rounded-2xl overflow-hidden transition-all hover:shadow-md">
-                      <button 
-                        onClick={() => setExpandedDay(expandedDay === day.day ? null : day.day)} 
+                      <button
+                        onClick={() => setExpandedDay(expandedDay === day.day ? null : day.day)}
                         className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition bg-white"
                       >
                         <div className="flex items-center gap-4">
@@ -242,7 +242,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                 </div>
               </div>
             )}
-            
+
             {/* Included/Not Included */}
             {(currentIncluded.length > 0 || currentNotIncluded.length > 0) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -259,7 +259,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 h-full">
                   <h3 className="text-xl font-bold text-red-700 mb-4 flex items-center gap-2 bg-red-50 w-fit px-4 py-2 rounded-lg">
                     <X className="w-5 h-5" /> {t.notIncluded}
@@ -281,88 +281,88 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
           {/* --- Right Column: Sidebar (1/3) --- */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              
+
               {/* Booking Card */}
               <div className="book-button-tutorial bg-white rounded-3xl p-6 shadow-xl border border-gray-100 ring-4 ring-[#00A699]/5 overflow-hidden relative">
                 <div className="text-center mb-6 relative z-10">
                   <p className="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">{t.startingFrom}</p>
                   <div className="flex items-center justify-center gap-1">
-                     <span className="text-4xl font-black text-[#00A699]">฿{Number(tour.price || 0).toLocaleString()}</span>
-                     <span className="text-gray-400 text-sm font-normal self-end mb-2">{t.perPerson}</span>
+                    <span className="text-4xl font-black text-[#00A699]">฿{Number(tour.price || 0).toLocaleString()}</span>
+                    <span className="text-gray-400 text-sm font-normal self-end mb-2">{t.perPerson}</span>
                   </div>
                 </div>
 
                 <div className="space-y-3 mb-6 relative z-10">
-                   {/* Duration */}
-                   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
-                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
-                         <Calendar className="w-5 h-5" />
-                      </div>
-                      <div>
-                         <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Duration</p>
-                         <p className="font-bold text-gray-900 text-sm">{getLang(tour, 'duration', language) || '-'}</p>
-                      </div>
-                   </div>
+                  {/* Duration */}
+                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Duration</p>
+                      <p className="font-bold text-gray-900 text-sm">{getLang(tour, 'duration', language) || '-'}</p>
+                    </div>
+                  </div>
 
-                   {/* Group Size */}
-                   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
-                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
-                         <Users className="w-5 h-5" />
-                      </div>
-                      <div>
-                         <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Group Size</p>
-                         <p className="font-bold text-gray-900 text-sm">{tour.maxGroupSize || "Small Groups"}</p>
-                      </div>
-                   </div>
+                  {/* Group Size */}
+                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Group Size</p>
+                      <p className="font-bold text-gray-900 text-sm">{tour.maxGroupSize || "Small Groups"}</p>
+                    </div>
+                  </div>
 
-                   {/* Location */}
-                   <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
-                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
-                         <MapPin className="w-5 h-5" />
-                      </div>
-                      <div>
-                         <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Location</p>
-                         <p className="font-bold text-gray-900 text-sm">{provinceName}</p>
-                      </div>
-                   </div>
+                  {/* Location */}
+                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Location</p>
+                      <p className="font-bold text-gray-900 text-sm">{provinceName}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <button 
-                  onClick={() => navigate(`/booking/${tour.id}`)} 
+                <button
+                  onClick={() => navigate(`/booking/${tour.id}`)}
                   className="w-full bg-[#FF6B4A] hover:bg-[#ff5232] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 transition-all active:scale-[0.98] relative z-10"
                 >
                   {t.bookNow}
                 </button>
-                
+
                 <p className="text-center text-xs text-gray-400 mt-4">
-                    Free cancellation up to 24 hours before start
+                  Free cancellation up to 24 hours before start
                 </p>
               </div>
 
               {/* Need Help Card */}
               <div className="bg-[#E6F6F5] rounded-3xl p-6 border border-[#00A699]/20">
-                 <div className="flex items-start gap-4">
-                    <div className="text-2xl">💬</div>
-                    <div>
-                       <h4 className="font-bold text-[#007A71] mb-1">Need Help?</h4>
-                       <p className="text-xs text-[#007A71]/80 leading-relaxed">
-                          Contact our support team for custom itineraries or group discounts.
-                       </p>
-                    </div>
-                 </div>
+                <div className="flex items-start gap-4">
+                  <div className="text-2xl">💬</div>
+                  <div>
+                    <h4 className="font-bold text-[#007A71] mb-1">Need Help?</h4>
+                    <p className="text-xs text-[#007A71]/80 leading-relaxed">
+                      Contact our support team for custom itineraries or group discounts.
+                    </p>
+                  </div>
+                </div>
               </div>
 
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Video Modal */}
       {showVideo && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-           <div className="relative w-full max-w-5xl">
-            <button 
-              onClick={() => setShowVideo(false)} 
+          <div className="relative w-full max-w-5xl">
+            <button
+              onClick={() => setShowVideo(false)}
               className="absolute -top-12 right-0 text-white hover:text-gray-300 transition"
             >
               <X className="w-8 h-8" />
