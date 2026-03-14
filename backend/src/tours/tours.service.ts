@@ -48,6 +48,15 @@ export class ToursService {
     if (filters.startDate) {
       query.andWhere('tour.startDate >= :startDate', { startDate: filters.startDate });
     }
+    if (filters.tripDays) {
+      if (filters.tripDays === '5+') {
+        // ถ้าเลือก "มากกว่า 4 วัน" ให้หาทัวร์ที่มีจำนวนวันมากกว่า 4
+        query.andWhere('tour.tripDays > 4');
+      } else {
+        // ถ้าเลือก 1, 2, 3, 4 ให้หาแบบตรงตัวเป๊ะๆ
+        query.andWhere('tour.tripDays = :tripDays', { tripDays: Number(filters.tripDays) });
+      }
+    }
 
     // ระบบจัดเรียง (Sorting)
     // ระบบจัดเรียง (Sorting)

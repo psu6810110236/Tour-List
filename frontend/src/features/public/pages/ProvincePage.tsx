@@ -8,7 +8,8 @@ import {
   DollarSign,
   Star,
   TrendingUp,
-  X
+  X,
+  Clock
 } from "lucide-react";
 
 // ✅ ใช้ Path ที่ถูกต้องสำหรับการเข้าถึงข้อมูลในโปรเจกต์ของคุณ
@@ -42,12 +43,12 @@ interface ProvincePageProps {
 
 export function ProvincePage({ province, onNavigate, language }: ProvincePageProps) {
   // ✅ 2. เปลี่ยนจาก any[] เป็น Tour[]
-  const [tours, setTours] = useState<Tour[]>([]); 
+  const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
-    minPrice: "", maxPrice: "", sortBy: "popular",
+    minPrice: "", maxPrice: "", sortBy: "popular", tripDays: ""
   });
 
   const t = translations[language].provinceDetail;
@@ -67,8 +68,9 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
           minPrice: filters.minPrice || undefined,
           maxPrice: filters.maxPrice || undefined,
           sort: filters.sortBy || undefined,
+          tripDays: filters.tripDays || undefined,
         });
-        
+
         if (response && response.data) {
           // 🟢 เติม 'as unknown as Tour[]' เข้าไปตรงนี้เพื่อแก้ Error ขีดแดงครับ
           setTours(response.data as unknown as Tour[]);
@@ -77,7 +79,7 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
         }
       } catch (error) {
         console.error("Failed to fetch tours", error);
-        setTours([]); 
+        setTours([]);
       } finally {
         setLoading(false);
       }
@@ -150,13 +152,57 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
               <Filter className="w-4 h-4" />
               {language === "th" ? "ตัวกรอง:" : "Filters:"}
             </div>
+            <div className="relative">
+              <button
+                onClick={() => toggleFilter('duration')}
+                className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition flex items-center gap-2 border ${filters.tripDays
+                  ? "bg-[#00A699]/10 text-[#00A699] border-[#00A699]"
+                  : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+                  }`}
+              >
+                <Clock className="w-4 h-4" />
+                {filters.tripDays
+                  ? (filters.tripDays === '5+'
+                    ? (language === 'th' ? 'มากกว่า 4 วัน' : 'More than 4 Days')
+                    : `${filters.tripDays} ${language === 'th' ? 'วัน' : 'Days'}`)
+                  : (language === "th" ? "ระยะเวลา" : "Duration")}
+              </button>
 
+              {/* ป๊อปอัปรายการจำนวนวันที่หล่นลงมาตอนกดปุ่ม */}
+              {activeFilter === 'duration' && (
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-40 animate-in fade-in zoom-in-95 duration-200">
+                  {[
+                    { val: "", labelTh: "จำนวนวันทั้งหมด", labelEn: "All Durations" },
+                    { val: "1", labelTh: "1 วัน (ไปเช้าเย็นกลับ)", labelEn: "1 Day" },
+                    { val: "2", labelTh: "2 วัน", labelEn: "2 Days" },
+                    { val: "3", labelTh: "3 วัน", labelEn: "3 Days" },
+                    { val: "4", labelTh: "4 วัน", labelEn: "4 Days" },
+                    { val: "5+", labelTh: "มากกว่า 4 วัน", labelEn: "More than 4 Days" },
+                  ].map(opt => (
+                    <button
+                      key={opt.val}
+                      onClick={() => {
+                        setFilters(prev => ({ ...prev, tripDays: opt.val }));
+                        setActiveFilter(null); // ปิดป๊อปอัปเมื่อเลือกเสร็จ
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#00A699]/5 transition ${
+                        filters.tripDays === opt.val 
+                          ? 'text-[#00A699] font-bold bg-[#00A699]/5' 
+                          : 'text-gray-700'
+                      }`}
+                    >
+                      {language === 'th' ? opt.labelTh : opt.labelEn}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="relative">
               <button
                 onClick={() => toggleFilter('price')}
                 className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition flex items-center gap-2 border ${activeFilter === 'price' || filters.minPrice || filters.maxPrice
-                    ? "bg-[#00A699]/10 text-[#00A699] border-[#00A699]"
-                    : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+                  ? "bg-[#00A699]/10 text-[#00A699] border-[#00A699]"
+                  : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
                   }`}
               >
                 <DollarSign className="w-4 h-4" />
@@ -208,8 +254,10 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
                     </button>
                   </div>
                 </div>
+
               )}
             </div>
+
 
             <button
               onClick={() => setFilters(prev => ({

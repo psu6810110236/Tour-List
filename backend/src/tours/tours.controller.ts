@@ -24,6 +24,7 @@ export class ToursController {
     @Query('maxPrice') maxPrice?: string,
     @Query('startDate') startDate?: string, // 🟢 1. รับค่า startDate จาก Query URL
     @Query('sort') sort?: string,
+    @Query('tripDays') tripDays?: string,
   ) {
     // 🟢 2. ส่งค่า startDate เข้าไปใน Service
     const parsedMin = minPrice ? Number(minPrice) : undefined;
@@ -33,7 +34,8 @@ export class ToursController {
       minPrice: parsedMin, 
       maxPrice: parsedMax, 
       startDate, 
-      sort 
+      sort,
+      tripDays
     });
   }
 

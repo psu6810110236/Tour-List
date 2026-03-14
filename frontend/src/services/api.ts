@@ -21,7 +21,7 @@ api.interceptors.request.use((config) => {
 });
 
 export const tourService = {
-  search: (params: { provinceId?: string; minPrice?: string; maxPrice?: string; startDate?: string; sort?: string }) =>
+  search: (params: { provinceId?: string; minPrice?: string; maxPrice?: string; startDate?: string; sort?: string; tripDays?: string }) =>
     api.get<Tour[]>('/tours/search', { params }),
 
   getProvinces: () => api.get<Province[]>('/tours/provinces'),
