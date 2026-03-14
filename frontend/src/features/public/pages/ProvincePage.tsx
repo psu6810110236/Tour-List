@@ -55,36 +55,29 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
   const tBooking = translations[language].booking;
 
   // 🟢 3. อัปเดตฟังก์ชันดึงข้อมูลให้ส่ง Filter ไปให้ Backend API ประมวลผล
+  // 🟢 ก๊อปปี้ไปวางทับ useEffect ตัวเก่าใน ProvincePage.tsx ได้เลยครับ
+  // src/features/public/pages/ProvincePage.tsx
+
   useEffect(() => {
     const fetchTours = async () => {
       setLoading(true);
       try {
-        // ใช้ URLSearchParams เพื่อจัดกลุ่มตัวกรองส่งไปหา Backend
-        const params = new URLSearchParams();
+        const response = await tourService.search({
+          provinceId: province.id,
+          minPrice: filters.minPrice || undefined,
+          maxPrice: filters.maxPrice || undefined,
+          sort: filters.sortBy || undefined,
+        });
         
-        // ส่ง ID จังหวัด
-        params.append('provinceId', province.id);
-        
-        // ถ้ามีการกรอกราคา ให้แนบไปด้วย
-        if (filters.minPrice) params.append('minPrice', filters.minPrice);
-        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-        
-        // แนบการจัดเรียง (price_asc, price_desc, popular)
-        if (filters.sortBy) params.append('sortBy', filters.sortBy);
-
-        // ยิง API ไปที่ Search Endpoint ของ Backend 
-        const response = await fetch(`http://localhost:3000/api/tours/search?${params.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
+        if (response && response.data) {
+          // 🟢 เติม 'as unknown as Tour[]' เข้าไปตรงนี้เพื่อแก้ Error ขีดแดงครับ
+          setTours(response.data as unknown as Tour[]);
+        } else {
+          setTours([]);
         }
-
-        const fetchedTours: Tour[] = await response.json();
-        
-        // ไม่ต้อง Filter หรือ Sort ฝั่ง Frontend แล้ว (Backend จัดการให้เสร็จ)
-        setTours(fetchedTours);
       } catch (error) {
         console.error("Failed to fetch tours", error);
+        setTours([]); 
       } finally {
         setLoading(false);
       }
