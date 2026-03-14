@@ -3,18 +3,31 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tour } from '../entities/tour.entity';
 import { Province } from '../entities/province.entity';
-
+import { Cron, CronExpression } from '@nestjs/schedule';
 @Injectable()
 export class ToursService {
-  
+
 
   constructor(
     @InjectRepository(Tour)
     private tourRepository: Repository<Tour>,
     @InjectRepository(Province)
     private provinceRepository: Repository<Province>,
-  ) {}
+  ) { }
 
+  // เปลี่ยนมาใช้ CronExpression ของ NestJS เพื่อความชัวร์และอ่านง่าย
+  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
+  async resetMonthlyPopularity() {
+    console.log('--- 📅 กำลังรีเซ็ตยอดจองสะสมประจำเดือน ---');
+
+    // ใช้ queryBuilder ตัวเดิมที่แก้ปัญหา Error ของ TypeORM ได้แล้ว
+    await this.tourRepository.createQueryBuilder()
+      .update(Tour)
+      .set({ historicalBooked: 0 })
+      .execute();
+
+    console.log('--- ✅ รีเซ็ตประจำเดือนเสร็จเรียบร้อยแล้ว ---');
+  }
   async search(filters: any) {
     const query = this.tourRepository.createQueryBuilder('tour')
       .leftJoinAndSelect('tour.province', 'province');
@@ -37,8 +50,10 @@ export class ToursService {
     }
 
     // ระบบจัดเรียง (Sorting)
+    // ระบบจัดเรียง (Sorting)
     if (filters.sort === 'price_asc') query.orderBy('tour.price', 'ASC');
     else if (filters.sort === 'price_desc') query.orderBy('tour.price', 'DESC');
+    else if (filters.sort === 'popular') query.orderBy('tour.bookedSeats', 'DESC'); // 🟢 เพิ่มบรรทัดนี้: เรียงยอดจองมากไปน้อย
     else query.orderBy('tour.rating', 'DESC');
 
     return await query.getMany();
@@ -57,7 +72,7 @@ export class ToursService {
   // 🟢 ฟังก์ชันที่แก้ไขแล้ว
   async findProvinceById(id: string) {
     const province = await this.provinceRepository.findOne({
-      where: { id: id } 
+      where: { id: id }
     });
 
     if (!province) {
@@ -75,10 +90,10 @@ export class ToursService {
   async createTour(tourData: Partial<Tour>) {
     const newTour = this.tourRepository.create(tourData);
     const savedTour = await this.tourRepository.save(newTour); // บันทึก Tour ก่อน
-    
+
     // ถ้าบันทึก Tour สำเร็จ ค่อยมาอัปเดต Province
     if (tourData.provinceId) {
-      const province = await this.provinceRepository.findOne({ where: { id: tourData.provinceId }});
+      const province = await this.provinceRepository.findOne({ where: { id: tourData.provinceId } });
       if (province) {
         province.tourCount = (province.tourCount || 0) + 1;
         await this.provinceRepository.save(province);
