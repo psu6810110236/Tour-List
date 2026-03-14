@@ -289,7 +289,7 @@ export function MyBookingsPage({
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "all" ? "bg-gray-800 text-white shadow-md" : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"}`}
+            className={`px-6 py-2.5 rounded-xl font-medium whitespace-nowrap transition ${activeTab === "all" ? "bg-gray-400 text-white shadow-md" : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"}`}
           >
             {safeLanguage === "th" ? "ทั้งหมด" : "All"} ({bookings.length})
           </button>
