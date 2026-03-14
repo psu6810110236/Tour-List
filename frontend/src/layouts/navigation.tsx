@@ -75,7 +75,7 @@ export function Navigation({
     };
     useScrollLock(isMobileMenuOpen);
     const LOGO_ICON = "https://github.com/psu6810110318/-/blob/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png?raw=true";
-    const LOGO_TEXT = "https://github.com/psu6810110318/-/blob/main/image-removebg-preview.png?raw=true";
+    const LOGO_TEXT = "https://github.com/psu6810110318/-/blob/main/image-removebg-preview%20(3).png?raw=true";
 
     const navItems = [
         { id: "home", label: t.home, icon: <Home className="w-5 h-5" /> },
@@ -88,6 +88,7 @@ export function Navigation({
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
                 <div className="flex items-center justify-between h-20 sm:h-24">
 
+
                     {/* LOGO */}
                     <button onClick={() => onNavigate("home")} className="flex items-center gap-3 sm:gap-5 group hover:opacity-95 transition-all">
                         <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-white border border-gray-100 shadow-md flex items-center justify-center p-1 group-hover:shadow-lg group-hover:border-[#00A699]/30 transition-all duration-300">
@@ -97,7 +98,8 @@ export function Navigation({
                                 <span className="text-[10px] font-bold text-gray-400">ROAM</span>
                             )}
                         </div>
-                        <img src={LOGO_TEXT} alt="RoamHub Tour" className="hidden lg:block h-[175px] w-auto object-contain drop-shadow-sm" />
+                        {/* 🟢 เปลี่ยนจาก h-[175px] เป็น h-12 sm:h-16 เพื่อให้พอดีกับแถบ Navigation */}
+                        <img src={LOGO_TEXT} alt="RoamHub Tour" className="hidden lg:block h-14 sm:h-16 w-auto object-contain drop-shadow-sm" />
                     </button>
 
                     {/* DESKTOP NAV */}
@@ -107,8 +109,8 @@ export function Navigation({
                                 key={item.id}
                                 onClick={() => onNavigate(item.id)}
                                 className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${currentPage === item.id || (item.id === "provinces" && currentPage.startsWith("province"))
-                                        ? "bg-white text-[#00A699] shadow-md ring-1 ring-black/5"
-                                        : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
+                                    ? "bg-white text-[#00A699] shadow-md ring-1 ring-black/5"
+                                    : "text-gray-500 hover:text-gray-900 hover:bg-white/60"
                                     }`}
                             >
                                 {item.icon}
