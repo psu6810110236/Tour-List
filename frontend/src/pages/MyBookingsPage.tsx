@@ -33,7 +33,7 @@ export function MyBookingsPage({
   const [activeTab, setActiveTab] = useState<"all" | "to_pay" | "Pending" | "completed" | "cancelled">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
-
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   // 🟢 State สำหรับ Popup ยกเลิกการจอง
   const [popup, setPopup] = useState<{
     isOpen: boolean;
@@ -54,7 +54,7 @@ export function MyBookingsPage({
     startExploring: "Explore",
     status: "Status"
   };
-  useScrollLock(!!selectedBooking || popup.isOpen);
+  useScrollLock(!!selectedBooking || popup.isOpen || !!previewImage);
   useEffect(() => {
     const fetchMyBookings = async () => {
       try {
@@ -243,6 +243,7 @@ export function MyBookingsPage({
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center font-bold text-[#00A699]">กำลังโหลดข้อมูลการจอง...</div>;
   }
+
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -686,12 +687,23 @@ export function MyBookingsPage({
                     <div className="mt-6 pt-5 border-t border-[#00A699]/20">
                       <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
                         <span>{safeLanguage === "th" ? "หลักฐานการชำระเงิน" : "Payment Slip"}</span>
-                        <button onClick={() => window.open(selectedBooking.paymentSlip, '_blank')} className="text-xs text-[#00A699] hover:underline">
-                          {safeLanguage === "th" ? "ดูรูปเต็ม" : "View Full"}
+                        <button
+                          onClick={() => setPreviewImage(selectedBooking.paymentSlip)}
+                          className="text-xs text-[#00A699] hover:underline"
+                        >
+                          {safeLanguage === "th" ? "ขยายรูปภาพ" : "Enlarge Image"}
                         </button>
                       </div>
-                      <div className="rounded-xl overflow-hidden border border-gray-200 bg-white cursor-pointer hover:border-[#00A699] transition-colors" onClick={() => window.open(selectedBooking.paymentSlip, '_blank')}>
+                      <div
+                        className="rounded-xl overflow-hidden border border-gray-200 bg-white cursor-pointer hover:border-[#00A699] transition-colors group relative"
+                        onClick={() => setPreviewImage(selectedBooking.paymentSlip)}
+                      >
                         <img src={selectedBooking.paymentSlip} alt="Payment Slip" className="w-full h-auto max-h-48 object-contain bg-gray-50" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+                          <span className="bg-white/90 px-3 py-1 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                            {safeLanguage === "th" ? "คลิกเพื่อขยาย" : "Click to enlarge"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -761,6 +773,30 @@ export function MyBookingsPage({
                 {popup.type === 'confirm' ? (safeLanguage === 'th' ? 'ยืนยันยกเลิก' : 'Confirm') : (safeLanguage === 'th' ? 'ตกลง' : 'OK')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 ป๊อปอัปขยายรูปภาพ (Image Preview Modal) */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-10 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors bg-white/10 p-2 rounded-full"
+            onClick={() => setPreviewImage(null)}
+          >
+            <XCircle className="w-8 h-8" />
+          </button>
+
+          <div className="relative max-w-5xl w-full h-full flex items-center justify-center animate-in zoom-in-95 duration-200">
+            <img
+              src={previewImage}
+              alt="Enlarged Preview"
+              className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+              onClick={(e) => e.stopPropagation()} // ป้องกันการกดที่รูปแล้วปิด
+            />
           </div>
         </div>
       )}
