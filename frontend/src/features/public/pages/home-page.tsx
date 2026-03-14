@@ -26,7 +26,7 @@ interface Province {
   image: string;
   description: string;
   description_th: string;
-  
+
 }
 
 // ✅ 2. Interface สำหรับทัวร์ (อัปเดตฟิลด์ให้ครบตามดีไซน์ใหม่)
@@ -249,9 +249,11 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
           <button
             onClick={() => onNavigate("provinces")}
-            className="text-[#00A699] font-semibold hover:text-[#008c81] flex items-center gap-1 transition"
+            className="flex items-center self-start md:self-auto gap-2 text-[#00A699] font-bold hover:text-[#008c81] transition px-4 py-2 hover:bg-[#00A699]/5 rounded-xl border border-[#00A699]/10"
           >
-            {language === 'th' ? 'ดูทัวร์ทั้งหมด' : 'View all tours'} <ArrowRight className="w-4 h-4" />
+            <Map className="w-5 h-5" />
+            <span className="text-sm md:text-base">{language === 'th' ? 'ค้นหาทัวร์ตามจังหวัด' : 'Explore by Province'}</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
