@@ -364,12 +364,18 @@ export default function HomePage({ language }: HomePageProps) {
                 onClick={() => onNavigate("province", province)}
                 className="group bg-white rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
               >
-                <div className="relative h-56 md:h-64 overflow-hidden">
+                <div className="relative h-56 md:h-64 overflow-hidden bg-gray-200">
                   <img
-                    src={province.image}
+                    src={province.image || FALLBACK_IMAGE_URL}
                     alt={province.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = FALLBACK_IMAGE_URL;
+                      target.className = "w-full h-full object-contain p-8 group-hover:scale-110 transition-transform duration-700";
+                    }}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute bottom-6 left-6 right-6">
                     <div className="flex items-center gap-2 text-white mb-2">
