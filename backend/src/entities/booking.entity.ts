@@ -51,4 +51,16 @@ export class Booking {
   @ManyToOne(() => Tour)
   @JoinColumn({ name: 'tourId' })
   tour: Tour;
+
+  @Column({ nullable: true })
+  contactName: string;
+
+  @Column({ nullable: true })
+  phone: string;
+
+  @Column({ nullable: true })
+  email: string;
+
+  @Column({ type: 'text', nullable: true })
+  specialRequests: string;
 }

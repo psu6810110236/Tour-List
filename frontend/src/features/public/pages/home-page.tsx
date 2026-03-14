@@ -26,6 +26,7 @@ interface Province {
   image: string;
   description: string;
   description_th: string;
+  
 }
 
 // ✅ 2. Interface สำหรับทัวร์ (อัปเดตฟิลด์ให้ครบตามดีไซน์ใหม่)
@@ -40,6 +41,7 @@ interface Tour {
   bookedSeats?: number;
   description?: string;
   isHidden?: boolean;
+  historicalBooked: number;
 }
 
 interface HomePageProps {
@@ -74,15 +76,26 @@ export default function HomePage({ language }: HomePageProps) {
     const fetchTours = async () => {
       try {
         const response = await axios.get('http://localhost:3000/api/tours/search');
-        setAllTours(response.data); // 🟢 ให้มันจำทัวร์ทั้งหมดที่มีในระบบไว้เพื่อนับเลข
-        setTours(response.data.slice(0, 3));
+        const toursData = response.data;
+
+        // 🟢 1. เก็บข้อมูลทัวร์ทั้งหมดไว้เพื่อนับจำนวน (Stats & จังหวัด) โดยไม่ถูกตัดทอน
+        setAllTours(toursData);
+
+        // 🟢 2. ทำการ Copy ข้อมูล นำมาเรียงลำดับตาม bookedSeats (มากไปน้อย)
+        const popularTours = [...toursData].sort((a, b) => {
+          const popularityA = a.historicalBooked || 0;
+          const popularityB = b.historicalBooked || 0;
+          return popularityB - popularityA; // เรียงจากมากไปน้อย
+        });
+
+        setTours(popularTours.slice(0, 3));
+
       } catch (error) {
         console.error("Error fetching tours:", error);
       } finally {
         setLoadingTours(false);
       }
     };
-
     fetchProvinces();
     fetchTours();
   }, []);
@@ -279,7 +292,7 @@ export default function HomePage({ language }: HomePageProps) {
                     {/* Badge ยอดคนจอง (คงไว้เหมือนเดิม) */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
-                      {language === 'th' ? `จองแล้ว ${tour.bookedSeats || 0} ที่` : `${tour.bookedSeats || 0} Booked`}
+                      {language === 'th' ? `จองแล้ว ${tour.historicalBooked || 0} ที่` : `${tour.historicalBooked || 0} Booked`}
                     </div>
                   </div>
 

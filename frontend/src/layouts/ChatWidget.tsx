@@ -14,6 +14,7 @@ interface ChatMessage {
 export default function ChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',

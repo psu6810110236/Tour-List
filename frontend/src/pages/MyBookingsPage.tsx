@@ -4,7 +4,6 @@ import {
   MapPin,
   Calendar,
   Users,
-  Filter,
   Search,
   FileText,
   XCircle,
@@ -622,6 +621,47 @@ export function MyBookingsPage({
                       {selectedBooking.travelers} {safeLanguage === "th" ? "ท่าน" : "Pax"}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* ข้อมูลผู้ติดต่อ (ข้อมูลที่กรอกตอนจอง) */}
+              <div className="mb-6">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-[#00A699]" />
+                  {safeLanguage === "th" ? "ข้อมูลผู้ติดต่อ" : "Contact Information"}
+                </h3>
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">{safeLanguage === "th" ? "ชื่อ-นามสกุล" : "Full Name"}</div>
+                      <div className="font-medium text-gray-900">
+                        {/* ดึงชื่อที่กรอก หรือถ้าไม่มีให้ดึงจาก User แทน */}
+                        {selectedBooking.contactName || selectedBooking.user?.fullName || "-"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">{safeLanguage === "th" ? "เบอร์โทรศัพท์" : "Phone Number"}</div>
+                      <div className="font-medium text-gray-900">
+                        {selectedBooking.phone || "-"}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <div className="text-sm text-gray-500 mb-1">{safeLanguage === "th" ? "อีเมล" : "Email"}</div>
+                      <div className="font-medium text-gray-900">
+                        {selectedBooking.email || selectedBooking.user?.email || "-"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* แสดงคำขอพิเศษ (ถ้ามีผู้ใช้กรอกมา) */}
+                  {(selectedBooking.specialRequest || selectedBooking.specialRequests) && (
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className="text-sm text-gray-500 mb-2">{safeLanguage === "th" ? "คำขอพิเศษ" : "Special Requests"}</div>
+                      <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        {selectedBooking.specialRequest || selectedBooking.specialRequests}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

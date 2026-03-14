@@ -114,6 +114,10 @@ export function PaymentPage({ bookingData, onNavigate, language, onClearCart }: 
           paymentSlip: slipImage || undefined,
           tourNameSnapshot: item.tour.name,
           tourNameSnapshot_th: item.tour.name_th,
+          contactName: item.contactInfo?.fullName,
+          phone: item.contactInfo?.phone,
+          email: item.contactInfo?.email,
+          specialRequests: item.contactInfo?.specialRequests,
         };
         const res = await bookingService.createBooking(payload);
         return res.data;
