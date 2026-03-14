@@ -1,8 +1,11 @@
 // src/pages/AllProvincesPage.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, ArrowRight, Search, Compass, Map, Filter, X } from "lucide-react"; // 🟢 เพิ่ม Filter, X เข้ามา
+import {
+  MapPin, ArrowRight, Search, Compass, Map, Filter, X,
+  ChevronLeft, ChevronRight // 🟢 เพิ่มไอคอนลูกศร
+} from "lucide-react"; // 🟢 เพิ่ม Filter, X เข้ามา
 
 interface Province {
   id: string;
@@ -37,7 +40,16 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
   const [selectedRegion, setSelectedRegion] = useState("all");
   const [isFilterExpanded, setIsFilterExpanded] = useState(false); // 🟢 State ควบคุมการกาง/หุบปุ่มกรอง
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = 200; // ระยะการเลื่อนต่อการกด 1 ครั้ง
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
   useEffect(() => {
     const fetchProvinces = async () => {
       setLoading(true);
@@ -128,12 +140,13 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
           />
         </div>
 
-        {/* 🟢 Expandable Region Filter (แกน X) */}
-        <div className="flex flex-row items-center justify-center w-full max-w-4xl mx-auto h-12">
+        {/* 🟢 Expandable Region Filter พร้อมปุ่มลูกศรเลื่อนซ้าย-ขวา */}
+        <div className="flex flex-row items-center justify-center w-full max-w-5xl mx-auto h-12 relative">
+
           {/* ปุ่มหลัก (Main Toggle Button) */}
           <button
             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 z-10 shrink-0 ${isFilterExpanded || selectedRegion !== "all"
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 z-20 shrink-0 ${isFilterExpanded || selectedRegion !== "all"
               ? "bg-[#00A699] text-white shadow-md"
               : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 shadow-sm"
               }`}
@@ -141,10 +154,9 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
             {isFilterExpanded ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
             <span>
               {isFilterExpanded
-                ? (language === "th" ? "ปิดตัวกรอง" : "Close Filter")
+                ? (language === "th" ? "ปิด" : "Close")
                 : (language === "th" ? "ภูมิภาค:" : "Region:")}
             </span>
-            {/* แสดงชื่อภาคที่เลือกไว้ตอนที่ปุ่มหุบอยู่ */}
             {!isFilterExpanded && (
               <span className={`ml-1 ${selectedRegion !== "all" ? "font-bold" : "font-normal"}`}>
                 {currentRegionName}
@@ -152,28 +164,51 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
             )}
           </button>
 
-          {/* แกน X ที่กางออก (Expanded Area) */}
-
+          {/* ส่วนตัวกรองที่กางออก */}
           <div
-            className={`flex items-center overflow-hidden transition-all duration-500 ease-in-out ${isFilterExpanded ? "max-w-[1000px] opacity-100 ml-3" : "max-w-0 opacity-0 ml-0"
+            className={`flex items-center overflow-hidden transition-all duration-500 ease-in-out relative ${isFilterExpanded ? "max-w-[1000px] opacity-100 ml-3" : "max-w-0 opacity-0 ml-0"
               }`}
           >
-            <div className="flex gap-2 overflow-x-auto py-3 pl-1 pr-3 [&::-webkit-scrollbar]:hidden whitespace-nowrap">
+            {/* 🟢 ปุ่มลูกศรซ้าย (แสดงเฉพาะเมื่อกางออก) */}
+            {isFilterExpanded && (
+              <button
+                onClick={() => scroll('left')}
+                className="absolute left-0 z-30 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm border border-gray-100 text-gray-400 hover:text-[#00A699] transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* กล่องรายการภูมิภาค */}
+            <div
+              ref={scrollRef} // 🟢 เชื่อม Ref
+              className="flex gap-2 overflow-x-auto py-3 px-8 [&::-webkit-scrollbar]:hidden whitespace-nowrap scroll-smooth"
+            >
               {REGIONS.map((region) => (
                 <button
                   key={region.id}
-                  onClick={() => {
-                    setSelectedRegion(region.id);
-                  }}
+                  onClick={() => setSelectedRegion(region.id)}
                   className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shrink-0 backdrop-blur-xl hover:-translate-y-0.5 active:scale-95 ${selectedRegion === region.id
-                      ? "bg-blue-500/15 border border-white/70 text-blue-800 shadow-[0_8px_30px_-6px_rgba(37,99,235,0.35)]" /* 💧 กระจกสีน้ำเงิน + เงาเรืองแสงสีฟ้า (Colored Shadow) */
-                      : "bg-white/30 border border-white/50 text-gray-600 shadow-[0_4px_15px_-3px_rgba(0,0,0,0.03)] hover:bg-white/50 hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.06)] hover:border-white/60" /* 💧 กระจกใส + เงาเทานุ่มๆ เบาๆ */
+                    ? "bg-blue-500/15 border border-white/70 text-blue-800 shadow-[0_8px_30px_-6px_rgba(37,99,235,0.35)]"
+                    : "bg-white/30 border border-white/50 text-gray-600 shadow-[0_4px_15px_-3px_rgba(0,0,0,0.03)] hover:bg-white/50"
                     }`}
                 >
                   {language === "th" ? region.name_th : region.name}
                 </button>
               ))}
+              {/* 🟢 เพิ่มพื้นที่ว่างด้านท้ายสุดเพื่อกันการตัดคำ */}
+              <div className="w-10 shrink-0" />
             </div>
+
+            {/* 🟢 ปุ่มลูกศรขวา (แสดงเฉพาะเมื่อกางออก) */}
+            {isFilterExpanded && (
+              <button
+                onClick={() => scroll('right')}
+                className="absolute right-0 z-30 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm border border-gray-100 text-gray-400 hover:text-[#00A699] transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
