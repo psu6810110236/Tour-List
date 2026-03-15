@@ -78,6 +78,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   // State สำหรับปฏิทินแอดมิน
   const [adminMonth, setAdminMonth] = useState(new Date(2026, 2, 1));
 
+  // State สำหรับระบบค้นหาจังหวัด
+  const [isProvinceOpen, setIsProvinceOpen] = useState(false);
+  const [provinceSearch, setProvinceSearch] = useState('');
+
   // State สำหรับ Popup
   const [popup, setPopup] = useState<{
     isOpen: boolean;
@@ -1114,10 +1118,58 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </div>
 
                     {!createNewProvince ? (
-                      <select className="w-full p-4 bg-white border rounded-xl font-bold" value={tourForm.provinceId || ''} onChange={handleSelectProvince}>
-                        <option value="">-- {language === 'th' ? 'กรุณาเลือกจังหวัด' : 'Select Province'} --</option>
-                        {allProvinces.map(p => <option key={p.id} value={p.id}>{getLang(p, 'name', language)}</option>)}
-                      </select>
+                      /* ================= ระบบเลือกจังหวัดแบบค้นหาได้ ================= */
+                      <div className="relative">
+                        <div 
+                          className="w-full p-4 bg-white border rounded-xl font-bold cursor-pointer flex justify-between items-center focus:ring-2 focus:ring-[#00A699]"
+                          onClick={() => setIsProvinceOpen(!isProvinceOpen)}
+                        >
+                          <span className={tourForm.provinceId ? "text-gray-900" : "text-gray-400 font-normal"}>
+                            {tourForm.provinceId 
+                              ? getLang(allProvinces.find(p => p.id === tourForm.provinceId) || {}, 'name', language) || (language === 'th' ? '-- กรุณาเลือกจังหวัด --' : '-- Select Province --')
+                              : (language === 'th' ? '-- กรุณาเลือกจังหวัด --' : '-- Select Province --')}
+                          </span>
+                          <span className="text-gray-400 text-xs">▼</span>
+                        </div>
+
+                        {isProvinceOpen && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                            <div className="p-2 border-b border-gray-100 bg-gray-50">
+                              <input
+                                type="text"
+                                placeholder={language === 'th' ? "🔍 พิมพ์ชื่อจังหวัดเพื่อค้นหา..." : "🔍 Search province..."}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all"
+                                value={provinceSearch}
+                                onChange={(e) => setProvinceSearch(e.target.value)}
+                                onClick={(e) => e.stopPropagation()} 
+                                autoFocus
+                              />
+                            </div>
+                            <ul className="max-h-60 overflow-y-auto p-1 font-normal">
+                              {allProvinces
+                                .filter((p) => getLang(p, 'name', language)?.toLowerCase().includes(provinceSearch.toLowerCase()))
+                                .map((province) => (
+                                  <li
+                                    key={province.id}
+                                    className="px-3 py-2 hover:bg-[#00A699]/10 hover:text-[#00A699] rounded-lg cursor-pointer text-sm text-gray-700 transition-colors"
+                                    onClick={() => {
+                                      setTourForm({ ...tourForm, provinceId: province.id, province: province.name });
+                                      setIsProvinceOpen(false);
+                                      setProvinceSearch('');
+                                    }}
+                                  >
+                                    {getLang(province, 'name', language)}
+                                  </li>
+                                ))}
+                              {allProvinces.filter((p) => getLang(p, 'name', language)?.toLowerCase().includes(provinceSearch.toLowerCase())).length === 0 && (
+                                <li className="px-3 py-4 text-center text-gray-400 text-sm">
+                                  {language === 'th' ? 'ไม่พบชื่อจังหวัดที่ค้นหา' : 'No province found'}
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="space-y-4 animate-in fade-in duration-300">
                         <div className="grid grid-cols-2 gap-4">
