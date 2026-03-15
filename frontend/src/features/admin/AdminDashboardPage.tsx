@@ -164,34 +164,54 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
   };
 
-  const handleApprovePayment = (bookingId: string) => {
+ const handleApprovePayment = (bookingId: string) => {
     showConfirm(language === 'th' ? "ยืนยันยอดชำระเงิน" : "Confirm Payment", language === 'th' ? `สลิปถูกต้อง อนุมัติยอดเงินสำหรับ ${bookingId} ใช่หรือไม่?` : `Slip is valid, approve payment?`, async () => {
+      
+      // เปลี่ยนเป็น APPROVED ให้ตรงกับฐานข้อมูล
+      setBookingsList((prev) => prev.map((booking) => 
+        booking.id === bookingId 
+          ? { ...booking, status: 'APPROVED', paymentStatus: 'completed' } as any 
+          : booking
+      ));
+
       try {
-        await bookingService.updatePaymentStatus(bookingId, 'completed');
-        fetchAdminData();
+        await Promise.all([
+          bookingService.updatePaymentStatus(bookingId, 'COMPLETED'),
+          bookingService.updateBookingStatus(bookingId, 'APPROVED') // 🟢 จุดที่แก้! ส่งคำว่า APPROVED ไป
+        ]);
+        
         setSelectedBooking(null);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ยืนยันยอดชำระเงินเรียบร้อยแล้ว" : "Payment verified successfully.");
       } catch (error) {
+        await fetchAdminData(); 
         showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการยืนยันสลิป" : "Error verifying payment.");
         closePopup();
       }
     });
   };
-
   const handleRejectPayment = (bookingId: string) => {
     const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธสลิป (เช่น ยอดเงินไม่ตรง):" : "Please enter rejection reason (e.g., Invalid amount):");
     if (reason === null) return;
 
     showConfirm(language === 'th' ? "ปฏิเสธสลิปและยกเลิก" : "Reject Payment & Booking", language === 'th' ? `สลิปไม่ถูกต้อง ปฏิเสธยอดเงินและยกเลิกการจองใช่หรือไม่?` : `Slip invalid, reject payment and cancel booking?`, async () => {
+      
+      // เปลี่ยนเป็น REJECTED
+      setBookingsList((prev) => prev.map((booking) => 
+        booking.id === bookingId 
+          ? { ...booking, status: 'REJECTED', paymentStatus: 'failed' } as any 
+          : booking
+      ));
+
       try {
         await Promise.all([
-          bookingService.updatePaymentStatus(bookingId, 'failed', reason),
-          bookingService.updateBookingStatus(bookingId, 'rejected', reason)
+          bookingService.updatePaymentStatus(bookingId, 'FAILED', reason),
+          bookingService.updateBookingStatus(bookingId, 'REJECTED', reason) // 🟢 จุดที่แก้! ส่งคำว่า REJECTED ไป
         ]);
-        fetchAdminData();
+        
         setSelectedBooking(null);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธสลิปและยกเลิกการจองแล้ว" : "Payment rejected and booking cancelled.");
       } catch (error) {
+        await fetchAdminData();
         closePopup();
       }
     });
@@ -438,13 +458,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
 
   const filteredPayments = bookingsList
-    .filter(b => b.paymentStatus?.toLowerCase() === 'verifying')
+    // 🟢 เอาตัวกรองสถานะและตัวกรองสลิปออกไปเลยครับ เพราะระบบเราบังคับแนบสลิปมาตั้งแต่แรกแล้ว
     .filter(b => {
+      // ระบบค้นหา (Search)
       const searchLower = (paymentSearch || '').toLowerCase();
       const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
       return String(b.id || '').toLowerCase().includes(searchLower) || String(tourName).toLowerCase().includes(searchLower);
     })
     .sort((a, b) => {
+      // ระบบเรียงลำดับ (Sort)
       const dateA = new Date(a.bookingDate || (a as any).createdAt || 0).getTime();
       const dateB = new Date(b.bookingDate || (b as any).createdAt || 0).getTime();
 
@@ -453,7 +475,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       if (paymentSort === 'amountDesc') return (b.totalPrice || 0) - (a.totalPrice || 0);
       return 0;
     });
-
   // 3. กรองทัวร์
   const filteredTours = allTours 
     .filter(t => {
@@ -785,13 +806,13 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
 
-        {/* ================= PAYMENTS TAB ================= */}
+       {/* ================= PAYMENTS TAB ================= */}
         {activeTab === 'payments' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">ตรวจสลิปโอนเงิน (Payment Verification)</h2>
-                <p className="text-gray-600 mt-1">รายการด้านล่างคือลูกค้าที่ส่งสลิปมาแล้ว รอแอดมินยืนยันยอดเงิน</p>
+                <p className="text-gray-600 mt-1">ประวัติการชำระเงินและรายการที่รอตรวจสอบ</p>
               </div>
               <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
 
@@ -821,54 +842,85 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPayments.map((booking) => (
-                <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg border-t-4 border-blue-400 relative">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm text-gray-600 font-mono">{booking.id}</span>
-                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold animate-pulse">WAITING SLIP</span>
-                  </div>
-                  <div className="font-bold text-gray-900 mb-4 line-clamp-1">{getLang(booking, 'tourNameSnapshot', language)}</div>
+              {filteredPayments.map((booking) => {
+                const isConfirmed = booking.status?.toUpperCase() === 'APPROVED'; 
+                const isCancelled = booking.status?.toUpperCase() === 'REJECTED';
+                const isPending = !isConfirmed && !isCancelled;
+                
+                const borderColor = isConfirmed ? 'border-green-500' : isCancelled ? 'border-red-400' : 'border-blue-400';
 
-                  <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-blue-400 transition" onClick={() => window.open(booking.paymentSlip, '_blank')}>
-                    {booking.paymentSlip ? (
-                      <img src={booking.paymentSlip} alt="slip" className="w-full h-full object-cover" />
+                return (
+                  <div key={booking.id} className={`bg-white rounded-3xl p-6 shadow-lg border-t-4 ${borderColor} relative transition-all duration-300 hover:-translate-y-1`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-sm text-gray-600 font-mono">{booking.id}</span>
+                      
+                      {/* 🟢 ป้าย Badge แสดงสถานะ */}
+                      {isPending && <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">WAITING SLIP</span>}
+                      {isConfirmed && <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3"/> APPROVED</span>}
+                      {isCancelled && <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><XCircle className="w-3 h-3"/> REJECTED</span>}
+                    </div>
+                    
+                    <div className="font-bold text-gray-900 mb-4 line-clamp-1">{getLang(booking, 'tourNameSnapshot', language)}</div>
+
+                    <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => window.open(booking.paymentSlip, '_blank')}>
+                      {booking.paymentSlip ? (
+                        <>
+                          <img src={booking.paymentSlip} alt="slip" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white font-semibold text-sm bg-black/50 px-3 py-1 rounded-lg">ดูรูปเต็ม</span>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-gray-400 flex flex-col items-center"><FileText className="w-6 h-6 mb-2" /> ไม่มีสลิปแนบมา</span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                      <div>
+                        <div className="text-gray-600 mb-1">{t.payment.amount}</div>
+                        <div className="font-bold text-[#00A699] text-lg">฿{booking.totalPrice?.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-600 mb-1">{t.payment.paymentDate}</div>
+                        <div className="font-semibold text-gray-900">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
+                      </div>
+                    </div>
+
+                    {/* 🟢 ซ่อนปุ่มถ้าจัดการไปแล้ว โชว์เป็นข้อความแทน */}
+                    {isPending ? (
+                      <div className="flex gap-3">
+                        <button onClick={() => handleApprovePayment(booking.id)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                          <CheckCircle className="w-4 h-4" /> อนุมัติสลิป
+                        </button>
+                        <button onClick={() => handleRejectPayment(booking.id)} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
+                          <XCircle className="w-4 h-4" /> ปฏิเสธ
+                        </button>
+                      </div>
                     ) : (
-                      <span className="text-gray-400 flex flex-col items-center"><FileText className="w-6 h-6 mb-2" /> ไม่มีสลิปแนบมา</span>
+                      <div className={`mt-2 text-center py-2.5 rounded-xl font-bold border flex items-center justify-center gap-2 ${isConfirmed ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                        {isConfirmed ? (
+                          <><CheckCircle className="w-4 h-4" /> ตรวจสอบและอนุมัติแล้ว</>
+                        ) : (
+                          <><XCircle className="w-4 h-4" /> ปฏิเสธการชำระเงินแล้ว</>
+                        )}
+                      </div>
                     )}
                   </div>
+                );
+              })}
 
-                  <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                    <div>
-                      <div className="text-gray-600 mb-1">{t.payment.amount}</div>
-                      <div className="font-bold text-[#00A699] text-lg">฿{booking.totalPrice?.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600 mb-1">{t.payment.paymentDate}</div>
-                      <div className="font-semibold text-gray-900">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button onClick={() => handleApprovePayment(booking.id)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
-                      <CheckCircle className="w-4 h-4" /> อนุมัติสลิป
-                    </button>
-                    <button onClick={() => handleRejectPayment(booking.id)} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
-                      <XCircle className="w-4 h-4" /> ปฏิเสธ
-                    </button>
-                  </div>
-                </div>
-              ))}
               {filteredPayments.length === 0 && (
-                <div className="col-span-full bg-white rounded-3xl p-12 text-center shadow-lg border">
-                  <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-10 h-10" /></div>
+                <div className="col-span-full bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
+                  <div className="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-10 h-10" />
+                  </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">ตรวจสอบสลิปครบหมดแล้ว!</h3>
-                  <p className="text-gray-600">{language === 'th' ? 'ไม่มีรายการโอนเงินที่ต้องรอตรวจสอบในขณะนี้' : 'All caught up! No pending payments.'}</p>
+                  <p className="text-gray-600">{language === 'th' ? 'ไม่มีรายการชำระเงินในระบบขณะนี้' : 'All caught up! No payments found.'}</p>
                 </div>
               )}
             </div>
           </div>
         )}
-
        {/* ================= TOURS TAB ================= */}
         {activeTab === 'tours' && (
           <div className="space-y-6 animate-in fade-in duration-500">
