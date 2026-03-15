@@ -25,6 +25,7 @@ import { MyBookingsPage } from './pages/MyBookingsPage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { PaymentMethodsPage } from './pages/PaymentMethodsPage'; // ✅ 1. เพิ่ม Import หน้าวิธีการชำระเงิน
 import CartDrawer from './components/ui/CartDrawer';
+import { TutorialModal } from './components/ui/TutorialModal'; // ✅ เพิ่ม Import TutorialModal
 
 // Service & Types
 import { tourService } from './services/api';
@@ -95,6 +96,10 @@ function AppContent() {
   const [language, setLanguage] = useState<'th' | 'en'>('th');
   const [bookingData, setBookingData] = useState<any>(null);
 
+  // ✅ เพิ่ม state สำหรับ Tutorial
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showLanguageFirst, setShowLanguageFirst] = useState(false);
+
   const { cartItems, toggleDrawer, clearCart, addToCart } = useCart();
   const totalItems = cartItems.length;
 
@@ -104,6 +109,16 @@ function AppContent() {
       if (stored) setBookingData(JSON.parse(stored));
     } catch (e) {
       console.warn('Failed to parse bookingData from sessionStorage', e);
+    }
+  }, []);
+
+  // ✅ เช็คว่าเปิดครั้งแรกหรือไม่
+  useEffect(() => {
+    const hasVisited = localStorage.getItem("roamhub_visited");
+    if (!hasVisited) {
+      setShowLanguageFirst(true);
+      setShowTutorial(true);
+      localStorage.setItem("roamhub_visited", "true");
     }
   }, []);
 
@@ -150,6 +165,12 @@ function AppContent() {
     }
   };
 
+  // ✅ ฟังก์ชันเปิด Tutorial (กรณีผู้ใช้กดปุ่มเอง)
+  const handleShowTutorial = () => {
+    setShowLanguageFirst(false);
+    setShowTutorial(true);
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {showNavbar && (
@@ -157,7 +178,7 @@ function AppContent() {
           currentPage={getCurrentPage()}
           onNavigate={handleNavigate}
           userName={user?.fullName || "Guest User"}
-          onShowTutorial={() => alert("Tutorial Coming Soon!")}
+          onShowTutorial={handleShowTutorial} // ✅ ส่ง prop handleShowTutorial
           cartCount={totalItems}
           onOpenCart={toggleDrawer}
           language={language}
@@ -228,6 +249,16 @@ function AppContent() {
 
       {showChatWidget && <ChatWidget />}
       <CartDrawer />
+
+      {/* ✅ เพิ่ม Modal ไว้ด้านล่างสุด */}
+      {showTutorial && (
+        <TutorialModal
+          language={language}
+          onClose={() => setShowTutorial(false)}
+          showLanguageFirst={showLanguageFirst}
+          onSelectLanguage={(lang) => setLanguage(lang as 'th' | 'en')}
+        />
+      )}
     </div>
   );
 }

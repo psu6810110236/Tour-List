@@ -38,6 +38,7 @@ import {
 
 import { Badge } from "../components/ui/badge";
 import { useScrollLock } from "../hooks/useScrollLock";
+
 interface NavigationProps {
     currentPage: string;
     onNavigate: (page: string) => void;
@@ -152,6 +153,15 @@ export function Navigation({
                                     {cartCount}
                                 </Badge>
                             )}
+                        </button>
+
+                        {/* ✅ TUTORIAL BUTTON */}
+                        <button
+                            onClick={onShowTutorial}
+                            title="Tutorial"
+                            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-all text-gray-500 hover:text-[#00A699]"
+                        >
+                            <HelpCircle className="w-5 h-5" />
                         </button>
 
                         {/* LANGUAGE */}
