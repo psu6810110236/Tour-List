@@ -11,6 +11,16 @@ interface ChatMessage {
   isImage?: boolean;
 }
 
+// ฟังก์ชันสำหรับสร้างหรือดึง Guest ID ชั่วคราว
+const getGuestId = () => {
+  let guestId = localStorage.getItem('guest_chat_id');
+  if (!guestId) {
+    guestId = 'guest_' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('guest_chat_id', guestId);
+  }
+  return guestId;
+};
+
 export default function ChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -32,15 +42,17 @@ export default function ChatWidget() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // กำหนด ID ที่จะใช้ (ถ้าล็อกอินใช้ user.id ถ้ายังให้ใช้ guest id)
+  const activeUserId = user?.id || getGuestId();
+
   useEffect(() => {
     const newSocket = io('http://localhost:3000', {
-      query: { role: 'user', userId: user?.id },
+      query: { role: 'user', userId: activeUserId },
     });
     setSocket(newSocket);
 
     newSocket.on('receiveMessage', (msg: any) => {
-      if (!user?.id) return;
-      const isMe = msg.senderId === user.id || msg.sender?.id === user.id;
+      const isMe = msg.senderId === activeUserId || msg.sender?.id === activeUserId;
       setMessages((prev) => {
         if (prev.some(m => m.id === msg.id)) return prev;
         const isImg = msg.content && msg.content.startsWith('data:image');
@@ -55,26 +67,33 @@ export default function ChatWidget() {
     });
 
     return () => { newSocket.disconnect(); };
-  }, [user?.id]);
+  }, [activeUserId]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    fetch(`http://localhost:3000/chat/messages/${user.id}`)
-      .then(res => res.json())
+    fetch(`http://localhost:3000/chat/messages/${activeUserId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
       .then(data => {
-        const mapped = data.map((msg: any) => ({
-          id: msg.id,
-          senderType: msg.senderId === user.id ? 'user' : 'admin',
-          text: msg.content,
-          timestamp: new Date(msg.createdAt),
-          isImage: msg.content.startsWith('data:image')
-        }));
-        setMessages(mapped);
+        if (Array.isArray(data)) {
+          const mapped = data.map((msg: any) => ({
+            id: msg.id,
+            senderType: (msg.senderId === activeUserId ? 'user' : 'admin') as 'user' | 'admin',
+            text: msg.content,
+            timestamp: new Date(msg.createdAt),
+            isImage: msg.content.startsWith('data:image')
+          }));
+          // ถ้าระบบส่งประวัติมา ให้เอาอันเก่าที่ fetch ได้มาแสดงเลย 
+          // (อาจจะตั้งเงื่อนไขเอาข้อความ welcome ไปต่อท้ายได้ถ้าต้องการ)
+          if (mapped.length > 0) {
+              setMessages(mapped);
+          }
+        }
       })
       .catch(err => console.error('โหลดแชทล้มเหลว:', err));
-  }, [user?.id]);
+  }, [activeUserId]);
 
-  // ✅ รับ event จาก UserProfilePage ปุ่ม "ติดต่อเรา"
   useEffect(() => {
     const handleOpenChat = () => setIsOpen(true);
     window.addEventListener("openChatWidget", handleOpenChat);
@@ -89,21 +108,21 @@ export default function ChatWidget() {
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((!input.trim() && !previewImage) || !socket || !user) return;
+    if ((!input.trim() && !previewImage) || !socket) return;
 
     if (previewImage) {
-      socket.emit('sendMessage', { content: previewImage, senderId: user.id });
+      socket.emit('sendMessage', { content: previewImage, senderId: activeUserId });
       setPreviewImage(null);
     }
     if (input.trim()) {
-      socket.emit('sendMessage', { content: input, senderId: user.id });
+      socket.emit('sendMessage', { content: input, senderId: activeUserId });
       setInput('');
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user?.id) return;
+    if (!file) return;
     if (file.size > 1024 * 1024) {
       alert("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 1MB");
       return;
@@ -121,7 +140,7 @@ export default function ChatWidget() {
     }
   };
 
-  if (!user) return null;
+  // ลบ if (!user) return null; ออกไปแล้ว เพื่อให้ทุกคนเห็นปุ่มแชท
 
   if (!isOpen) {
     return (
@@ -134,6 +153,7 @@ export default function ChatWidget() {
     );
   }
 
+  // ส่วน UI ด้านล่าง (return <div>...) เหมือนเดิมทุกอย่างครับ
   return (
     <div className="fixed bottom-6 right-6 w-[360px] h-[550px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden border border-gray-100 z-50 font-sans animate-in slide-in-from-bottom-5 duration-300">
 

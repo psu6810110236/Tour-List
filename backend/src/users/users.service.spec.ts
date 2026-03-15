@@ -25,11 +25,10 @@ export class UsersService {
   async create(createUserDto: CreateUserDto, passwordHash: string): Promise<User> {
     const { email, fullName } = createUserDto;
 
-    // ✅ แก้ไข: เปลี่ยนจาก 'user' เป็น 'USER' ให้ตรงกับที่ Seed ไว้ใน AppService
     const userRole = await this.roleRepository.findOne({ where: { name: 'USER' } });
 
     if (!userRole) {
-      // ถ้าหาไม่เจอจริงๆ ให้ลองหาแบบ Case-insensitive หรือ Throw Error ที่ชัดเจน
+
       throw new InternalServerErrorException('Default role "USER" not found in database. Please run seed script.');
     }
 

@@ -22,4 +22,7 @@ export class Province {
 
   @Column({ default: 0 })
   tourCount: number;
+
+  @Column({ nullable: true })
+  region: string; // north, central, northeast, east, west, south
 }

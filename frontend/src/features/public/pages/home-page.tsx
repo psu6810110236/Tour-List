@@ -191,18 +191,18 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
 
           {/* 🟢 H1 - ดีไซน์ใหม่แบบ "Elegant & Minimal" */}
-          <h1 className="text-4xl md:text-7xl lg:text-8xl font-thin mb-8 tracking-tighter leading-[1.1] text-white">
+          <h1 className="text-4xl md:text-7xl lg:text-8xl font-thin mb-8 tracking-tighter leading-[1.1] text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
             {language === 'th' ? (
               <>
                 <span className="font-light opacity-80">ค้นพบความมหัศจรรย์</span><br />
                 {/* 🟢 เปลี่ยน Gradient ให้ทึบทั้งหมด และเพิ่ม Drop Shadow สีแบรนด์ */}
-                <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r  from-[#008c81] via-[#4de4d8] to-[#008c81] drop-shadow-[0_4px_12px_rgba(0,166,153,0.3)] animate-gradient-x">ประเทศไทย</span>
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#a8fff9] via-[#2dd4bf] to-[#00A699] drop-shadow-xl">ประเทศไทย</span>
               </>
             ) : (
               <>
                 <span className="font-light opacity-80">Discover Amazing</span><br />
                 {/* เน้น "Thailand" ด้วยตัวหนาและไล่สีแบบ Smooth (ทึบทั้งหมด) */}
-                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-gray-200 drop-shadow-xl">Thailand</span>
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#a8fff9] via-[#2dd4bf] to-[#00A699] drop-shadow-xl">Thailand</span>
               </>
             )}
           </h1>
