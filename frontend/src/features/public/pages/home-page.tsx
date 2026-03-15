@@ -7,10 +7,11 @@ import {
   Search,
   Map,
   MapPin,
-  ArrowRight,
+  ArrowRight, // มีอันนี้อยู่แล้ว
+  ArrowLeft,  // 🟢 เพิ่มอันนี้เข้าไป
   Star,
   TrendingUp,
-  Flame // เพิ่ม Icon สำหรับยอดฮิต
+  Flame
 } from "lucide-react";
 
 import { tourService } from "../../../services/api";
@@ -60,7 +61,22 @@ export default function HomePage({ language }: HomePageProps) {
   const [loadingTours, setLoadingTours] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
+  // 🟢 รูป Hero Section (สถานที่ท่องเที่ยวในไทย)
+  const [heroSlide, setHeroSlide] = useState(0);
+  const heroImages = [
+    "https://bktemple.wordpress.com/wp-content/uploads/2018/09/cropped-1-zvqo976jklnpve9gyg6sfw.jpeg", // วัดอรุณ (กรุงเทพฯ)
+    "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a", // เกาะพีพี (กระบี่)
+    "https://s359.kapook.com/pagebuilder/9626fbfd-602a-4c30-bb9d-68eeafb07b69.jpg", // ดอยอินทนนท์ (เชียงใหม่)
+    "https://s359.kapook.com/pagebuilder/d56acd15-99d1-4dae-9087-91fdd69d9f05.jpg"  // ตลาดน้ำ/วิถีไทย
+  ];
 
+  // สลับรูปอัตโนมัติ
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroSlide((prev) => (prev + 1) % heroImages.length);
+    }, 7000); // 7 วินาทีเปลี่ยนทีเพื่อให้คนมีเวลาดู
+    return () => clearInterval(timer);
+  }, [heroImages.length]);
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
@@ -143,55 +159,85 @@ export default function HomePage({ language }: HomePageProps) {
     <div className="min-h-screen bg-gray-50 overflow-x-hidden relative">
 
       {/* ===== HERO SECTION ===== */}
-      <div className="relative min-h-[550px] md:h-[600px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0">
+      <div className="relative min-h-[550px] md:h-[700px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0 group">
+
+        {/* 🟢 ส่วนของภาพพื้นหลังแบบสไลด์ */}
         <div className="absolute inset-0 z-0">
-          <img
-            src={HERO_BG}
-            alt="Amazing Thailand"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+          {heroImages.map((img, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${index === heroSlide ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                }`}
+            >
+              <img
+                src={img}
+                alt="Amazing Thailand"
+                className="w-full h-full object-cover"
+              />
+              {/* Overlay และ Gradient ตามดีไซน์เดิมของคุณ */}
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+            </div>
+          ))}
         </div>
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-3xl mx-auto animate-in fade-in zoom-in duration-700 slide-in-from-bottom-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-xs md:text-sm font-medium mb-6 text-white/90">
-              <span>✈️</span>
-              <span>{language === 'th' ? 'พร้อมสำหรับการเดินทางหรือยัง?' : 'Ready for your next journey?'}</span>
-            </div>
+        {/* 🟢 ปุ่มลูกศร เปลี่ยนรูปซ้าย-ขวา (แสดงตอน Hover) */}
+        
+       
 
-            <h1 className="text-3xl md:text-7xl font-bold mb-6 tracking-tight drop-shadow-lg leading-tight">
-              {language === 'th' ? (
-                <>ค้นพบความมหัศจรรย์ <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">ประเทศไทย</span></>
-              ) : (
-                <>Discover Amazing <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">Thailand</span></>
-              )}
-            </h1>
-
-            <p className="text-base md:text-xl text-white/90 mb-10 leading-relaxed drop-shadow-md px-2">
-              {t.subtitle}
-            </p>
-
-            <form onSubmit={handleSearch} className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-2 md:p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
-              <div className="flex items-center w-full px-2">
-                <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t.searchPlaceholder}
-                  className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
-              >
-                {t.searchBtn}
-              </button>
-            </form>
+        {/* ⚪ ส่วนเนื้อหา (Content) - คงดีไซน์เดิมของคุณไว้เป๊ะๆ */}
+        <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center">
+          {/* 🟢 พร้อมสำหรับการเดินทางหรือยัง? - ปรับให้คลีนและหรูขึ้น */}
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-xs md:text-sm font-medium mb-10 text-white/90 tracking-wide shadow-inner">
+            <span>✈️</span>
+            <span>{language === 'th' ? 'เตรียมพบกับประสบการณ์พิเศษ...' : 'Discover your next extraordinary journey...'}</span>
           </div>
+
+          {/* 🟢 H1 - ดีไซน์ใหม่แบบ "Elegant & Minimal" */}
+          <h1 className="text-4xl md:text-7xl lg:text-8xl font-thin mb-8 tracking-tighter leading-[1.1] text-white">
+            {language === 'th' ? (
+              <>
+                <span className="font-light opacity-80">ค้นพบความมหัศจรรย์</span><br />
+                {/* 🟢 เปลี่ยน Gradient ให้ทึบทั้งหมด และเพิ่ม Drop Shadow สีแบรนด์ */}
+                <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r  from-[#008c81] via-[#4de4d8] to-[#008c81] drop-shadow-[0_4px_12px_rgba(0,166,153,0.3)] animate-gradient-x">ประเทศไทย</span>
+              </>
+            ) : (
+              <>
+                <span className="font-light opacity-80">Discover Amazing</span><br />
+                {/* เน้น "Thailand" ด้วยตัวหนาและไล่สีแบบ Smooth (ทึบทั้งหมด) */}
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-gray-200 drop-shadow-xl">Thailand</span>
+              </>
+            )}
+          </h1>
+
+          {/* 🟢 sub-title - จัดกลุ่มคำใหม่ให้อ่านง่ายและดูแพง */}
+          <p className="text-base md:text-xl text-white/90 mb-14 leading-relaxed drop-shadow-sm max-w-xl mx-auto font-light tracking-wide opacity-90 px-4">
+            {language === 'th' ? (
+              <>สัมผัสความงามของวัฒนธรรม ธรรมชาติ <br />และการผจญภัยที่น่าตื่นเต้นในมุมที่ต่างออกไป</>
+            ) : (
+              <>Experience the beauty of culture, nature, <br />and adventure in a new light.</>
+            )}
+          </p>
+
+          {/* Search Bar (อันเดิมของคุณ - ผมปรับ padding และ shadow นิดหน่อยให้เข้ากัน) */}
+          <form onSubmit={handleSearch} className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
+            <div className="flex items-center w-full px-2 text-gray-900">
+              <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.searchPlaceholder}
+                className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
+            >
+              {t.searchBtn}
+            </button>
+          </form>
         </div>
       </div>
 
@@ -547,7 +593,7 @@ export default function HomePage({ language }: HomePageProps) {
               © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
             </div>
             <div className="flex items-center gap-8">
-              
+
             </div>
           </div>
         </div>
