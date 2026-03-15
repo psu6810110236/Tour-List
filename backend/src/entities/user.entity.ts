@@ -9,11 +9,15 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   passwordHash: string;
 
   @Column()
   fullName: string;
+
+  // ✅ เพิ่ม phone field
+  @Column({ nullable: true })
+  phone: string;
 
   @Column({ default: 'local' })
   provider: string;
@@ -28,7 +32,6 @@ export class User {
   @CreateDateColumn()
   createdAt: Date;
 
-  // เพิ่มคอลัมน์ใหม่สำหรับ Auth Features
   @Column({ default: false })
   isEmailVerified: boolean;
 

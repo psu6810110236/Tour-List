@@ -1,8 +1,8 @@
-// backend/src/auth/auth.controller.ts
-import { Controller, Post, UseGuards, Request, Body, Get } from '@nestjs/common';
+import { Controller, Post, UseGuards, Request, Body, Get, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
-import { CreateUserDto } from './dto/create-user.dto'; // ✅ Import DTO
+import { CreateUserDto } from './dto/create-user.dto';
+import type { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -14,7 +14,6 @@ export class AuthController {
     return this.authService.login(req.user);
   }
 
-  // ✅ Register Route ที่ใช้ DTO
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
     return this.authService.register(createUserDto);
@@ -24,5 +23,20 @@ export class AuthController {
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;
+  }
+
+  // Route สำหรับเริ่มล็อคอินด้วย Google
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth(@Request() req) {}
+
+  // Route รับ Callback จาก Google
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthRedirect(@Request() req, @Res() res: Response) {
+    const authResult = await this.authService.googleLogin(req);
+    // Redirect กลับไปที่ Frontend พร้อมแนบ Token และข้อมูลผู้ใช้
+    const frontendUrl = 'http://localhost:5173/login';
+    res.redirect(`${frontendUrl}?token=${authResult.access_token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
   }
 }

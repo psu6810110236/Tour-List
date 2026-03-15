@@ -12,8 +12,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // 🟢 แก้จาก access_token เป็น token ให้ตรงกับ AuthContext
-  const token = localStorage.getItem('token'); 
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -21,7 +20,7 @@ api.interceptors.request.use((config) => {
 });
 
 export const tourService = {
-  search: (params: { provinceId?: string; minPrice?: string; maxPrice?: string; startDate?: string; sort?: string }) =>
+  search: (params: { provinceId?: string; minPrice?: string; maxPrice?: string; startDate?: string; sort?: string; tripDays?: string }) =>
     api.get<Tour[]>('/tours/search', { params }),
 
   getProvinces: () => api.get<Province[]>('/tours/provinces'),
@@ -36,34 +35,35 @@ export const bookingService = {
   getAllBookings: () => api.get<Booking[]>('/bookings'),
   getMyBookings: () => api.get<Booking[]>('/bookings/my'),
   createBooking: (data: any) => api.post('/bookings', data),
-  
-  // 🟢 เพิ่มการรับ data (reason) เข้าไป
-  updateBookingStatus: (id: string, status: string, reason?: string) => api.patch(`/bookings/${id}/status`, { status, reason }),
-  updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) => api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
-  
+  updateBookingStatus: (id: string, status: string, reason?: string) =>
+    api.patch(`/bookings/${id}/status`, { status, reason }),
+  updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) =>
+    api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
   deleteProvince: (id: string) => axios.delete(`http://localhost:3000/provinces/${id}`),
 };
 
-// 🟢 เพิ่มส่วนจัดการ Review
-export const reviewService = {
-  // ดึงรีวิวทั้งหมดของทัวร์นั้นๆ
-  getReviewsByTourId: async (tourId: string | number) => {
-    const response = await fetch(`${API_URL}/reviews/tour/${tourId}`);
-    if (!response.ok) throw new Error('Failed to fetch reviews');
-    return response.json();
-  },
+export interface AddToCartPayload {
+  tourId: string;
+  selectedDate: string;
+  pax: number;
+  totalPrice: number;
+}
 
-  // ส่งรีวิวใหม่ไปบันทึก
-  createReview: async (reviewData: { tourId: string | number; userName: string; rating: number; comment: string }) => {
-    const response = await fetch(`${API_URL}/reviews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(reviewData),
-    });
-    if (!response.ok) throw new Error('Failed to create review');
-    return response.json();
-  }
+export const addToCartAPI = async (payload: AddToCartPayload) => {
+  const response = await api.post('/cart/add', payload);
+  return response.data;
+};
+
+export const userService = {
+  // ✅ แก้จาก /auth/me → /users/me (endpoint จริงใน backend)
+  getProfile: () => api.get('/users/me'),
+
+  // PATCH /users/me — แก้ชื่อ + เบอร์
+  updateProfile: (data: { fullName?: string; phone?: string }) =>
+    api.patch('/users/me', data),
+
+  // PATCH /users/me/password — เปลี่ยนรหัสผ่าน
+  changePassword: (data: { oldPassword: string; newPassword: string }) =>
+    api.patch('/users/me/password', data),
 };

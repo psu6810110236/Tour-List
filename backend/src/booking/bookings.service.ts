@@ -87,6 +87,7 @@ export class BookingsService {
         );
       }
       tour.bookedSeats = currentBooked + travelersCount; // 🌟 บวกตัวเลข
+      tour.historicalBooked = (Number(tour.historicalBooked) || 0) + travelersCount;
       await this.tourRepository.save(tour);
       
     } else if (oldStatus === 'APPROVED' && newStatus !== 'APPROVED') {

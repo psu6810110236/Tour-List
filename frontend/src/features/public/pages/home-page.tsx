@@ -1,4 +1,4 @@
-// src/components/home-page.tsx
+// src/features/public/pages/home-page.tsx
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -7,17 +7,18 @@ import {
   Search,
   Map,
   MapPin,
-  ArrowRight,
+  ArrowRight, // มีอันนี้อยู่แล้ว
+  ArrowLeft,  // 🟢 เพิ่มอันนี้เข้าไป
   Star,
   TrendingUp,
-  Flame // เพิ่ม Icon สำหรับยอดฮิต
+  Flame
 } from "lucide-react";
 
 import { tourService } from "../../../services/api";
+
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 
-// ✅ 1. Interface สำหรับจังหวัด
 interface Province {
   id: string;
   name: string;
@@ -28,18 +29,18 @@ interface Province {
   description_th: string;
 }
 
-// ✅ 2. Interface สำหรับทัวร์ (อัปเดตฟิลด์ให้ครบตามดีไซน์ใหม่)
 interface Tour {
   id: string | number;
   name: string;
   name_th?: string;
-  province?: any; // เผื่อกรณีดึง relation province มาด้วย
+  province?: any;
   provinceId?: string;
   price: number;
   image?: string;
   bookedSeats?: number;
   description?: string;
   isHidden?: boolean;
+  historicalBooked: number;
 }
 
 interface HomePageProps {
@@ -47,17 +48,33 @@ interface HomePageProps {
 }
 
 export default function HomePage({ language }: HomePageProps) {
+  const FALLBACK_IMAGE_URL = 'https://raw.githubusercontent.com/psu6810110318/-/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png';
   const navigate = useNavigate();
 
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [tours, setTours] = useState<Tour[]>([]);
-  const [allTours, setAllTours] = useState<Tour[]>([]); // 🟢 เพิ่มบรรทัดนี้เพื่อเก็บทัวร์ทั้งหมด
+  const [allTours, setAllTours] = useState<Tour[]>([]);
 
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingTours, setLoadingTours] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
+  // 🟢 รูป Hero Section (สถานที่ท่องเที่ยวในไทย)
+  const [heroSlide, setHeroSlide] = useState(0);
+  const heroImages = [
+    "https://bktemple.wordpress.com/wp-content/uploads/2018/09/cropped-1-zvqo976jklnpve9gyg6sfw.jpeg", // วัดอรุณ (กรุงเทพฯ)
+    "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a", // เกาะพีพี (กระบี่)
+    "https://s359.kapook.com/pagebuilder/9626fbfd-602a-4c30-bb9d-68eeafb07b69.jpg", // ดอยอินทนนท์ (เชียงใหม่)
+    "https://s359.kapook.com/pagebuilder/d56acd15-99d1-4dae-9087-91fdd69d9f05.jpg"  // ตลาดน้ำ/วิถีไทย
+  ];
 
+  // สลับรูปอัตโนมัติ
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroSlide((prev) => (prev + 1) % heroImages.length);
+    }, 7000); // 7 วินาทีเปลี่ยนทีเพื่อให้คนมีเวลาดู
+    return () => clearInterval(timer);
+  }, [heroImages.length]);
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
@@ -72,9 +89,19 @@ export default function HomePage({ language }: HomePageProps) {
 
     const fetchTours = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/tours');
-        setAllTours(response.data); // 🟢 ให้มันจำทัวร์ทั้งหมดที่มีในระบบไว้เพื่อนับเลข
-        setTours(response.data.slice(0, 3));
+        const response = await axios.get('http://localhost:3000/api/tours/search');
+        const toursData = response.data;
+
+        setAllTours(toursData);
+
+        const popularTours = [...toursData].sort((a, b) => {
+          const popularityA = a.historicalBooked || 0;
+          const popularityB = b.historicalBooked || 0;
+          return popularityB - popularityA;
+        });
+
+        setTours(popularTours.slice(0, 3));
+
       } catch (error) {
         console.error("Error fetching tours:", error);
       } finally {
@@ -129,75 +156,100 @@ export default function HomePage({ language }: HomePageProps) {
     <div className="min-h-screen bg-gray-50 overflow-x-hidden relative">
 
       {/* ===== HERO SECTION ===== */}
-      <div className="relative min-h-[550px] md:h-[600px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0">
+      <div className="relative min-h-[550px] md:h-[700px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0 group">
+
+        {/* 🟢 ส่วนของภาพพื้นหลังแบบสไลด์ */}
         <div className="absolute inset-0 z-0">
-          <img
-            src={HERO_BG}
-            alt="Amazing Thailand"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+          {heroImages.map((img, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-all duration-1000 ease-in-out ${index === heroSlide ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                }`}
+            >
+              <img
+                src={img}
+                alt="Amazing Thailand"
+                className="w-full h-full object-cover"
+              />
+              {/* Overlay และ Gradient ตามดีไซน์เดิมของคุณ */}
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+            </div>
+          ))}
         </div>
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-3xl mx-auto animate-in fade-in zoom-in duration-700 slide-in-from-bottom-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-xs md:text-sm font-medium mb-6 text-white/90">
-              <span>✈️</span>
-              <span>{language === 'th' ? 'พร้อมสำหรับการเดินทางหรือยัง?' : 'Ready for your next journey?'}</span>
-            </div>
+        {/* 🟢 ปุ่มลูกศร เปลี่ยนรูปซ้าย-ขวา (แสดงตอน Hover) */}
+        
+       
 
-            <h1 className="text-3xl md:text-7xl font-bold mb-6 tracking-tight drop-shadow-lg leading-tight">
-              {language === 'th' ? (
-                <>ค้นพบความมหัศจรรย์ <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">ประเทศไทย</span></>
-              ) : (
-                <>Discover Amazing <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A699] to-[#4de4d8]">Thailand</span></>
-              )}
-            </h1>
-
-            <p className="text-base md:text-xl text-white/90 mb-10 leading-relaxed drop-shadow-md px-2">
-              {t.subtitle}
-            </p>
-
-            <form onSubmit={handleSearch} className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-2 md:p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
-              <div className="flex items-center w-full px-2">
-                <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t.searchPlaceholder}
-                  className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
-              >
-                {t.searchBtn}
-              </button>
-            </form>
+        {/* ⚪ ส่วนเนื้อหา (Content) - คงดีไซน์เดิมของคุณไว้เป๊ะๆ */}
+        <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center">
+          {/* 🟢 พร้อมสำหรับการเดินทางหรือยัง? - ปรับให้คลีนและหรูขึ้น */}
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-xs md:text-sm font-medium mb-10 text-white/90 tracking-wide shadow-inner">
+            <span>✈️</span>
+            <span>{language === 'th' ? 'เตรียมพบกับประสบการณ์พิเศษ...' : 'Discover your next extraordinary journey...'}</span>
           </div>
+
+          {/* 🟢 H1 - ดีไซน์ใหม่แบบ "Elegant & Minimal" */}
+          <h1 className="text-4xl md:text-7xl lg:text-8xl font-thin mb-8 tracking-tighter leading-[1.1] text-white">
+            {language === 'th' ? (
+              <>
+                <span className="font-light opacity-80">ค้นพบความมหัศจรรย์</span><br />
+                {/* 🟢 เปลี่ยน Gradient ให้ทึบทั้งหมด และเพิ่ม Drop Shadow สีแบรนด์ */}
+                <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r  from-[#008c81] via-[#4de4d8] to-[#008c81] drop-shadow-[0_4px_12px_rgba(0,166,153,0.3)] animate-gradient-x">ประเทศไทย</span>
+              </>
+            ) : (
+              <>
+                <span className="font-light opacity-80">Discover Amazing</span><br />
+                {/* เน้น "Thailand" ด้วยตัวหนาและไล่สีแบบ Smooth (ทึบทั้งหมด) */}
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-gray-200 drop-shadow-xl">Thailand</span>
+              </>
+            )}
+          </h1>
+
+          {/* 🟢 sub-title - จัดกลุ่มคำใหม่ให้อ่านง่ายและดูแพง */}
+          <p className="text-base md:text-xl text-white/90 mb-14 leading-relaxed drop-shadow-sm max-w-xl mx-auto font-light tracking-wide opacity-90 px-4">
+            {language === 'th' ? (
+              <>สัมผัสความงามของวัฒนธรรม ธรรมชาติ <br />และการผจญภัยที่น่าตื่นเต้นในมุมที่ต่างออกไป</>
+            ) : (
+              <>Experience the beauty of culture, nature, <br />and adventure in a new light.</>
+            )}
+          </p>
+
+          {/* Search Bar (อันเดิมของคุณ - ผมปรับ padding และ shadow นิดหน่อยให้เข้ากัน) */}
+          <form onSubmit={handleSearch} className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
+            <div className="flex items-center w-full px-2 text-gray-900">
+              <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.searchPlaceholder}
+                className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
+            >
+              {t.searchBtn}
+            </button>
+          </form>
         </div>
       </div>
 
-      {/* ================= STATS SECTION (Glowing Layout) ================= */}
+      {/* ================= STATS SECTION ================= */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-8 md:-mt-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
-          {/* Card 1: ซ้าย */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
             </div>
-            {/* แสดงตัวเลขทัวร์ทั้งหมดที่มีในระบบ */}
             <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">{allTours.length}</div>
-
-            {/* 🟢 แก้ไขข้อความตรงนี้ */}
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'แพ็กเกจทัวร์' : 'Tour Packages'}</h3>
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'พร้อมให้บริการในขณะนี้' : 'Available for booking'}</p>
           </div>
 
-          {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย) */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_35px_rgba(56,189,248,0.4)] hover:shadow-[0_0_50px_rgba(56,189,248,0.7)] border border-sky-200 md:-mt-6 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center relative z-10">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
               <MapPin className="w-8 h-8" />
@@ -207,7 +259,6 @@ export default function HomePage({ language }: HomePageProps) {
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'ครอบคลุมทุกจุดหมายปลายทาง' : 'Covering all destinations'}</p>
           </div>
 
-          {/* Card 3: ขวา */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center text-yellow-500 mb-4">
               <Star className="w-8 h-8 fill-yellow-500" />
@@ -222,7 +273,7 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
       </div>
 
-      {/* ===== 🌟 RECOMMENDED TOURS SECTION (ย้ายขึ้นมาบนสุด และปรับดีไซน์) ===== */}
+      {/* ===== RECOMMENDED TOURS SECTION ===== */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10">
         <div className="mb-10 flex flex-col md:flex-row justify-between items-end gap-4">
           <div>
@@ -235,9 +286,11 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
           <button
             onClick={() => onNavigate("provinces")}
-            className="text-[#00A699] font-semibold hover:text-[#008c81] flex items-center gap-1 transition"
+            className="flex items-center self-start md:self-auto gap-2 text-[#00A699] font-bold hover:text-[#008c81] transition px-4 py-2 hover:bg-[#00A699]/5 rounded-xl border border-[#00A699]/10"
           >
-            {language === 'th' ? 'ดูทัวร์ทั้งหมด' : 'View all tours'} <ArrowRight className="w-4 h-4" />
+            <Map className="w-5 h-5" />
+            <span className="text-sm md:text-base">{language === 'th' ? 'ค้นหาทัวร์ตามจังหวัด' : 'Explore by Province'}</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
@@ -248,7 +301,6 @@ export default function HomePage({ language }: HomePageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {tours.filter(tour => !tour.isHidden).map((tour) => {
-              // จัดการเรื่องชื่อจังหวัด (ถ้ามี relation มาด้วย ให้ใช้ชื่อไทย/อังกฤษ ตามภาษา)
               const provinceName = tour.province?.name_th && language === 'th' ? tour.province.name_th :
                 tour.province?.name && language === 'en' ? tour.province.name :
                   tour.provinceId || 'จุดหมายยอดฮิต';
@@ -261,27 +313,27 @@ export default function HomePage({ language }: HomePageProps) {
                   className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
                 >
                   {/* ภาพทัวร์ และ Badge ยอดจอง */}
-                  <div className="relative h-56 overflow-hidden bg-gray-100">
-                    {tour.image ? (
-                      <img
-                        src={tour.image}
-                        alt={tourName}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex justify-center items-center text-gray-400 bg-gray-200">
-                        {language === 'th' ? 'ไม่มีรูปภาพ' : 'No Image'}
-                      </div>
-                    )}
+                  <div className="relative h-56 overflow-hidden bg-[#00A699]">
+                    <img
+                      src={tour.image || FALLBACK_IMAGE_URL}
+                      alt={tourName}
+                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${
+                        !tour.image ? 'object-contain p-6' : 'object-cover'
+                      }`}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = FALLBACK_IMAGE_URL;
+                        target.className = "w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500";
+                      }}
+                    />
 
                     {/* Badge ยอดคนจอง */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
-                      {language === 'th' ? `จองแล้ว ${tour.bookedSeats || 0} ที่` : `${tour.bookedSeats || 0} Booked`}
+                      {language === 'th' ? `จองแล้ว ${tour.historicalBooked || 0} ที่` : `${tour.historicalBooked || 0} Booked`}
                     </div>
                   </div>
 
-                  {/* ข้อมูลทัวร์ */}
                   <div className="p-6 flex-1 flex flex-col">
                     <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2" title={tourName}>
                       {tourName}
@@ -347,12 +399,18 @@ export default function HomePage({ language }: HomePageProps) {
                 onClick={() => onNavigate("province", province)}
                 className="group bg-white rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
               >
-                <div className="relative h-56 md:h-64 overflow-hidden">
+                <div className="relative h-56 md:h-64 overflow-hidden bg-gray-200">
                   <img
-                    src={province.image}
+                    src={province.image || FALLBACK_IMAGE_URL}
                     alt={province.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = FALLBACK_IMAGE_URL;
+                      target.className = "w-full h-full object-contain p-8 group-hover:scale-110 transition-transform duration-700";
+                    }}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute bottom-6 left-6 right-6">
                     <div className="flex items-center gap-2 text-white mb-2">
@@ -365,7 +423,9 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-white/90 text-xs md:text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                        {allTours.filter(t => String(t.provinceId || t.province?.id || t.province) === String(province.id)).length} {h.toursAvailable}
+                        {allTours.filter(t =>
+                          String(t.provinceId || t.province?.id || t.province) === String(province.id) && !t.isHidden
+                        ).length} {h.toursAvailable}
                       </span>
                       <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="w-4 h-4" />
@@ -522,9 +582,6 @@ export default function HomePage({ language }: HomePageProps) {
               © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
             </div>
             <div className="flex items-center gap-8">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" className="h-4 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
             </div>
           </div>
         </div>

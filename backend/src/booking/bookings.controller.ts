@@ -2,7 +2,7 @@ import { Controller, Get, Patch, Param, Body, Post, Delete, UseGuards, Request }
 import { BookingsService } from './bookings.service';
 import { AuthGuard } from '@nestjs/passport';
 
-//@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'))
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
@@ -12,14 +12,14 @@ export class BookingsController {
     return this.bookingsService.findAll();
   }
 
-  //@UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'))
   @Get('my')
   async getMyBookings(@Request() req) {
     const userId = req.user?.id || req.user?.userId;
     return this.bookingsService.findMyBookings(userId);
   }
 
-  //@UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'))
   @Post()
   async createBooking(@Body() bookingData: any, @Request() req) {
     const userId = req.user?.id || req.user?.userId || bookingData.userId;

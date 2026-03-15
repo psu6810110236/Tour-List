@@ -115,4 +115,8 @@ export class Tour {
 
   @Column({ default: false })
   isHidden: boolean;
+
+  // 🟢 เพิ่มตัวแปรใหม่: เอาไว้จัดอันดับความฮิต ลบบิลแล้วไม่หาย
+  @Column({ type: 'int', default: 0 })
+  historicalBooked: number;
 }
