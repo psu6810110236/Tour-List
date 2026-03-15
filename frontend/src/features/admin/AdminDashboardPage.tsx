@@ -1233,7 +1233,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                             onChange={e => setTourForm({ ...tourForm, province: e.target.value })} 
                           />
                         </div>
-
+                          
                         <div className="bg-white p-4 border rounded-xl">
                           <label className="block text-sm font-bold text-gray-700 mb-2">
                             {language === 'th' ? 'รูปภาพจังหวัด (URL)' : 'Province Image (URL)'}
@@ -1304,20 +1304,22 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     <div className="space-y-4">
 
                       {/* 🌟 2. เลือกประเภททริป จำนวนวัน และปฏิทินของแอดมิน */}
+                      {/* 🌟 2. เลือกประเภททริป จำนวนวัน และปฏิทินของแอดมิน */}
                       <div className="p-5 border border-blue-100 bg-blue-50/30 rounded-2xl space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'ประเภททริป' : 'Trip Type'}</label>
-                            <select className="w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm"
+                            <select className="w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-400"
                               value={tourForm.tripType || 'one-day'}
                               onChange={e => setTourForm({ ...tourForm, tripType: e.target.value })}>
                               <option value="one-day">One Day (ไปเช้าเย็นกลับ)</option>
-                              <option value="multiple-days">Multiple Days (หลายวัน)</option>
+                              <option value="multiple-days">Multiple Days (หลายวัน/ไม่รวมที่พัก)</option>
+                              <option value="package">Package (หลายวัน + มีที่พัก)</option>
                             </select>
                           </div>
                           <div>
                             <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'จำนวนวันเดินทาง' : 'Trip Days'}</label>
-                            <input type="number" className={`w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm ${tourForm.tripType === 'one-day' ? 'opacity-50' : ''}`}
+                            <input type="number" className={`w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-400 ${tourForm.tripType === 'one-day' ? 'opacity-50' : ''}`}
                               min="1"
                               value={tourForm.tripDays || 1}
                               disabled={tourForm.tripType === 'one-day'}
@@ -1325,7 +1327,19 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                           </div>
                         </div>
 
-                        <div>
+                        {/* 🟢 แสดงช่องกรอกชื่อที่พักอัตโนมัติเมื่อเลือก Package */}
+                        {tourForm.tripType === 'package' && (
+                          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'ชื่อที่พัก (Accommodation)' : 'Accommodation'}</label>
+                            <input className="w-full p-3 bg-white border border-blue-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" 
+                              placeholder={language === 'th' ? "เช่น โรงแรม ABC ภูเก็ต" : "e.g., ABC Hotel Phuket"}
+                              value={tourForm.accommodation || ''}
+                              onChange={e => setTourForm({ ...tourForm, accommodation: e.target.value })} 
+                            />
+                          </div>
+                        )}
+
+                        <div> 
                           <label className="block font-bold text-blue-600 mb-2">
                             {language === 'th' ? 'กำหนดวันเปิดรอบ (จิ้มที่ปฏิทินเพื่อเพิ่ม/ลบ)' : 'Available Dates (Click to toggle)'}
                           </label>
@@ -1383,6 +1397,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     </div>
                   </div>
                   
+
                   
                   {/* 🟢 ส่วนที่เพิ่มใหม่: จุดเด่น สิ่งที่รวม และสิ่งที่ไม่รวม */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t">
