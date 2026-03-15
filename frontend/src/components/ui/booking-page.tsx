@@ -38,8 +38,8 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
 
   const config = {
     success: { bg: "bg-white", border: "border-[#00A699]/20", accent: "bg-[#00A699]", iconBg: "bg-[#00A699]/10", iconColor: "text-[#00A699]", Icon: CheckCircle, progressColor: "bg-[#00A699]" },
-    error: { bg: "bg-white", border: "border-red-200", accent: "bg-red-500", iconBg: "bg-red-50", iconColor: "text-red-500", Icon: XCircle, progressColor: "bg-red-500" },
-    warning: { bg: "bg-white", border: "border-amber-200", accent: "bg-amber-400", iconBg: "bg-amber-50", iconColor: "text-amber-500", Icon: AlertCircle, progressColor: "bg-amber-400" },
+    error:   { bg: "bg-white", border: "border-red-200",       accent: "bg-red-500",   iconBg: "bg-red-50",        iconColor: "text-red-500",   Icon: XCircle,     progressColor: "bg-red-500"   },
+    warning: { bg: "bg-white", border: "border-amber-200",     accent: "bg-amber-400", iconBg: "bg-amber-50",      iconColor: "text-amber-500", Icon: AlertCircle, progressColor: "bg-amber-400" },
   }[toast.type];
 
   const { Icon } = config;
@@ -90,23 +90,25 @@ function useToast() {
 
 interface BookingPageProps {
   tour?: Tour | null;
+  bookingData?: any; // รับ bookingData เต็มเมื่อย้อนกลับจากหน้าชำระเงิน
   onNavigate: (page: string, data?: any) => void;
   language: Language;
   onAddToCart?: (item: any) => void;
 }
 
-export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
+export function BookingPage({ tour, bookingData, onNavigate, language }: BookingPageProps) {
   const { addToCart } = useCart();
   const { user, token } = useAuth();
   const t = translations[language].booking;
   const params = useParams();
-  const [localTour, setLocalTour] = useState<Tour | null>(tour || null);
+  const [localTour, setLocalTour] = useState<Tour | null>(tour || bookingData?.tour || null);
   const [loading, setLoading] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1));
-  const [selectedDate, setSelectedDate] = useState("");
+  // ✅ restore ค่าเดิมถ้ามี bookingData ส่งมา (กรณีย้อนกลับจากหน้าชำระเงิน)
+  const [selectedDate, setSelectedDate] = useState(bookingData?.date || "");
   const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string }>({ isOpen: false, startDate: "", endDate: "" });
-  const [travelers, setTravelers] = useState(0);
-  const [contactInfo, setContactInfo] = useState({ fullName: "", email: "", phone: "", specialRequests: "" });
+  const [travelers, setTravelers] = useState(bookingData?.travelers || 0);
+  const [contactInfo, setContactInfo] = useState(bookingData?.contactInfo || { fullName: "", email: "", phone: "", specialRequests: "" });
   const [availableSeats, setAvailableSeats] = useState<number>(10);
   const [isFull, setIsFull] = useState<boolean>(false);
   const [autofillLoading, setAutofillLoading] = useState(false);
@@ -144,7 +146,7 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
         }
       }
 
-      setContactInfo((prev) => ({
+      setContactInfo((prev: typeof contactInfo) => ({
         ...prev,
         fullName: profileData.fullName,
         email: profileData.email,
@@ -157,7 +159,7 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
         "success"
       );
     } catch {
-      setContactInfo((prev) => ({
+      setContactInfo((prev: typeof contactInfo) => ({
         ...prev,
         fullName: user?.fullName || "",
         email: user?.email || "",
@@ -229,7 +231,7 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setContactInfo((prev) => ({ ...prev, [name]: value }));
+    setContactInfo((prev: typeof contactInfo) => ({ ...prev, [name]: value }));
   };
 
   const validateForm = () => {
@@ -327,11 +329,11 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
           <div className="flex items-center justify-between gap-4 py-4">
 
             {/* LEFT: back + title */}
-            <div className="flex items-center gap-4 min-w-0 -ml-20">
+            <div className="flex items-center gap-4 min-w-0">
               {/* back */}
               <button
                 onClick={() => onNavigate("tour-detail", localTour)}
-                className="flex items-center gap-2 text-gray-400 hover:text-[#00A699] transition-all group flex-shrink-0 pr-1"
+                className="flex items-center gap-2 text-gray-400 hover:text-[#00A699] transition-all group flex-shrink-0"
               >
                 <div className="w-8 h-8 rounded-xl bg-gray-100 group-hover:bg-[#00A699]/10 border border-gray-200 group-hover:border-[#00A699]/30 flex items-center justify-center transition-all">
                   <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -371,28 +373,31 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
           {/* Step indicator */}
           <div className="border-t border-gray-100">
             {(() => {
-              const hasDate = !!selectedDate;
+              const hasDate     = !!selectedDate;
               const hasTraveler = travelers > 0;
-              const hasContact = !!(contactInfo.fullName && contactInfo.email && contactInfo.phone);
+              const hasContact  = !!(contactInfo.fullName && contactInfo.email && contactInfo.phone);
               const steps = [
-                { num: 1, label: language === 'th' ? 'เลือกวันที่' : 'Select Date', done: hasDate, active: !hasDate },
-                { num: 2, label: language === 'th' ? 'ผู้เดินทาง' : 'Travelers', done: hasDate && hasTraveler, active: hasDate && !hasContact },
-                { num: 3, label: language === 'th' ? 'ข้อมูลติดต่อ' : 'Contact', done: hasContact, active: hasDate && hasTraveler && !hasContact },
+                { num: 1, label: language === 'th' ? 'เลือกวันที่'   : 'Select Date', done: hasDate,                     active: !hasDate },
+                { num: 2, label: language === 'th' ? 'ผู้เดินทาง'    : 'Travelers',   done: hasDate && hasTraveler,       active: hasDate && !hasContact },
+                { num: 3, label: language === 'th' ? 'ข้อมูลติดต่อ' : 'Contact',     done: hasContact,                   active: hasDate && hasTraveler && !hasContact },
               ];
               return (
                 <div className="flex">
                   {steps.map((step, i) => (
                     <div key={step.num} className="flex-1 relative flex items-center justify-center py-3">
                       {/* active underline */}
-                      <div className={`absolute bottom-0 left-0 right-0 h-[2px] rounded-t-sm transition-all duration-300 ${step.done ? 'bg-[#00A699]' : step.active ? 'bg-[#00A699]/30' : 'bg-transparent'
-                        }`} />
+                      <div className={`absolute bottom-0 left-0 right-0 h-[2px] rounded-t-sm transition-all duration-300 ${
+                        step.done ? 'bg-[#00A699]' : step.active ? 'bg-[#00A699]/30' : 'bg-transparent'
+                      }`} />
                       <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-all ${step.done ? 'bg-[#00A699] text-white' : step.active ? 'bg-[#00A699]/15 text-[#00A699] border-2 border-[#00A699]/40' : 'bg-gray-100 text-gray-400'
-                          }`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-all ${
+                          step.done ? 'bg-[#00A699] text-white' : step.active ? 'bg-[#00A699]/15 text-[#00A699] border-2 border-[#00A699]/40' : 'bg-gray-100 text-gray-400'
+                        }`}>
                           {step.done ? '✓' : step.num}
                         </div>
-                        <span className={`text-xs font-semibold transition-colors ${step.done ? 'text-[#00A699]' : step.active ? 'text-gray-800' : 'text-gray-400'
-                          }`}>{step.label}</span>
+                        <span className={`text-xs font-semibold transition-colors ${
+                          step.done ? 'text-[#00A699]' : step.active ? 'text-gray-800' : 'text-gray-400'
+                        }`}>{step.label}</span>
                       </div>
                       {i < 2 && <div className="absolute right-0 top-1/4 bottom-1/4 w-px bg-gray-100" />}
                     </div>
@@ -578,8 +583,9 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
             <button
               onClick={handleAddToCart}
               disabled={isFull}
-              className={`px-5 py-3 md:py-4 rounded-2xl border-2 font-bold flex items-center gap-2 transition-colors ${isFull ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'border-teal-50 bg-teal-50 text-[#00A699] hover:bg-teal-100'
-                }`}
+              className={`px-5 py-3 md:py-4 rounded-2xl border-2 font-bold flex items-center gap-2 transition-colors ${
+                isFull ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed' : 'border-teal-50 bg-teal-50 text-[#00A699] hover:bg-teal-100'
+              }`}
             >
               <ShoppingBag className="w-5 h-5" />
               <span className="hidden sm:inline">Add to Cart</span>
@@ -587,10 +593,11 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
             <button
               onClick={handleContinue}
               disabled={isFull}
-              className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center gap-2 transition-all ${isFull
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                : 'bg-[#FF6B4A] hover:bg-[#F25A38] text-white shadow-lg shadow-orange-200/50 active:scale-95'
-                }`}
+              className={`px-6 md:px-8 py-3 md:py-4 rounded-2xl font-bold flex items-center gap-2 transition-all ${
+                isFull
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                  : 'bg-[#FF6B4A] hover:bg-[#F25A38] text-white shadow-lg shadow-orange-200/50 active:scale-95'
+              }`}
             >
               <span>{isFull ? (language === 'th' ? 'ทัวร์เต็มแล้ว' : 'Fully Booked') : t.proceedToPayment}</span>
               {!isFull && <ArrowRight className="w-5 h-5" />}

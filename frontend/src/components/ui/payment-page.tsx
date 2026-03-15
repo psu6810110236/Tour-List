@@ -185,7 +185,12 @@ export function PaymentPage({ bookingData, cartItems = [], onNavigate, language,
     <div className="min-h-screen bg-[#F7F9FA] py-8 md:py-12 font-sans relative">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <button
-          onClick={() => onNavigate("home")}
+          onClick={() => { 
+            // ส่ง bookingData เต็มกลับไป เพื่อให้หน้าจองโหลด date/travelers/contactInfo ครบ
+            const data = localBooking || bookingData;
+            if (data?.tour?.id) onNavigate("booking", data);
+            else onNavigate("booking", data);
+          }}
           className="flex items-center gap-2 text-gray-500 hover:text-[#00A699] mb-8 transition-colors font-medium w-fit"
         >
           <ArrowLeft className="w-5 h-5" />

@@ -159,6 +159,15 @@ function AppContent() {
     switch (pageId) {
       case 'provinces': navigate('/provinces'); break;
       case 'bookings': navigate('/my-bookings'); break;
+      // ย้อนกลับจากหน้าชำระเงินไปหน้าจอง — เก็บ bookingData เต็มไว้ให้ BookingPage
+      case 'booking':
+        if (data) {
+          setBookingData(data);
+          try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch {}
+        }
+        if (data?.tour?.id) navigate(`/booking/${data.tour.id}`);
+        else navigate('/booking');
+        break;
       case 'dashboard': navigate('/profile'); break;
       case 'payment-methods': navigate('/payment-methods'); break;
       case 'admin/dashboard': navigate('/admin/dashboard'); break;
@@ -204,8 +213,8 @@ function AppContent() {
 
           {/* Private (User) */}
           <Route element={<PrivateRoute />}>
-            <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
-            <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
+            <Route path="/booking" element={<BookingPage tour={bookingData?.tour || bookingData} bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
+            <Route path="/booking/:id" element={<BookingPage tour={bookingData?.tour || bookingData} bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
             <Route path="/profile" element={<UserProfilePage language={language} onNavigate={handleNavigate} />} />
             
