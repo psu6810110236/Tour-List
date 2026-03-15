@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Put, Body, Query, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Put, Body, Query, Param, NotFoundException } from '@nestjs/common';
 import { ToursService } from './tours.service'; // ตรวจสอบ path ให้ตรงกับไฟล์ของคุณ
 
 export class CreateTourDto {
@@ -54,6 +54,12 @@ export class ToursController {
   @Post('provinces')
   async createProvince(@Body() provinceData: any) {
     return this.toursService.createProvince(provinceData);
+  }
+
+  // 🟢 API สำหรับอัปเดตจังหวัด
+  @Patch('provinces/:id')
+  async updateProvince(@Param('id') id: string, @Body() updateData: any) {
+    return this.toursService.updateProvince(id, updateData); // เปลี่ยนชื่อ Service ตามที่เพื่อนตั้ง
   }
 
   @Post()

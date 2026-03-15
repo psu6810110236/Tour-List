@@ -74,3 +74,12 @@ export interface Booking {
   user?: any;
   province?: any;
 }
+
+export interface Review {
+  id: string | number;
+  tourId: string | number;
+  userName: string; 
+  rating: number;   
+  comment: string;  
+  createdAt?: string; 
+}

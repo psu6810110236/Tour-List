@@ -26,9 +26,11 @@ export const tourService = {
   getProvinces: () => api.get<Province[]>('/tours/provinces'),
   getById: (id: string) => api.get<Tour>(`/tours/${id}`),
   createProvince: (data: Partial<Province>) => api.post('/tours/provinces', data),
+  updateProvince: (id: string, data: any) => axios.patch(`${API_URL}/provinces/${id}`, data),
   createTour: (data: Partial<Tour>) => api.post('/tours', data),
   updateTour: (id: string, data: Partial<Tour>) => api.put(`/tours/${id}`, data),
   deleteTour: (id: string) => api.delete(`/tours/${id}`),
+  
 };
 
 export const bookingService = {
