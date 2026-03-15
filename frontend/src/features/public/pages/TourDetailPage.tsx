@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+// 🟢 เพิ่ม User เข้ามาใช้เป็นไอคอนรูปคนสำหรับรีวิว
+import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar, User } from 'lucide-react';
 
-// ✅ ใช้ Path ที่ถูกต้องสำหรับโครงสร้างโปรเจกต์ของคุณ
-import { tourService } from '../../../services/api';
+// 🟢 อย่าลืมเพิ่ม reviewService ในไฟล์ api.ts ของคุณด้วยนะครับ
+import { tourService, reviewService } from '../../../services/api'; 
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 
-// ✅ 1. สร้าง Interface สำหรับแผนการเดินทาง (Itinerary)
 interface ItineraryDay {
   day: number;
   title?: string;
@@ -20,7 +20,6 @@ interface ItineraryDay {
   [key: string]: unknown; 
 }
 
-// ✅ 2. สร้าง Interface สำหรับข้อมูลทัวร์ (Tour) ให้ตรงกับ Database
 interface TourDetail {
   id: string | number;
   name?: string;
@@ -44,6 +43,16 @@ interface TourDetail {
   [key: string]: unknown;
 }
 
+// 🟢 สร้าง Interface สำหรับ Review
+interface Review {
+  id?: string | number;
+  tourId: string | number;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt?: string;
+}
+
 interface TourDetailPageProps {
   language?: Language;
 }
@@ -52,48 +61,85 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // ✅ 3. เปลี่ยนจาก useState<any> เป็น useState<TourDetail | null>
   const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<number | null>(1);
   const [showVideo, setShowVideo] = useState(false);
   
+  // 🟢 State สำหรับระบบรีวิว
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewForm, setReviewForm] = useState({ userName: '', rating: 5, comment: '' });
+  const [hoverRating, setHoverRating] = useState(0); // สำหรับลูกเล่นเอามือชี้ดาว
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
 
-// 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
   useEffect(() => {
     if (!id) return;
 
-    const fetchTourDetail = async () => {
+    const fetchTourDetailAndReviews = async () => {
       setLoading(true);
       setError(null);
       
-      try { // <--- ต้องมีคำว่า try นำหน้าเสมอเมื่อใช้คู่กับ catch
-        
-        const response = await tourService.getById(id);
-        
-        // 🟢 ใช้ 'as unknown as TourDetail' เพื่อบอก TypeScript ว่า
-        // เรารู้ว่า Type มันคืออะไร ให้แปลงเป็น TourDetail ซะ จะได้ไม่ Error
-        setTour(response.data as unknown as TourDetail);
+      try { 
+        // 1. ดึงข้อมูลทัวร์
+        const tourRes = await tourService.getById(id);
+        setTour(tourRes.data as unknown as TourDetail);
+
+        // 2. ดึงข้อมูลรีวิว (ถ้ามี Error จากฝั่ง Review จะได้ไม่ทำให้ทัวร์พัง)
+        try {
+          const reviewsRes = await reviewService.getReviewsByTourId(id);
+          // Backend อาจจะส่งมาเป็น array ตรงๆ หรือส่งมาใน property data
+          setReviews(Array.isArray(reviewsRes) ? reviewsRes : reviewsRes.data || []);
+        } catch (reviewErr) {
+          console.error("No reviews found or error fetching reviews", reviewErr);
+        }
 
       } catch (err: unknown) { 
         console.error("Error fetching tour details:", err);
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("ไม่สามารถโหลดข้อมูลทัวร์ได้");
-        }
+        setError("ไม่สามารถโหลดข้อมูลทัวร์ได้");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTourDetail();
+    fetchTourDetailAndReviews();
   }, [id]);
 
-  // Loading State
+  // 🟢 ฟังก์ชันจัดการตอนกดส่งรีวิว
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !reviewForm.userName.trim() || !reviewForm.comment.trim()) {
+      alert(language === 'th' ? 'กรุณากรอกชื่อและข้อความรีวิวให้ครบถ้วน' : 'Please fill in your name and review text.');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      await reviewService.createReview({
+        tourId: id,
+        userName: reviewForm.userName,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment
+      });
+      
+      // ดึงข้อมูลรีวิวใหม่มาแสดงทันที
+      const reviewsRes = await reviewService.getReviewsByTourId(id);
+      setReviews(Array.isArray(reviewsRes) ? reviewsRes : reviewsRes.data || []);
+      
+      // ล้างฟอร์ม
+      setReviewForm({ userName: '', rating: 5, comment: '' });
+      alert(language === 'th' ? 'ขอบคุณสำหรับรีวิวของคุณ!' : 'Thank you for your review!');
+    } catch (err) {
+      console.error(err);
+      alert(language === 'th' ? 'เกิดข้อผิดพลาดในการส่งรีวิว' : 'Failed to submit review.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gray-50">
@@ -102,7 +148,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
     );
   }
 
-  // Error State
   if (error || !tour) {
     return (
       <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 gap-4">
@@ -113,7 +158,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
     );
   }
 
-  // 🟢 จัดการข้อมูลให้ปลอดภัย
   const provinceName = typeof tour.province === 'object' && tour.province !== null
     ? getLang(tour.province, 'name', language) 
     : getLang(tour, 'province', language);
@@ -165,7 +209,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                 <span className="text-white font-semibold">{tour.rating || 0}</span>
-                <span className="text-white/80">({tour.reviewCount || 0} {language === 'th' ? 'รีวิว' : 'reviews'})</span>
+                <span className="text-white/80">({reviews.length > 0 ? reviews.length : (tour.reviewCount || 0)} {language === 'th' ? 'รีวิว' : 'reviews'})</span>
               </div>
             </div>
           </div>
@@ -178,13 +222,11 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
           {/* --- Left Column: Content (2/3) --- */}
           <div className="lg:col-span-2 space-y-8">
             
-            {/* Description */}
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 mb-4 border-l-4 border-[#00A699] pl-4">{t.description}</h2>
               <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{getLang(tour, 'description', language)}</p>
             </div>
 
-            {/* Highlights */}
             {currentHighlights.length > 0 && (
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-[#00A699] pl-4">{t.highlights}</h2>
@@ -201,7 +243,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               </div>
             )}
 
-            {/* Itinerary */}
             {currentItinerary.length > 0 && (
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-[#00A699] pl-4">{t.itinerary}</h2>
@@ -243,7 +284,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               </div>
             )}
             
-            {/* Included/Not Included */}
             {(currentIncluded.length > 0 || currentNotIncluded.length > 0) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 h-full">
@@ -276,6 +316,106 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               </div>
             )}
 
+            {/* ============================================== */}
+            {/* 🟢 ส่วน Review (คอมเมนต์ & กดดาว) เพิ่มใหม่ตรงนี้ครับ */}
+            {/* ============================================== */}
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 mt-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-yellow-400 pl-4 flex items-center gap-2">
+                {language === 'th' ? 'รีวิวจากผู้เดินทาง' : 'Traveler Reviews'}
+                <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{reviews.length} {language === 'th' ? 'รีวิว' : 'Reviews'}</span>
+              </h2>
+
+              {/* รายการรีวิว */}
+              <div className="space-y-6 mb-8 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                {reviews.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    <Star className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                    <p>{language === 'th' ? 'ยังไม่มีรีวิวสำหรับทัวร์นี้ เป็นคนแรกที่รีวิวสิ!' : 'No reviews yet. Be the first to review!'}</p>
+                  </div>
+                ) : (
+                  reviews.map((review) => (
+                    <div key={review.id} className="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-[#00A699] to-[#007A71] rounded-full flex items-center justify-center text-white shadow-sm">
+                            <User className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900">{review.userName}</p>
+                            <p className="text-xs text-gray-400">{review.createdAt ? new Date(review.createdAt).toLocaleDateString('th-TH') : 'เพิ่งรีวิว'}</p>
+                          </div>
+                        </div>
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-gray-600 pl-13 bg-gray-50 p-4 rounded-2xl rounded-tl-none">{review.comment}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* ฟอร์มเขียนรีวิว */}
+              <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-4">{language === 'th' ? 'เขียนรีวิวของคุณ' : 'Write a Review'}</h3>
+                <form onSubmit={handleSubmitReview} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{language === 'th' ? 'ให้คะแนน (ดาว)' : 'Rating'}</label>
+                    <div className="flex gap-1" onMouseLeave={() => setHoverRating(0)}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className="focus:outline-none transition-transform hover:scale-110"
+                          onMouseEnter={() => setHoverRating(star)}
+                          onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                        >
+                          <Star className={`w-8 h-8 ${star <= (hoverRating || reviewForm.rating) ? 'fill-yellow-400 text-yellow-400 drop-shadow-sm' : 'fill-white text-gray-300'}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{language === 'th' ? 'ชื่อของคุณ' : 'Your Name'}</label>
+                    <input 
+                      type="text" 
+                      required
+                      className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none"
+                      placeholder={language === 'th' ? "เช่น สมชาย ใจดี" : "e.g., John Doe"}
+                      value={reviewForm.userName}
+                      onChange={(e) => setReviewForm({ ...reviewForm, userName: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{language === 'th' ? 'ความประทับใจ/ข้อเสนอแนะ' : 'Your Review'}</label>
+                    <textarea 
+                      required
+                      rows={3}
+                      className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none resize-none"
+                      placeholder={language === 'th' ? "เล่าประสบการณ์ความสนุกให้เราฟังหน่อย..." : "Tell us about your experience..."}
+                      value={reviewForm.comment}
+                      onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                    />
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={isSubmittingReview}
+                    className={`px-6 py-3 rounded-xl font-bold text-white transition-all shadow-md ${isSubmittingReview ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#00A699] hover:bg-[#008c81] active:scale-95'}`}
+                  >
+                    {isSubmittingReview 
+                      ? (language === 'th' ? 'กำลังส่งข้อมูล...' : 'Submitting...') 
+                      : (language === 'th' ? 'ส่งรีวิว' : 'Submit Review')}
+                  </button>
+                </form>
+              </div>
+            </div>
+            {/* ============================================== */}
+
           </div>
 
           {/* --- Right Column: Sidebar (1/3) --- */}
@@ -293,7 +433,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                 </div>
 
                 <div className="space-y-3 mb-6 relative z-10">
-                   {/* Duration */}
                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
                          <Calendar className="w-5 h-5" />
@@ -304,7 +443,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                       </div>
                    </div>
 
-                   {/* Group Size */}
                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
                          <Users className="w-5 h-5" />
@@ -315,7 +453,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                       </div>
                    </div>
 
-                   {/* Location */}
                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-[#00A699]">
                          <MapPin className="w-5 h-5" />

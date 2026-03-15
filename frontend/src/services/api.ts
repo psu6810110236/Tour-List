@@ -44,3 +44,26 @@ export const bookingService = {
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
   deleteProvince: (id: string) => axios.delete(`http://localhost:3000/provinces/${id}`),
 };
+
+// 🟢 เพิ่มส่วนจัดการ Review
+export const reviewService = {
+  // ดึงรีวิวทั้งหมดของทัวร์นั้นๆ
+  getReviewsByTourId: async (tourId: string | number) => {
+    const response = await fetch(`${API_URL}/reviews/tour/${tourId}`);
+    if (!response.ok) throw new Error('Failed to fetch reviews');
+    return response.json();
+  },
+
+  // ส่งรีวิวใหม่ไปบันทึก
+  createReview: async (reviewData: { tourId: string | number; userName: string; rating: number; comment: string }) => {
+    const response = await fetch(`${API_URL}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(reviewData),
+    });
+    if (!response.ok) throw new Error('Failed to create review');
+    return response.json();
+  }
+};
