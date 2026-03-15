@@ -23,9 +23,9 @@ import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
 import { MyBookingsPage } from './pages/MyBookingsPage';
 import { UserProfilePage } from './pages/UserProfilePage';
-import { PaymentMethodsPage } from './pages/PaymentMethodsPage'; // ✅ 1. เพิ่ม Import หน้าวิธีการชำระเงิน
+import { PaymentMethodsPage } from './pages/PaymentMethodsPage';
 import CartDrawer from './components/ui/CartDrawer';
-import { TutorialModal } from './components/ui/TutorialModal'; // ✅ เพิ่ม Import TutorialModal
+import { TutorialModal } from './components/ui/TutorialModal';
 
 // Service & Types
 import { tourService } from './services/api';
@@ -96,9 +96,14 @@ function AppContent() {
   const [language, setLanguage] = useState<'th' | 'en'>('th');
   const [bookingData, setBookingData] = useState<any>(null);
 
-  // ✅ เพิ่ม state สำหรับ Tutorial
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [showLanguageFirst, setShowLanguageFirst] = useState(false);
+  // ✅ 1. ดึงค่าจาก localStorage ถ้าไม่มีค่า (เข้าเว็บครั้งแรก) จะเซ็ตเป็น true ให้เด้งทันที
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return !localStorage.getItem("roamhub_tutorial_seen_v1");
+  });
+  
+  const [showLanguageFirst, setShowLanguageFirst] = useState(() => {
+    return !localStorage.getItem("roamhub_tutorial_seen_v1");
+  });
 
   const { cartItems, toggleDrawer, clearCart, addToCart } = useCart();
   const totalItems = cartItems.length;
@@ -112,15 +117,12 @@ function AppContent() {
     }
   }, []);
 
-  // ✅ เช็คว่าเปิดครั้งแรกหรือไม่
+  // ✅ 2. ทันทีที่ Modal ถูกสั่งให้แสดง จะบันทึกข้อมูลไว้ในเครื่องทันทีว่า "เคยเห็นแล้วนะ"
   useEffect(() => {
-    const hasVisited = localStorage.getItem("roamhub_visited");
-    if (!hasVisited) {
-      setShowLanguageFirst(true);
-      setShowTutorial(true);
-      localStorage.setItem("roamhub_visited", "true");
+    if (showTutorial) {
+      localStorage.setItem("roamhub_tutorial_seen_v1", "true");
     }
-  }, []);
+  }, [showTutorial]);
 
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -158,14 +160,14 @@ function AppContent() {
       case 'provinces': navigate('/provinces'); break;
       case 'bookings': navigate('/my-bookings'); break;
       case 'dashboard': navigate('/profile'); break;
-      case 'payment-methods': navigate('/payment-methods'); break; // ✅ 2. เพิ่ม case สำหรับไปหน้าวิธีการชำระเงิน
+      case 'payment-methods': navigate('/payment-methods'); break;
       case 'admin/dashboard': navigate('/admin/dashboard'); break;
       case 'admin/chat': navigate('/admin/chat'); break;
       default: navigate(`/${pageId}`);
     }
   };
 
-  // ✅ ฟังก์ชันเปิด Tutorial (กรณีผู้ใช้กดปุ่มเอง)
+  // ✅ ฟังก์ชันเปิด Tutorial (กรณีผู้ใช้กดปุ่มเองที่ Navigation)
   const handleShowTutorial = () => {
     setShowLanguageFirst(false);
     setShowTutorial(true);
@@ -178,7 +180,7 @@ function AppContent() {
           currentPage={getCurrentPage()}
           onNavigate={handleNavigate}
           userName={user?.fullName || "Guest User"}
-          onShowTutorial={handleShowTutorial} // ✅ ส่ง prop handleShowTutorial
+          onShowTutorial={handleShowTutorial}
           cartCount={totalItems}
           onOpenCart={toggleDrawer}
           language={language}
@@ -202,7 +204,6 @@ function AppContent() {
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
             <Route path="/profile" element={<UserProfilePage language={language} onNavigate={handleNavigate} />} />
             
-            {/* ✅ 3. เพิ่ม Route สำหรับหน้าวิธีการชำระเงิน */}
             <Route path="/payment-methods" element={<PaymentMethodsPage language={language} onNavigate={handleNavigate} />} />
 
             <Route
