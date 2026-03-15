@@ -191,7 +191,7 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
 
           {/* 🟢 H1 - ดีไซน์ใหม่แบบ "Elegant & Minimal" */}
-          <h1 className="text-4xl md:text-7xl lg:text-8xl font-thin mb-8 tracking-tighter leading-[1.1] text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-4xl md:text-7xl lg:t  ext-8xl font-thin mb-8 tracking-tighter leading-[1.1] text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
             {language === 'th' ? (
               <>
                 <span className="font-light opacity-80">ค้นพบความมหัศจรรย์</span><br />

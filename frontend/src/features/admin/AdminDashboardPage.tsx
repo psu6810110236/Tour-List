@@ -1118,9 +1118,48 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   <div className="bg-[#00A699]/5 p-6 rounded-2xl border-2 border-dashed border-[#00A699]/20">
                     <div className="flex justify-between items-center mb-4">
                       <label className="font-bold flex items-center gap-2"><MapPin size={18} /> {language === 'th' ? 'ระบุจังหวัด' : 'Specify Province'}</label>
-                      <button onClick={() => setCreateNewProvince(!createNewProvince)} className="text-xs font-bold text-[#00A699] hover:underline">
-                        {createNewProvince ? (language === 'th' ? 'เลือกจังหวัดที่มีอยู่' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
-                      </button>
+                      <div className="flex gap-4">
+                        {/* 🟢 ปุ่มแก้ไข (โชว์เมื่อเลือกจังหวัดแล้ว และไม่ได้อยู่ในหน้าฟอร์ม) */}
+                        {tourForm.provinceId && !createNewProvince && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const selectedProv = allProvinces.find(p => p.id === tourForm.provinceId);
+                              if (selectedProv) {
+                                setTourForm({ ...tourForm, provinceId: selectedProv.id, province: getLang(selectedProv, 'name', language) });
+                                setProvinceImage(selectedProv.image || '');
+                                setIsEditingProvince(true);
+                                setCreateNewProvince(true);
+                              }
+                            }}
+                            className="text-xs font-bold text-orange-500 hover:text-orange-600 hover:underline flex items-center gap-1"
+                          >
+                            <Edit className="w-3 h-3" /> {language === 'th' ? 'แก้ไขจังหวัดนี้' : 'Edit this Province'}
+                          </button>
+                        )}
+
+                        <button 
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            if (createNewProvince) {
+                              setCreateNewProvince(false);
+                              setIsEditingProvince(false);
+                              if (isEditingProvince) {
+                                setTourForm({ ...tourForm, provinceId: '', province: '' });
+                                setProvinceImage('');
+                              }
+                            } else {
+                              setTourForm({ ...tourForm, provinceId: '', province: '' });
+                              setProvinceImage('');
+                              setIsEditingProvince(false);
+                              setCreateNewProvince(true);
+                            }
+                          }} 
+                          className="text-xs font-bold text-[#00A699] hover:underline"
+                        >
+                          {createNewProvince ? (language === 'th' ? 'กลับไปเลือกจังหวัด' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
+                        </button>
+                      </div>
                     </div>
 
                     {!createNewProvince ? (
@@ -1179,10 +1218,22 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     ) : (
                       <div className="space-y-4 animate-in fade-in duration-300">
                         <div className="grid grid-cols-2 gap-4">
-                          <input placeholder="Province ID (e.g., hat-yai)" className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" onChange={e => setTourForm({ ...tourForm, provinceId: e.target.value })} />
-                          <input placeholder="Province Name (TH/EN)" className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" onChange={e => setTourForm({ ...tourForm, province: e.target.value })} />
+                          {/* 🟢 ล็อคช่อง ID ไว้ถ้ากำลังแก้ไข (ป้องกัน ID เปลี่ยน) */}
+                          <input 
+                            placeholder="Province ID (e.g., hat-yai)" 
+                            className={`p-4 border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition ${isEditingProvince ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`} 
+                            value={tourForm.provinceId || ''}
+                            disabled={isEditingProvince}
+                            onChange={e => setTourForm({ ...tourForm, provinceId: e.target.value })} 
+                          />
+                          <input 
+                            placeholder="Province Name (TH/EN)" 
+                            className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" 
+                            value={(tourForm.province as string) || ''}
+                            onChange={e => setTourForm({ ...tourForm, province: e.target.value })} 
+                          />
                         </div>
-                        
+                          
                         <div className="bg-white p-4 border rounded-xl">
                           <label className="block text-sm font-bold text-gray-700 mb-2">
                             {language === 'th' ? 'รูปภาพจังหวัด (URL)' : 'Province Image (URL)'}
