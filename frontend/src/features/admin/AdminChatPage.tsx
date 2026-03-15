@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { MessageSquare, Send, Image as  ArrowLeft, Paperclip, X } from 'lucide-react'; // 🟢 นำเข้าไอคอน X เพิ่ม
+import { MessageSquare, Send, Image, ArrowLeft, Paperclip, X } from 'lucide-react';
 import { useAuth } from '../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
