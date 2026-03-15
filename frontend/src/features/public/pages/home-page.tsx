@@ -196,13 +196,13 @@ export default function HomePage({ language }: HomePageProps) {
               <>
                 <span className="font-light opacity-80">ค้นพบความมหัศจรรย์</span><br />
                 {/* 🟢 เปลี่ยน Gradient ให้ทึบทั้งหมด และเพิ่ม Drop Shadow สีแบรนด์ */}
-                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#a8fff9] via-[#2dd4bf] to-[#00A699] drop-shadow-xl">ประเทศไทย</span>
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#00fff0] via-[#00A699] to-[#005f58] drop-shadow-xl">ประเทศไทย</span>
               </>
             ) : (
               <>
                 <span className="font-light opacity-80">Discover Amazing</span><br />
                 {/* เน้น "Thailand" ด้วยตัวหนาและไล่สีแบบ Smooth (ทึบทั้งหมด) */}
-                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#a8fff9] via-[#2dd4bf] to-[#00A699] drop-shadow-xl">Thailand</span>
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#00fff0] via-[#00A699] to-[#005f58] drop-shadow-xl">Thailand</span>
               </>
             )}
           </h1>
@@ -393,7 +393,7 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
         ) : (
           <div className="province-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {provinces.map((province) => (
+            {provinces.slice(0, 9).map((province) => (
               <button
                 key={province.id}
                 onClick={() => onNavigate("province", province)}
@@ -433,11 +433,7 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                   </div>
                 </div>
-                <div className="p-5 md:p-6">
-                  <p className="text-gray-600 text-xs md:text-sm line-clamp-2 leading-relaxed">
-                    {language === 'th' ? province.description_th : province.description}
-                  </p>
-                </div>
+
               </button>
             ))}
           </div>
