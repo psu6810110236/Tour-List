@@ -78,26 +78,42 @@ export class AppService implements OnApplicationBootstrap {
 
   private async seedProvinces() {
     const count = await this.provinceRepository.count();
-    if (count === 0) {
-      const data = await this.provinceRepository.save([
-        {
-          id: 'bangkok',
-          name: 'Bangkok',
-          name_th: 'กรุงเทพมหานคร',
-          description: 'The capital city of Thailand',
-          description_th: 'เมืองหลวงของประเทศไทย',
-          image: 'https://images.unsplash.com/photo-1508009603885-50cf7c579365',
-        },
-        {
-          id: 'chiang-mai',
-          name: 'Chiang Mai',
-          name_th: 'เชียงใหม่',
-          description: 'Cultural capital of Northern Thailand',
-          description_th: 'เมืองหลวงทางวัฒนธรรมของภาคเหนือ',
-          image: 'https://github.com/psu6810110318/-/blob/main/imagกหดหกหดe.png',
-        },
-      ]);
-      console.log('✅ Seeded Provinces');
+    // ถ้าข้อมูลมีน้อยกว่า 77 แปลว่ายังไม่ครบ ให้เพิ่มเข้าไป
+    if (count < 77) {
+      const provincesList = [
+        "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร",
+        "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา", "ชลบุรี", "ชัยนาท",
+        "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง",
+        "ตราด", "ตาก", "นครนายก", "นครปฐม", "นครพนม",
+        "นครราชสีมา", "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส",
+        "น่าน", "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์",
+        "ปราจีนบุรี", "ปัตตานี", "พระนครศรีอยุธยา", "พะเยา", "พังงา",
+        "พัทลุง", "พิจิตร", "พิษณุโลก", "เพชรบุรี", "เพชรบูรณ์",
+        "แพร่", "ภูเก็ต", "มหาสารคาม", "มุกดาหาร", "แม่ฮ่องสอน",
+        "ยโสธร", "ยะลา", "ร้อยเอ็ด", "ระนอง", "ระยอง",
+        "ราชบุรี", "ลพบุรี", "ลำปาง", "ลำพูน", "เลย",
+        "ศรีสะเกษ", "สกลนคร", "สงขลา", "สตูล", "สมุทรปราการ",
+        "สมุทรสงคราม", "สมุทรสาคร", "สระแก้ว", "สระบุรี", "สิงห์บุรี",
+        "สุโขทัย", "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์", "หนองคาย",
+        "หนองบัวลำภู", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์",
+        "อุทัยธานี", "อุบลราชธานี"
+      ];
+
+      const provincesData = provincesList.map((name, index) => ({
+        id: `province-${index + 1}`, // รหัสจังหวัด
+        name: name,
+        name_th: name,
+        description: `เที่ยว${name} สัมผัสบรรยากาศที่สวยงาม`,
+        description_th: `เที่ยว${name} สัมผัสบรรยากาศที่สวยงาม`,
+        image: `https://loremflickr.com/800/600/thailand,nature,temple?random=${index + 1}`,
+        tourCount: 0
+      }));
+
+      // ลบข้อมูลเดิมทิ้งก่อน (ถ้ามี) จะได้ไม่ซ้ำซ้อน
+      await this.provinceRepository.query('TRUNCATE TABLE "province" CASCADE');
+      // บันทึกข้อมูลใหม่ทั้ง 77 จังหวัดลงฐานข้อมูล
+      const data = await this.provinceRepository.save(provincesData);
+      console.log('✅ Seeded 77 Provinces into PostgreSQL Database');
       return data;
     }
     return await this.provinceRepository.find();
