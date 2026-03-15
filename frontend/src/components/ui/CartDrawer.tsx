@@ -177,7 +177,15 @@ const CartDrawer = () => {
                 <ShoppingBag className="w-10 h-10 text-gray-300" />
               </div>
               <p className="text-gray-500 font-medium">ยังไม่มีรายการทัวร์ในตะกร้า</p>
-              <button onClick={toggleDrawer} className="text-[#00A699] font-bold hover:underline">
+              
+              {/* ✅ แก้ไขปุ่มนี้ ให้กดแล้วไปหน้า provinces */}
+              <button 
+                onClick={() => {
+                  toggleDrawer(); // ปิด Drawer
+                  navigate('/provinces'); // นำทางไปหน้า Provinces
+                }} 
+                className="text-[#00A699] font-bold hover:underline"
+              >
                 เลือกดูทัวร์เลย
               </button>
             </div>
