@@ -6,24 +6,15 @@ import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 import { useCart } from "../../context/CartContext";
 import { tourService, bookingService } from "../../services/api";
+import { useScrollLock } from "../../hooks/useScrollLock";
 
-// ============================================================
-//  Toast System
-// ============================================================
 type ToastType = "success" | "error" | "warning";
-
-interface ToastData {
-  id: number;
-  type: ToastType;
-  message: string;
-}
+interface ToastData { id: number; type: ToastType; message: string; }
 
 function ToastContainer({ toasts, onRemove }: { toasts: ToastData[]; onRemove: (id: number) => void }) {
   return (
     <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-3 pointer-events-none w-full max-w-sm px-4">
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
-      ))}
+      {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />)}
     </div>
   );
 }
@@ -44,31 +35,15 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
   };
 
   const config = {
-    success: {
-      bg: "bg-white", border: "border-[#00A699]/25", accent: "bg-[#00A699]",
-      iconBg: "bg-[#00A699]/10", iconColor: "text-[#00A699]", Icon: CheckCircle, progressColor: "bg-[#00A699]",
-    },
-    error: {
-      bg: "bg-white", border: "border-red-200", accent: "bg-red-500",
-      iconBg: "bg-red-50", iconColor: "text-red-500", Icon: XCircle, progressColor: "bg-red-500",
-    },
-    warning: {
-      bg: "bg-white", border: "border-amber-200", accent: "bg-amber-400",
-      iconBg: "bg-amber-50", iconColor: "text-amber-500", Icon: AlertCircle, progressColor: "bg-amber-400",
-    },
+    success: { bg: "bg-white", border: "border-[#00A699]/25", accent: "bg-[#00A699]", iconBg: "bg-[#00A699]/10", iconColor: "text-[#00A699]", Icon: CheckCircle, progressColor: "bg-[#00A699]" },
+    error: { bg: "bg-white", border: "border-red-200", accent: "bg-red-500", iconBg: "bg-red-50", iconColor: "text-red-500", Icon: XCircle, progressColor: "bg-red-500" },
+    warning: { bg: "bg-white", border: "border-amber-200", accent: "bg-amber-400", iconBg: "bg-amber-50", iconColor: "text-amber-500", Icon: AlertCircle, progressColor: "bg-amber-400" },
   }[toast.type];
 
   const { Icon } = config;
 
   return (
-    <div
-      className="pointer-events-auto w-full"
-      style={{
-        transition: "all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        opacity: visible && !leaving ? 1 : 0,
-        transform: visible && !leaving ? "translateY(0) scale(1)" : "translateY(-20px) scale(0.95)",
-      }}
-    >
+    <div className="pointer-events-auto w-full" style={{ transition: "all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)", opacity: visible && !leaving ? 1 : 0, transform: visible && !leaving ? "translateY(0) scale(1)" : "translateY(-20px) scale(0.95)" }}>
       <div className={`relative flex items-start gap-3 ${config.bg} border ${config.border} rounded-2xl px-4 py-3.5 shadow-xl shadow-black/8 overflow-hidden`}>
         <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.accent} rounded-l-2xl`} />
         <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config.iconBg}`}>
@@ -98,9 +73,6 @@ function useToast() {
   return { toasts, show, remove };
 }
 
-// ============================================================
-//  BookingPage
-// ============================================================
 interface BookingPageProps {
   tour?: Tour | null;
   onNavigate: (page: string, data?: any) => void;
@@ -109,7 +81,6 @@ interface BookingPageProps {
 }
 
 export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
-  // ✅ ลบ onAddToCart ออกจาก destructure — ใช้ addToCart จาก Context อย่างเดียว
   const { addToCart } = useCart();
   const t = translations[language].booking;
   const params = useParams();
@@ -125,6 +96,7 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
 
   const { toasts, show: showToast, remove: removeToast } = useToast();
   const totalPrice = (localTour?.price || 0) * travelers;
+  useScrollLock(datePopup.isOpen);
 
   useEffect(() => {
     if (!localTour && params?.id) {
@@ -132,7 +104,9 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
       (async () => {
         try {
           const resp = await tourService.getById(String(params.id));
-          setLocalTour(resp.data);
+          const data = resp.data;
+          console.log('✅ localTour fetched:', data); // debug
+          setLocalTour(data);
         } catch (err) {
           console.error("Failed to fetch tour:", err);
         } finally {
@@ -199,12 +173,18 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
     return true;
   };
 
-  // ✅ เรียก addToCart ครั้งเดียว ไม่มี onAddToCart ซ้ำอีกต่อไป
   const handleAddToCart = () => {
     if (isFull || !validateForm()) return;
 
+    // ✅ safeguard ชื่อทัวร์ — ป้องกันกรณี field ไม่ตรง
+    const tourToAdd = {
+      ...localTour,
+      name: localTour?.name || localTour?.name_th || "ทัวร์",
+      name_th: localTour?.name_th || localTour?.name || "ทัวร์",
+    };
+
     addToCart({
-      tour: localTour,
+      tour: tourToAdd,
       date: selectedDate,
       travelers,
       totalPrice,
@@ -238,9 +218,7 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
     setDatePopup(prev => ({ ...prev, isOpen: false }));
   };
 
-  const weekDays = language === "th"
-    ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]
-    : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const weekDays = language === "th" ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
   const monthNames = language === "th"
     ? ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
     : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -374,13 +352,11 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-5">
-                  <button onClick={() => setTravelers(Math.max(1, travelers - 1))} disabled={travelers <= 1 || isFull}
-                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200">
+                  <button onClick={() => setTravelers(Math.max(1, travelers - 1))} disabled={travelers <= 1 || isFull} className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200">
                     <Minus className="w-5 h-5" />
                   </button>
                   <span className="text-xl font-bold w-6 text-center text-gray-900">{travelers}</span>
-                  <button onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} disabled={travelers >= availableSeats || isFull}
-                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200">
+                  <button onClick={() => setTravelers(Math.min(availableSeats, travelers + 1))} disabled={travelers >= availableSeats || isFull} className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200">
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>

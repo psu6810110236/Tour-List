@@ -8,7 +8,9 @@ import { tourService } from '../../../services/api';
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
+import { useScrollLock } from '../../../hooks/useScrollLock';
 
+// ✅ Interface สำหรับแผนการเดินทาง (Itinerary)
 interface ItineraryDay {
   day: number;
   title?: string;
@@ -49,6 +51,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  // ✅ useState<TourDetail | null> แทน useState<any>
   const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +61,9 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
 
+  useScrollLock(showVideo);
+
+  // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
   useEffect(() => {
     if (!id) return;
 
@@ -67,7 +73,11 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
       try {
         const response = await tourService.getById(id);
+
+        // 🟢 ใช้ 'as unknown as TourDetail' เพื่อบอก TypeScript ว่า
+        // เรารู้ว่า Type มันคืออะไร ให้แปลงเป็น TourDetail ซะ จะได้ไม่ Error
         setTour(response.data as unknown as TourDetail);
+
       } catch (err: unknown) {
         console.error("Error fetching tour details:", err);
         if (err instanceof Error) {
@@ -164,7 +174,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
 
-          {/* --- Left Column --- */}
+          {/* --- Left Column: Content (2/3) --- */}
           <div className="lg:col-span-2 space-y-8">
 
             {/* Description */}
@@ -316,7 +326,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                   </div>
                 </div>
 
-                {/* ปุ่ม Book Now เท่านั้น */}
+                {/* ปุ่ม Book Now */}
                 <div className="relative z-10">
                   <button
                     onClick={() => navigate(`/booking/${tour.id}`)}

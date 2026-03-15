@@ -27,7 +27,7 @@ export interface Tour {
   duration: string;
   duration_th: string;
   isHidden?: boolean;
-  
+  historicalBooked: number;
   vehicleType?: string;
   maxCapacity?: number;
 

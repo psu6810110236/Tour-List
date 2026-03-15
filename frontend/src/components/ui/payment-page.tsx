@@ -5,6 +5,7 @@ import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 import { useAuth } from "../../features/auth/context/AuthContext";
 import { bookingService } from "../../services/api";
+import { useScrollLock } from "../../hooks/useScrollLock";
 
 interface PaymentPageProps {
   bookingData: any;
@@ -43,6 +44,8 @@ export function PaymentPage({ bookingData, cartItems = [], onNavigate, language,
     setModalConfig(prev => ({ ...prev, isOpen: false }));
     if (onConfirm) onConfirm();
   };
+
+  useScrollLock(modalConfig.isOpen);
 
   useEffect(() => {
     if (bookingData?.isFromCart || cartItems.length > 0) return;
@@ -119,8 +122,13 @@ export function PaymentPage({ bookingData, cartItems = [], onNavigate, language,
           travelers: item.travelers || item.pax,
           totalPrice: item.totalPrice,
           paymentSlip: slipImage || undefined,
+          // ✅ Safer fallbacks from HEAD — handles cart items where tour object may be partial
           tourNameSnapshot: item.tour?.name || item.tourName || "Tour from Cart",
           tourNameSnapshot_th: item.tour?.name_th || item.tourName_th || item.tourName || "ทัวร์จากตะกร้า",
+          contactName: item.contactInfo?.fullName,
+          phone: item.contactInfo?.phone,
+          email: item.contactInfo?.email,
+          specialRequests: item.contactInfo?.specialRequests,
         };
         const res = await bookingService.createBooking(payload);
         return res.data;

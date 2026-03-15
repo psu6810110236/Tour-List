@@ -4,6 +4,8 @@ import { X, ShoppingBag, Trash2, Clock, Users, CheckCircle2, Circle } from 'luci
 import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 
+const FALLBACK_IMAGE = 'https://raw.githubusercontent.com/psu6810110318/-/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png';
+
 const CartDrawer = () => {
   const { cartItems, isDrawerOpen, toggleDrawer, clearCart, removeFromCart } = useCart();
   const navigate = useNavigate();
@@ -59,6 +61,32 @@ const CartDrawer = () => {
     }, 300);
   };
 
+  // ✅ helper ดึงชื่อทัวร์จาก item — fallback ทุก field ที่เป็นไปได้
+  const getTourName = (item: any): string => {
+    return (
+      item.tour?.name_th ||
+      item.tour?.name ||
+      item.tour?.title_th ||
+      item.tour?.title ||
+      item.tourName_th ||
+      item.tourName ||
+      item.name_th ||
+      item.name ||
+      'ทัวร์'
+    );
+  };
+
+  // ✅ helper ดึงรูปภาพ — fallback เป็น logo RoamHub
+  const getTourImage = (item: any): string => {
+    return (
+      item.tour?.image ||
+      item.image ||
+      item.tour?.thumbnail ||
+      item.thumbnail ||
+      FALLBACK_IMAGE
+    );
+  };
+
   const allSelected = cartItems.length > 0 && selectedIds.size === cartItems.length;
 
   return (
@@ -109,7 +137,6 @@ const CartDrawer = () => {
                   }
                   เลือกทั้งหมด
                 </button>
-
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleDeleteSelected}
@@ -123,7 +150,6 @@ const CartDrawer = () => {
                     <Trash2 className="w-4 h-4" />
                     ลบ {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
                   </button>
-
                   <button
                     onClick={toggleSelectMode}
                     className="px-3 py-1.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
@@ -160,6 +186,8 @@ const CartDrawer = () => {
               {cartItems.map((item: any) => {
                 const isRemoving = removingIds.has(item.id);
                 const isSelected = selectedIds.has(item.id);
+                const tourName = getTourName(item);
+                const tourImage = getTourImage(item);
 
                 return (
                   <div
@@ -184,14 +212,28 @@ const CartDrawer = () => {
                         </div>
                       )}
 
-                      <img
-                        src={item.tour?.image || item.image || '/placeholder-tour.jpg'}
-                        alt={item.tour?.name_th || item.tour?.name || item.tourName || 'Tour'}
-                        className="w-20 h-20 object-cover rounded-xl bg-gray-100 flex-shrink-0"
-                      />
+                      {/* ✅ รูปภาพทัวร์ พร้อม fallback */}
+                      <div className="w-20 h-20 rounded-xl bg-[#00A699] flex-shrink-0 overflow-hidden">
+                        <img
+                          src={tourImage}
+                          alt={tourName}
+                          className={`w-full h-full ${
+                            tourImage === FALLBACK_IMAGE
+                              ? 'object-contain p-2'
+                              : 'object-cover'
+                          }`}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = FALLBACK_IMAGE;
+                            target.className = 'w-full h-full object-contain p-2';
+                          }}
+                        />
+                      </div>
+
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        {/* ✅ ชื่อทัวร์ */}
                         <h3 className="font-bold text-gray-900 text-sm md:text-base line-clamp-2 leading-tight">
-                          {item.tour?.name_th || item.tour?.name || item.tourName_th || item.tourName || 'ทัวร์ (ไม่พบชื่อ)'}
+                          {tourName}
                         </h3>
                         <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                           <Clock className="w-3 h-3" />

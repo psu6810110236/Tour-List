@@ -39,6 +39,7 @@ interface Tour {
   bookedSeats?: number;
   description?: string;
   isHidden?: boolean;
+  historicalBooked: number;
 }
 
 interface HomePageProps {
@@ -46,11 +47,12 @@ interface HomePageProps {
 }
 
 export default function HomePage({ language }: HomePageProps) {
+  const FALLBACK_IMAGE_URL = 'https://raw.githubusercontent.com/psu6810110318/-/main/611177844_1219279366819683_4920076292858051338_n-removebg-preview.png';
   const navigate = useNavigate();
 
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [tours, setTours] = useState<Tour[]>([]);
-  const [allTours, setAllTours] = useState<Tour[]>([]); // 🟢 เพิ่มบรรทัดนี้เพื่อเก็บทัวร์ทั้งหมด
+  const [allTours, setAllTours] = useState<Tour[]>([]);
 
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingTours, setLoadingTours] = useState(true);
@@ -71,9 +73,19 @@ export default function HomePage({ language }: HomePageProps) {
 
     const fetchTours = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/tours');
-        setAllTours(response.data); // 🟢 ให้มันจำทัวร์ทั้งหมดที่มีในระบบไว้เพื่อนับเลข
-        setTours(response.data.slice(0, 3));
+        const response = await axios.get('http://localhost:3000/api/tours/search');
+        const toursData = response.data;
+
+        setAllTours(toursData);
+
+        const popularTours = [...toursData].sort((a, b) => {
+          const popularityA = a.historicalBooked || 0;
+          const popularityB = b.historicalBooked || 0;
+          return popularityB - popularityA;
+        });
+
+        setTours(popularTours.slice(0, 3));
+
       } catch (error) {
         console.error("Error fetching tours:", error);
       } finally {
@@ -187,10 +199,7 @@ export default function HomePage({ language }: HomePageProps) {
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
             </div>
-            {/* แสดงตัวเลขทัวร์ทั้งหมดที่มีในระบบ */}
             <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">{allTours.length}</div>
-
-            {/* 🟢 แก้ไขข้อความตรงนี้ */}
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'แพ็กเกจทัวร์' : 'Tour Packages'}</h3>
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'พร้อมให้บริการในขณะนี้' : 'Available for booking'}</p>
           </div>
@@ -231,9 +240,11 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
           <button
             onClick={() => onNavigate("provinces")}
-            className="text-[#00A699] font-semibold hover:text-[#008c81] flex items-center gap-1 transition"
+            className="flex items-center self-start md:self-auto gap-2 text-[#00A699] font-bold hover:text-[#008c81] transition px-4 py-2 hover:bg-[#00A699]/5 rounded-xl border border-[#00A699]/10"
           >
-            {language === 'th' ? 'ดูทัวร์ทั้งหมด' : 'View all tours'} <ArrowRight className="w-4 h-4" />
+            <Map className="w-5 h-5" />
+            <span className="text-sm md:text-base">{language === 'th' ? 'ค้นหาทัวร์ตามจังหวัด' : 'Explore by Province'}</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
@@ -244,7 +255,6 @@ export default function HomePage({ language }: HomePageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {tours.filter(tour => !tour.isHidden).map((tour) => {
-              // จัดการเรื่องชื่อจังหวัด (ถ้ามี relation มาด้วย ให้ใช้ชื่อไทย/อังกฤษ ตามภาษา)
               const provinceName = tour.province?.name_th && language === 'th' ? tour.province.name_th :
                 tour.province?.name && language === 'en' ? tour.province.name :
                   tour.provinceId || 'จุดหมายยอดฮิต';
@@ -256,23 +266,25 @@ export default function HomePage({ language }: HomePageProps) {
                   key={tour.id}
                   className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
                 >
-                  <div className="relative h-56 overflow-hidden bg-gray-100">
-                    {tour.image ? (
-                      <img
-                        src={tour.image}
-                        alt={tourName}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex justify-center items-center text-gray-400 bg-gray-200">
-                        {language === 'th' ? 'ไม่มีรูปภาพ' : 'No Image'}
-                      </div>
-                    )}
+                  {/* ภาพทัวร์ และ Badge ยอดจอง */}
+                  <div className="relative h-56 overflow-hidden bg-[#00A699]">
+                    <img
+                      src={tour.image || FALLBACK_IMAGE_URL}
+                      alt={tourName}
+                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${
+                        !tour.image ? 'object-contain p-6' : 'object-cover'
+                      }`}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = FALLBACK_IMAGE_URL;
+                        target.className = "w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500";
+                      }}
+                    />
 
                     {/* Badge ยอดคนจอง */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
-                      {language === 'th' ? `จองแล้ว ${tour.bookedSeats || 0} ที่` : `${tour.bookedSeats || 0} Booked`}
+                      {language === 'th' ? `จองแล้ว ${tour.historicalBooked || 0} ที่` : `${tour.historicalBooked || 0} Booked`}
                     </div>
                   </div>
 
@@ -341,12 +353,18 @@ export default function HomePage({ language }: HomePageProps) {
                 onClick={() => onNavigate("province", province)}
                 className="group bg-white rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 text-left"
               >
-                <div className="relative h-56 md:h-64 overflow-hidden">
+                <div className="relative h-56 md:h-64 overflow-hidden bg-gray-200">
                   <img
-                    src={province.image}
+                    src={province.image || FALLBACK_IMAGE_URL}
                     alt={province.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = FALLBACK_IMAGE_URL;
+                      target.className = "w-full h-full object-contain p-8 group-hover:scale-110 transition-transform duration-700";
+                    }}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute bottom-6 left-6 right-6">
                     <div className="flex items-center gap-2 text-white mb-2">
@@ -359,7 +377,9 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-white/90 text-xs md:text-sm font-medium bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
-                        {allTours.filter(t => String(t.provinceId || t.province?.id || t.province) === String(province.id)).length} {h.toursAvailable}
+                        {allTours.filter(t =>
+                          String(t.provinceId || t.province?.id || t.province) === String(province.id) && !t.isHidden
+                        ).length} {h.toursAvailable}
                       </span>
                       <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white text-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="w-4 h-4" />
@@ -516,9 +536,6 @@ export default function HomePage({ language }: HomePageProps) {
               © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
             </div>
             <div className="flex items-center gap-8">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" className="h-4 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 opacity-30 grayscale hover:grayscale-0 transition-all cursor-pointer" />
             </div>
           </div>
         </div>
