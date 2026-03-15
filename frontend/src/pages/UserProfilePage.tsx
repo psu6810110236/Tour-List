@@ -25,24 +25,22 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const { user, logout } = useAuth() as any;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [profileImage, setProfileImage]     = useState<string | null>(localStorage.getItem("userProfileImage"));
+  const [profileImage, setProfileImage]       = useState<string | null>(localStorage.getItem("userProfileImage"));
   const [displayFullName, setDisplayFullName] = useState(user?.fullName || "Normal User");
   const [displayPhone, setDisplayPhone]       = useState((user as any)?.phone || "");
   const [bookings, setBookings]               = useState<any[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
-  // modals
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotifModal, setShowNotifModal]       = useState(false);
 
-  // settings
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess]   = useState(false);
-  const [showOld, setShowOld]       = useState(false);
-  const [showNew, setShowNew]       = useState(false);
+  const [showOld, setShowOld]         = useState(false);
+  const [showNew, setShowNew]         = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [passwordError, setPasswordError]   = useState("");
+  const [passwordError, setPasswordError]     = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const [editForm, setEditForm] = useState({
@@ -51,13 +49,8 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: "", newPassword: "", confirmPassword: "",
   });
-
-  // ✅ notification toggles
   const [notifSettings, setNotifSettings] = useState({
-    booking:   true,
-    promotion: true,
-    system:    false,
-    email:     true,
+    booking: true, promotion: true, system: false, email: true,
   });
 
   useEffect(() => {
@@ -162,7 +155,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     } catch { return d; }
   };
 
-  // ✅ ลบ Help & Support ออก, เชื่อม Bell → showNotifModal
   const quickMenuItems = [
     { icon: Calendar,   label_th: "ดูประวัติการจองทั้งหมด", label_en: "View All Bookings", action: () => onNavigate("bookings"),        color: "text-[#00A699]",  bg: "bg-teal-50"   },
     { icon: Settings,   label_th: "ตั้งค่าบัญชี",            label_en: "Account Settings",  action: () => setShowSettingsModal(true),    color: "text-blue-600",   bg: "bg-blue-50"   },
@@ -173,7 +165,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   return (
     <div className="min-h-screen bg-gray-50 font-sans pb-12">
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <div
         className="relative overflow-hidden pb-24 pt-10"
         style={{ background: "linear-gradient(135deg, #00A699 0%, #00BCD4 40%, #2196F3 100%)" }}
@@ -191,8 +183,10 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                     : <div className="w-full h-full flex items-center justify-center bg-white/20"><User className="w-10 h-10 text-white" strokeWidth={1.5} /></div>
                   }
                 </div>
-                <button onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors border border-gray-100 cursor-pointer">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors border border-gray-100 cursor-pointer"
+                >
                   <Camera className="w-4 h-4 text-[#00A699]" />
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
@@ -217,14 +211,14 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       </div>
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <div className="max-w-6xl mx-auto px-6 -mt-14 relative z-20 mb-10">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label_th: "การจองทั้งหมด", label_en: "Total Bookings", value: totalBookings,                   icon: <Calendar className="w-5 h-5 text-gray-400" />,               valueColor: "text-gray-900"  },
-            { label_th: "รอตรวจสอบ",    label_en: "Pending",         value: pendingCount,                   icon: <span className="text-xl leading-none">⏳</span>,              valueColor: "text-amber-500" },
-            { label_th: "อนุมัติแล้ว",  label_en: "Approved",        value: approvedCount,                  icon: <Check className="w-5 h-5 text-green-500" strokeWidth={2.5} />, valueColor: "text-green-500" },
-            { label_th: "ยอดใช้จ่ายรวม", label_en: "Total Spent",   value: `฿${totalSpent.toLocaleString()}`, icon: <CreditCard className="w-5 h-5 text-teal-500" />,             valueColor: "text-gray-900"  },
+            { label_th: "การจองทั้งหมด",  label_en: "Total Bookings", value: totalBookings,                     icon: <Calendar className="w-5 h-5 text-gray-400" />,                valueColor: "text-gray-900"  },
+            { label_th: "รอตรวจสอบ",      label_en: "Pending",        value: pendingCount,                     icon: <span className="text-xl leading-none">⏳</span>,               valueColor: "text-amber-500" },
+            { label_th: "อนุมัติแล้ว",    label_en: "Approved",       value: approvedCount,                    icon: <Check className="w-5 h-5 text-green-500" strokeWidth={2.5} />,  valueColor: "text-green-500" },
+            { label_th: "ยอดใช้จ่ายรวม",  label_en: "Total Spent",    value: `฿${totalSpent.toLocaleString()}`, icon: <CreditCard className="w-5 h-5 text-teal-500" />,              valueColor: "text-gray-900"  },
           ].map(({ label_th, label_en, value, icon, valueColor }) => (
             <div key={label_th} className="bg-white rounded-2xl px-5 py-5 shadow-md border border-gray-100">
               <div className="flex items-center justify-between mb-3">
@@ -237,7 +231,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       </div>
 
-      {/* ── Main ── */}
+      {/* Main */}
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -308,7 +302,9 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                   { key: "phone",    label_th: "เบอร์โทรศัพท์", label_en: "Phone Number", icon: Phone, value: displayPhone    },
                 ].map(({ key, label_th, label_en, icon: Icon, value }) => (
                   <div key={key}>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">{language === "th" ? label_th : label_en}</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">
+                      {language === "th" ? label_th : label_en}
+                    </label>
                     <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
                       <div className="w-9 h-9 bg-white rounded-lg border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
                         <Icon className="w-4 h-4 text-[#00A699]" />
@@ -325,6 +321,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
           {/* Right */}
           <div className="space-y-6">
+
             {/* Quick Menu */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-6 py-5 border-b border-gray-100">
@@ -343,16 +340,19 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               </div>
             </div>
 
-            {/* Help card — ✅ กดแล้วเปิด Chat widget */}
-            <div className="rounded-2xl p-6 text-white" style={{ background: "linear-gradient(135deg, #00A699 0%, #2196F3 100%)" }}>
+            {/* ✅ Help card — เพิ่ม relative z-10 เพื่อให้ปุ่มกดได้ */}
+            <div
+              className="rounded-2xl p-6 text-white relative z-10"
+              style={{ background: "linear-gradient(135deg, #00A699 0%, #2196F3 100%)" }}
+            >
               <h3 className="font-extrabold text-base mb-1">{language === "th" ? "ต้องการความช่วยเหลือ?" : "Need Help?"}</h3>
               <p className="text-white/85 text-xs mb-4 leading-relaxed">
                 {language === "th" ? "ทีมสนับสนุนพร้อมให้บริการตลอด 24 ชั่วโมง" : "Our support team is available 24/7"}
               </p>
-              {/* ✅ dispatch event เปิด ChatWidget */}
               <button
+                type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent("openChatWidget"))}
-                className="bg-white/20 hover:bg-white/30 border border-white/30 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-colors w-full flex items-center justify-center gap-2"
+                className="bg-white/20 hover:bg-white/30 border border-white/30 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-colors w-full flex items-center justify-center gap-2 cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
                 {language === "th" ? "ติดต่อเรา" : "Contact Us"}
@@ -362,56 +362,28 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════
-          Modal: การแจ้งเตือน
-      ══════════════════════════════════════════ */}
+      {/* Modal: การแจ้งเตือน */}
       {showNotifModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-
-            {/* header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
                   <Bell className="w-5 h-5 text-orange-500" />
                 </div>
-                <h3 className="text-lg font-extrabold text-gray-900">
-                  {language === "th" ? "การแจ้งเตือน" : "Notifications"}
-                </h3>
+                <h3 className="text-lg font-extrabold text-gray-900">{language === "th" ? "การแจ้งเตือน" : "Notifications"}</h3>
               </div>
-              <button onClick={() => setShowNotifModal(false)}
-                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
+              <button onClick={() => setShowNotifModal(false)} className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
                 <X className="w-4 h-4 text-gray-600" />
               </button>
             </div>
 
-            {/* items */}
             <div className="px-6 py-5 space-y-3">
               {[
-                {
-                  key: "booking",
-                  label_th: "การแจ้งเตือนการจอง",    label_en: "Booking updates",
-                  desc_th:  "อัปเดตสถานะการจองและการชำระเงิน", desc_en: "Booking status & payment updates",
-                  icon: Calendar, color: "text-[#00A699]", bg: "bg-teal-50",
-                },
-                {
-                  key: "promotion",
-                  label_th: "โปรโมชั่นและข้อเสนอ",   label_en: "Promotions & offers",
-                  desc_th:  "ส่วนลดและดีลพิเศษสำหรับคุณ",     desc_en: "Discounts and special deals",
-                  icon: BellRing, color: "text-purple-600", bg: "bg-purple-50",
-                },
-                {
-                  key: "system",
-                  label_th: "การแจ้งเตือนระบบ",       label_en: "System notifications",
-                  desc_th:  "ข่าวสารและการอัปเดตจากระบบ",      desc_en: "System news and updates",
-                  icon: Settings, color: "text-blue-600", bg: "bg-blue-50",
-                },
-                {
-                  key: "email",
-                  label_th: "รับการแจ้งเตือนทางอีเมล", label_en: "Email notifications",
-                  desc_th:  "ส่งสรุปไปยังอีเมลของคุณ",          desc_en: "Send summaries to your email",
-                  icon: Mail, color: "text-gray-600", bg: "bg-gray-100",
-                },
+                { key: "booking",   label_th: "การแจ้งเตือนการจอง",     label_en: "Booking updates",     desc_th: "อัปเดตสถานะการจองและการชำระเงิน", desc_en: "Booking status & payment updates", icon: Calendar, color: "text-[#00A699]",  bg: "bg-teal-50"   },
+                { key: "promotion", label_th: "โปรโมชั่นและข้อเสนอ",    label_en: "Promotions & offers", desc_th: "ส่วนลดและดีลพิเศษสำหรับคุณ",      desc_en: "Discounts and special deals",      icon: BellRing, color: "text-purple-600", bg: "bg-purple-50" },
+                { key: "system",    label_th: "การแจ้งเตือนระบบ",        label_en: "System notifications",desc_th: "ข่าวสารและการอัปเดตจากระบบ",       desc_en: "System news and updates",          icon: Settings, color: "text-blue-600",   bg: "bg-blue-50"   },
+                { key: "email",     label_th: "รับการแจ้งเตือนทางอีเมล", label_en: "Email notifications", desc_th: "ส่งสรุปไปยังอีเมลของคุณ",           desc_en: "Send summaries to your email",      icon: Mail,     color: "text-gray-600",   bg: "bg-gray-100"  },
               ].map(({ key, label_th, label_en, desc_th, desc_en, icon: Icon, color, bg }) => (
                 <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
                   <div className="flex items-center gap-3">
@@ -423,7 +395,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                       <p className="text-xs text-gray-500 mt-0.5">{language === "th" ? desc_th : desc_en}</p>
                     </div>
                   </div>
-                  {/* toggle switch */}
                   <button
                     onClick={() => setNotifSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
                     className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ml-3 ${notifSettings[key as keyof typeof notifSettings] ? 'bg-[#00A699]' : 'bg-gray-200'}`}
@@ -447,7 +418,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       )}
 
-      {/* ── Settings Modal ── */}
+      {/* Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-200">
@@ -458,23 +429,24 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </div>
                 <h3 className="text-lg font-extrabold text-gray-900">{language === "th" ? "ตั้งค่าบัญชี" : "Account Settings"}</h3>
               </div>
-              <button onClick={() => { setShowSettingsModal(false); setEditForm({ fullName: displayFullName, email: user?.email || "", phone: displayPhone }); }}
-                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
+              <button
+                onClick={() => { setShowSettingsModal(false); setEditForm({ fullName: displayFullName, email: user?.email || "", phone: displayPhone }); }}
+                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+              >
                 <X className="w-4 h-4 text-gray-600" />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-0 px-7 py-6 space-y-6 bg-gray-50/50">
-              {/* personal info */}
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <User className="w-4 h-4 text-gray-400" />{language === "th" ? "ข้อมูลส่วนตัว" : "Personal Information"}
                 </h4>
                 <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
                   {[
-                    { key: "fullName", label_th: "ชื่อ-นามสกุล",              label_en: "Full Name",      type: "text",  readOnly: false },
-                    { key: "email",    label_th: "อีเมล (ไม่สามารถแก้ไขได้)", label_en: "Email (Read-only)", type: "email", readOnly: true  },
-                    { key: "phone",    label_th: "เบอร์โทรศัพท์",              label_en: "Phone Number",   type: "tel",   readOnly: false },
+                    { key: "fullName", label_th: "ชื่อ-นามสกุล",               label_en: "Full Name",         type: "text",  readOnly: false },
+                    { key: "email",    label_th: "อีเมล (ไม่สามารถแก้ไขได้)",  label_en: "Email (Read-only)", type: "email", readOnly: true  },
+                    { key: "phone",    label_th: "เบอร์โทรศัพท์",               label_en: "Phone Number",      type: "tel",   readOnly: false },
                   ].map(({ key, label_th, label_en, type, readOnly }) => (
                     <div key={key}>
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">{language === "th" ? label_th : label_en}</label>
@@ -483,16 +455,17 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                         value={editForm[key as keyof typeof editForm]}
                         readOnly={readOnly}
                         onChange={readOnly ? undefined : e => setEditForm(p => ({ ...p, [key]: e.target.value }))}
-                        className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all font-semibold text-sm
-                          ${readOnly ? "bg-gray-100 border-gray-100 text-gray-500 cursor-not-allowed"
-                                     : "bg-gray-50 border-gray-100 focus:bg-white focus:border-[#00A699] text-gray-900"}`}
+                        className={`w-full px-4 py-3 border-2 rounded-xl outline-none transition-all font-semibold text-sm ${
+                          readOnly
+                            ? "bg-gray-100 border-gray-100 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-50 border-gray-100 focus:bg-white focus:border-[#00A699] text-gray-900"
+                        }`}
                       />
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* security */}
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-gray-400" />{language === "th" ? "ความปลอดภัย" : "Security"}
@@ -513,7 +486,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </div>
               </div>
 
-              {/* danger zone */}
               <div>
                 <h4 className="text-sm font-bold text-red-600 mb-3 flex items-center gap-2">
                   <Trash2 className="w-4 h-4 text-red-500" />{language === "th" ? "พื้นที่อันตราย" : "Danger Zone"}
@@ -536,8 +508,11 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                   <Check className="w-4 h-4" /> {language === "th" ? "บันทึกข้อมูลสำเร็จ!" : "Saved successfully!"}
                 </div>
               )}
-              <button onClick={handleSaveProfile} disabled={isSavingProfile}
-                className="w-full bg-[#00A699] hover:bg-[#008c81] text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70">
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="w-full bg-[#00A699] hover:bg-[#008c81] text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+              >
                 {isSavingProfile
                   ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   : <Check className="w-5 h-5" />}
@@ -548,14 +523,16 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         </div>
       )}
 
-      {/* ── Change Password Modal ── */}
+      {/* Change Password Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
             <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
               <h3 className="text-lg font-extrabold text-gray-900">{language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}</h3>
-              <button onClick={() => { setShowPasswordModal(false); setPasswordError(""); setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" }); }}
-                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
+              <button
+                onClick={() => { setShowPasswordModal(false); setPasswordError(""); setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" }); }}
+                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+              >
                 <X className="w-4 h-4 text-gray-600" />
               </button>
             </div>
@@ -571,9 +548,9 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </div>
               )}
               {[
-                { key: "oldPassword",     label: language === "th" ? "รหัสผ่านเดิม"      : "Current Password",  show: showOld,     toggle: () => setShowOld(p => !p)     },
-                { key: "newPassword",     label: language === "th" ? "รหัสผ่านใหม่"      : "New Password",      show: showNew,     toggle: () => setShowNew(p => !p)     },
-                { key: "confirmPassword", label: language === "th" ? "ยืนยันรหัสผ่านใหม่" : "Confirm Password",  show: showConfirm, toggle: () => setShowConfirm(p => !p) },
+                { key: "oldPassword",     label: language === "th" ? "รหัสผ่านเดิม"       : "Current Password", show: showOld,     toggle: () => setShowOld(p => !p)     },
+                { key: "newPassword",     label: language === "th" ? "รหัสผ่านใหม่"       : "New Password",     show: showNew,     toggle: () => setShowNew(p => !p)     },
+                { key: "confirmPassword", label: language === "th" ? "ยืนยันรหัสผ่านใหม่" : "Confirm Password", show: showConfirm, toggle: () => setShowConfirm(p => !p) },
               ].map(({ key, label, show, toggle }) => (
                 <div key={key}>
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">{label}</label>
@@ -585,8 +562,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                       placeholder="••••••••"
                       className="w-full px-4 py-3 pr-12 bg-gray-50 border-2 border-gray-100 rounded-xl outline-none focus:bg-white focus:border-[#00A699] transition-all font-medium tracking-widest text-sm"
                     />
-                    <button type="button" onClick={toggle}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 shadow-sm">
+                    <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 shadow-sm">
                       {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -605,8 +581,10 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                   </div>
                 ))}
               </div>
-              <button onClick={handleChangePassword}
-                className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+              <button
+                onClick={handleChangePassword}
+                className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              >
                 <Lock className="w-5 h-5" />
                 {language === "th" ? "ยืนยันเปลี่ยนรหัสผ่าน" : "Confirm Change"}
               </button>
