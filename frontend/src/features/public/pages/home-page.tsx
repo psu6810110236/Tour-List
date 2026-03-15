@@ -1,4 +1,4 @@
-// src/components/home-page.tsx
+// src/features/public/pages/home-page.tsx
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 
 import { tourService } from "../../../services/api";
+
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 
-// ✅ 1. Interface สำหรับจังหวัด
 interface Province {
   id: string;
   name: string;
@@ -27,15 +27,13 @@ interface Province {
   image: string;
   description: string;
   description_th: string;
-
 }
 
-// ✅ 2. Interface สำหรับทัวร์ (อัปเดตฟิลด์ให้ครบตามดีไซน์ใหม่)
 interface Tour {
   id: string | number;
   name: string;
   name_th?: string;
-  province?: any; // เผื่อกรณีดึง relation province มาด้วย
+  province?: any;
   provinceId?: string;
   price: number;
   image?: string;
@@ -55,7 +53,7 @@ export default function HomePage({ language }: HomePageProps) {
 
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [tours, setTours] = useState<Tour[]>([]);
-  const [allTours, setAllTours] = useState<Tour[]>([]); // 🟢 เพิ่มบรรทัดนี้เพื่อเก็บทัวร์ทั้งหมด
+  const [allTours, setAllTours] = useState<Tour[]>([]);
 
   const [loadingProvinces, setLoadingProvinces] = useState(true);
   const [loadingTours, setLoadingTours] = useState(true);
@@ -94,14 +92,12 @@ export default function HomePage({ language }: HomePageProps) {
         const response = await axios.get('http://localhost:3000/api/tours/search');
         const toursData = response.data;
 
-        // 🟢 1. เก็บข้อมูลทัวร์ทั้งหมดไว้เพื่อนับจำนวน (Stats & จังหวัด) โดยไม่ถูกตัดทอน
         setAllTours(toursData);
 
-        // 🟢 2. ทำการ Copy ข้อมูล นำมาเรียงลำดับตาม bookedSeats (มากไปน้อย)
         const popularTours = [...toursData].sort((a, b) => {
           const popularityA = a.historicalBooked || 0;
           const popularityB = b.historicalBooked || 0;
-          return popularityB - popularityA; // เรียงจากมากไปน้อย
+          return popularityB - popularityA;
         });
 
         setTours(popularTours.slice(0, 3));
@@ -112,6 +108,7 @@ export default function HomePage({ language }: HomePageProps) {
         setLoadingTours(false);
       }
     };
+
     fetchProvinces();
     fetchTours();
   }, []);
@@ -241,23 +238,18 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
       </div>
 
-      {/* ================= STATS SECTION (Glowing Layout) ================= */}
+      {/* ================= STATS SECTION ================= */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 -mt-8 md:-mt-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
-          {/* Card 1: ซ้าย */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4">
               <Map className="w-8 h-8" />
             </div>
-            {/* แสดงตัวเลขทัวร์ทั้งหมดที่มีในระบบ */}
             <div className="text-4xl lg:text-5xl font-black text-gray-900 mb-2">{allTours.length}</div>
-
-            {/* 🟢 แก้ไขข้อความตรงนี้ */}
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'แพ็กเกจทัวร์' : 'Tour Packages'}</h3>
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'พร้อมให้บริการในขณะนี้' : 'Available for booking'}</p>
           </div>
 
-          {/* Card 2: กลาง (ลอยสูงขึ้นนิดหน่อย) */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_35px_rgba(56,189,248,0.4)] hover:shadow-[0_0_50px_rgba(56,189,248,0.7)] border border-sky-200 md:-mt-6 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center relative z-10">
             <div className="w-16 h-16 rounded-2xl bg-[#00A699]/10 flex items-center justify-center text-[#00A699] mb-4 shadow-lg shadow-[#00A699]/20">
               <MapPin className="w-8 h-8" />
@@ -267,7 +259,6 @@ export default function HomePage({ language }: HomePageProps) {
             <p className="text-sm text-gray-500 mt-1">{language === 'th' ? 'ครอบคลุมทุกจุดหมายปลายทาง' : 'Covering all destinations'}</p>
           </div>
 
-          {/* Card 3: ขวา */}
           <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_40px_rgba(56,189,248,0.6)] border border-sky-100 transform hover:-translate-y-2 transition-all duration-500 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-yellow-100 flex items-center justify-center text-yellow-500 mb-4">
               <Star className="w-8 h-8 fill-yellow-500" />
@@ -282,7 +273,7 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
       </div>
 
-      {/* ===== 🌟 RECOMMENDED TOURS SECTION (ย้ายขึ้นมาบนสุด และปรับดีไซน์) ===== */}
+      {/* ===== RECOMMENDED TOURS SECTION ===== */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10">
         <div className="mb-10 flex flex-col md:flex-row justify-between items-end gap-4">
           <div>
@@ -310,7 +301,6 @@ export default function HomePage({ language }: HomePageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {tours.filter(tour => !tour.isHidden).map((tour) => {
-              // จัดการเรื่องชื่อจังหวัด (ถ้ามี relation มาด้วย ให้ใช้ชื่อไทย/อังกฤษ ตามภาษา)
               const provinceName = tour.province?.name_th && language === 'th' ? tour.province.name_th :
                 tour.province?.name && language === 'en' ? tour.province.name :
                   tour.provinceId || 'จุดหมายยอดฮิต';
@@ -323,28 +313,27 @@ export default function HomePage({ language }: HomePageProps) {
                   className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
                 >
                   {/* ภาพทัวร์ และ Badge ยอดจอง */}
-                  <div className="relative h-56 overflow-hidden bg-[#00A699]"> {/* เปลี่ยนสีพื้นหลังรอไว้เลย */}
+                  <div className="relative h-56 overflow-hidden bg-[#00A699]">
                     <img
                       src={tour.image || FALLBACK_IMAGE_URL}
                       alt={tourName}
-                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${!tour.image ? 'object-contain p-6' : 'object-cover'
-                        }`}
+                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${
+                        !tour.image ? 'object-contain p-6' : 'object-cover'
+                      }`}
                       onError={(e) => {
-                        // ใส่เผื่อไว้กรณี tour.image มีค่าแต่ลิงก์เสีย
                         const target = e.target as HTMLImageElement;
                         target.src = FALLBACK_IMAGE_URL;
                         target.className = "w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500";
                       }}
                     />
 
-                    {/* Badge ยอดคนจอง (คงไว้เหมือนเดิม) */}
+                    {/* Badge ยอดคนจอง */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
                       {language === 'th' ? `จองแล้ว ${tour.historicalBooked || 0} ที่` : `${tour.historicalBooked || 0} Booked`}
                     </div>
                   </div>
 
-                  {/* ข้อมูลทัวร์ */}
                   <div className="p-6 flex-1 flex flex-col">
                     <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2" title={tourName}>
                       {tourName}
@@ -593,7 +582,6 @@ export default function HomePage({ language }: HomePageProps) {
               © 2026 <span className="text-gray-300">ROAMHUB TOUR</span>. UNIVERSITY FIGMA ASSIGNMENT PROJECT
             </div>
             <div className="flex items-center gap-8">
-
             </div>
           </div>
         </div>

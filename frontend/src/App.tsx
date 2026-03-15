@@ -4,11 +4,11 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Outle
 import { AuthProvider, useAuth } from './features/auth/context/AuthContext';
 import AdminRoute from './features/admin/AdminRoute';
 import ChatWidget from './layouts/ChatWidget';
+import ScrollToTop from './components/ScrollToTop';
 
-// --- Icons ---
-import { Construction, Ticket, UserCircle } from 'lucide-react';
+import { CartProvider, useCart } from './context/CartContext';
+import { Construction } from 'lucide-react';
 
-// --- Import Pages & Components ---
 import Login from './features/auth/Login';
 import Register from './features/auth/Register';
 import HomePage from './features/public/pages/home-page';
@@ -22,10 +22,15 @@ import { BookingPage } from './components/ui/booking-page';
 import { PaymentPage } from './components/ui/payment-page';
 import { PaymentConfirmation } from './components/ui/payment-confirmation';
 import { MyBookingsPage } from './pages/MyBookingsPage';
+import { UserProfilePage } from './pages/UserProfilePage';
+import { PaymentMethodsPage } from './pages/PaymentMethodsPage';
+import CartDrawer from './components/ui/CartDrawer';
+import { TutorialModal } from './components/ui/TutorialModal';
+
 // Service & Types
 import { tourService } from './services/api';
 import type { Province } from './data/mockData';
-import ScrollToTop from './components/ScrollToTop';
+
 // --- UI Helper Components ---
 const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, desc: string, icon: any }) => (
   <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 bg-gray-50/50">
@@ -40,16 +45,6 @@ const WorkInProgressTemplate = ({ title, desc, icon: Icon }: { title: string, de
   </div>
 );
 
-
-
-const UserProfile = ({ language }: { language: 'th' | 'en' }) => (
-  <WorkInProgressTemplate
-    title={language === 'th' ? "โปรไฟล์ผู้ใช้" : "User Profile"}
-    desc={language === 'th' ? "ระบบจัดการข้อมูลส่วนตัวกำลังเปิดให้ใช้งานเร็วๆ นี้" : "Personal information management will be available soon."}
-    icon={UserCircle}
-  />
-);
-
 // --- PrivateRoute Helper ---
 const PrivateRoute = () => {
   const { user, loading } = useAuth();
@@ -57,7 +52,6 @@ const PrivateRoute = () => {
   return user ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
-// --- Province Wrapper ---
 const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -68,7 +62,6 @@ const ProvinceRouteWrapper = ({ language }: { language: 'th' | 'en' }) => {
     const fetchProvince = async () => {
       try {
         if (!id) return;
-        // 🟢 เปลี่ยนมาเรียกใช้ API ดึงจังหวัดเดียว
         const response = await tourService.getProvinces();
         const province = response.data?.find((p: Province) => p.id === id) || null;
         setProvinceData(province);
@@ -103,6 +96,18 @@ function AppContent() {
   const [language, setLanguage] = useState<'th' | 'en'>('th');
   const [bookingData, setBookingData] = useState<any>(null);
 
+  // ✅ 1. ดึงค่าจาก localStorage ถ้าไม่มีค่า (เข้าเว็บครั้งแรก) จะเซ็ตเป็น true ให้เด้งทันที
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return !localStorage.getItem("roamhub_tutorial_seen_v1");
+  });
+  
+  const [showLanguageFirst, setShowLanguageFirst] = useState(() => {
+    return !localStorage.getItem("roamhub_tutorial_seen_v1");
+  });
+
+  const { cartItems, toggleDrawer, clearCart, addToCart } = useCart();
+  const totalItems = cartItems.length;
+
   useEffect(() => {
     try {
       const stored = sessionStorage.getItem('bookingData');
@@ -111,6 +116,13 @@ function AppContent() {
       console.warn('Failed to parse bookingData from sessionStorage', e);
     }
   }, []);
+
+  // ✅ 2. ทันทีที่ Modal ถูกสั่งให้แสดง จะบันทึกข้อมูลไว้ในเครื่องทันทีว่า "เคยเห็นแล้วนะ"
+  useEffect(() => {
+    if (showTutorial) {
+      localStorage.setItem("roamhub_tutorial_seen_v1", "true");
+    }
+  }, [showTutorial]);
 
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -121,25 +133,25 @@ function AppContent() {
     const path = location.pathname;
     if (path === '/' || path.startsWith('/tour')) return 'home';
     if (path.startsWith('/province') || path === '/provinces') return 'provinces';
-    if (path.startsWith('/booking') || path.startsWith('/my-bookings')) return 'bookings';
+    if (path.startsWith('/booking') || path === '/my-bookings') return 'bookings';
     return '';
   };
 
   const handleNavigate = (pageId: string, data?: any) => {
     if (pageId === 'payment') {
       setBookingData(data);
-      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { };
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { }
       navigate('/payment');
       return;
     }
     if (pageId === 'payment-confirmation') {
       setBookingData(data);
-      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { };
+      try { sessionStorage.setItem('bookingData', JSON.stringify(data)); } catch { }
       navigate('/payment-confirmation');
       return;
     }
     if (pageId === 'home') {
-      try { sessionStorage.removeItem('bookingData'); } catch { };
+      try { sessionStorage.removeItem('bookingData'); } catch { }
       setBookingData(null);
       navigate('/');
       return;
@@ -148,10 +160,22 @@ function AppContent() {
       case 'provinces': navigate('/provinces'); break;
       case 'bookings': navigate('/my-bookings'); break;
       case 'dashboard': navigate('/profile'); break;
+      case 'payment-methods': navigate('/payment-methods'); break;
       case 'admin/dashboard': navigate('/admin/dashboard'); break;
       case 'admin/chat': navigate('/admin/chat'); break;
+      // ✅ แก้ bug: tour-detail ต้องใช้ data.id ไม่ใช่ navigate('/tour-detail')
+      case 'tour-detail':
+        if (data?.id) navigate(`/tour/${data.id}`);
+        else navigate(-1 as any);
+        break;
       default: navigate(`/${pageId}`);
     }
+  };
+
+  // ✅ ฟังก์ชันเปิด Tutorial (กรณีผู้ใช้กดปุ่มเองที่ Navigation)
+  const handleShowTutorial = () => {
+    setShowLanguageFirst(false);
+    setShowTutorial(true);
   };
 
   return (
@@ -161,9 +185,9 @@ function AppContent() {
           currentPage={getCurrentPage()}
           onNavigate={handleNavigate}
           userName={user?.fullName || "Guest User"}
-          onShowTutorial={() => alert("Tutorial Coming Soon!")}
-          cartCount={0}
-          onOpenCart={() => console.log("Open Cart")}
+          onShowTutorial={handleShowTutorial}
+          cartCount={totalItems}
+          onOpenCart={toggleDrawer}
           language={language}
           onToggleLanguage={() => setLanguage(prev => prev === 'th' ? 'en' : 'th')}
         />
@@ -183,9 +207,33 @@ function AppContent() {
             <Route path="/booking" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/booking/:id" element={<BookingPage tour={bookingData} onNavigate={handleNavigate} language={language} />} />
             <Route path="/my-bookings" element={<MyBookingsPage onNavigate={handleNavigate} language={language} />} />
-            <Route path="/profile" element={<UserProfile language={language} />} />
-            <Route path="/payment" element={<PaymentPage bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
-            <Route path="/payment-confirmation" element={<PaymentConfirmation bookingData={bookingData} onNavigate={handleNavigate} language={language} />} />
+            <Route path="/profile" element={<UserProfilePage language={language} onNavigate={handleNavigate} />} />
+            
+            <Route path="/payment-methods" element={<PaymentMethodsPage language={language} onNavigate={handleNavigate} />} />
+
+            <Route
+              path="/payment"
+              element={
+                <PaymentPage
+                  bookingData={bookingData || { isFromCart: true }}
+                  cartItems={cartItems}
+                  onClearCart={clearCart}
+                  onNavigate={handleNavigate}
+                  language={language}
+                />
+              }
+            />
+            <Route
+              path="/payment-confirmation"
+              element={
+                <PaymentConfirmation
+                  bookingData={bookingData || { isFromCart: true }}
+                  cartItems={cartItems}
+                  onNavigate={handleNavigate}
+                  language={language}
+                />
+              }
+            />
           </Route>
 
           {/* Admin Only */}
@@ -206,6 +254,17 @@ function AppContent() {
       </main>
 
       {showChatWidget && <ChatWidget />}
+      <CartDrawer />
+
+      {/* ✅ เพิ่ม Modal ไว้ด้านล่างสุด */}
+      {showTutorial && (
+        <TutorialModal
+          language={language}
+          onClose={() => setShowTutorial(false)}
+          showLanguageFirst={showLanguageFirst}
+          onSelectLanguage={(lang) => setLanguage(lang as 'th' | 'en')}
+        />
+      )}
     </div>
   );
 }
@@ -213,10 +272,12 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <AppContent />
-      </BrowserRouter>
+      <CartProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <AppContent />
+        </BrowserRouter>
+      </CartProvider>
     </AuthProvider>
   );
 }

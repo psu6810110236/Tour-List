@@ -9,12 +9,15 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  // แก้ไขให้ nullable: true สำหรับ Google Login
   @Column({ nullable: true })
   passwordHash: string;
 
   @Column()
   fullName: string;
+
+  // ✅ เพิ่ม phone field
+  @Column({ nullable: true })
+  phone: string;
 
   @Column({ default: 'local' })
   provider: string;

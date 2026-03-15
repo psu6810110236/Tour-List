@@ -10,21 +10,24 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { MailerModule, MailerService } from '@nestjs-modules/mailer';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Role } from './entities/role.entity';
 import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
-import { User } from './entities/user.entity'; 
+import { User } from './entities/user.entity';
+import { Review } from './entities/review.entity';
+import { CartItem } from './cart/entities/cart-item.entity';
+import { CartModule } from './cart/cart.module';
 import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { Review } from './entities/review.entity';
 import { ReviewsModule } from './reviews/reviews.module';
 import { ToursModule } from './tours/tours.module';
 import { BookingsModule } from './booking/bookings.module';
-import { ScheduleModule } from '@nestjs/schedule';
+
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -40,15 +43,13 @@ import { ScheduleModule } from '@nestjs/schedule';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true, 
+        synchronize: true,
       }),
     }),
-    // ตั้งค่าป้องกันการยิง Request รัวๆ จำกัด 10 ครั้งใน 60 วินาที
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 10,
     }]),
-    // ตั้งค่าระบบส่งอีเมล
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -67,13 +68,15 @@ import { ScheduleModule } from '@nestjs/schedule';
         },
       }),
     }),
-    TypeOrmModule.forFeature([Role, Province, Tour, User, Review]), 
+    // ✅ Single consolidated forFeature call
+    TypeOrmModule.forFeature([Role, Province, Tour, User, Review, CartItem]),
     UsersModule,
     AuthModule,
     ReviewsModule,
     ChatModule,
     ToursModule,
     BookingsModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],

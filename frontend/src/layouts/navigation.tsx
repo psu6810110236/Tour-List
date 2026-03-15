@@ -1,6 +1,6 @@
 // src/components/navigation.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Home,
     Map,
@@ -33,10 +33,12 @@ import {
 import {
     Avatar,
     AvatarFallback,
+    AvatarImage, // ✅ เพิ่ม Import AvatarImage
 } from "../components/ui/avatar";
 
 import { Badge } from "../components/ui/badge";
 import { useScrollLock } from "../hooks/useScrollLock";
+
 interface NavigationProps {
     currentPage: string;
     onNavigate: (page: string) => void;
@@ -60,6 +62,24 @@ export function Navigation({
 }: NavigationProps) {
     const [logoError, setLogoError] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // ✅ สร้าง State สำหรับเก็บรูปโปรไฟล์ โดยดึงค่าเริ่มต้นจาก localStorage
+    const [avatarImg, setAvatarImg] = useState<string | null>(localStorage.getItem("userProfileImage"));
+
+    // ✅ สร้าง useEffect เพื่อรอรับสัญญาณ 'profileImageUpdated' จากหน้า Profile
+    useEffect(() => {
+        const handleProfileUpdate = () => {
+            setAvatarImg(localStorage.getItem("userProfileImage"));
+        };
+
+        // ดักฟัง Event
+        window.addEventListener("profileImageUpdated", handleProfileUpdate);
+
+        // คืนค่า Event เมื่อ Component ถูกทำลาย
+        return () => {
+            window.removeEventListener("profileImageUpdated", handleProfileUpdate);
+        };
+    }, []);
 
     // ดึงฟังก์ชัน logout และข้อมูล user จาก AuthContext
     const { logout, user } = useAuth();
@@ -122,13 +142,26 @@ export function Navigation({
                     {/* ACTIONS */}
                     <div className="flex items-center gap-2 sm:gap-4 -mr-4 lg:-mr-8">
                         {/* CART */}
-                        <button onClick={onOpenCart} title={tCart.title} className="relative p-3 text-gray-600 hover:text-[#00A699] hover:bg-[#00A699]/5 rounded-2xl transition-all border border-transparent hover:border-[#00A699]/20">
+                        <button 
+                            onClick={onOpenCart} 
+                            title={tCart?.title || "ตะกร้าของฉัน"} 
+                            className="relative p-3 text-gray-600 hover:text-[#00A699] hover:bg-[#00A699]/5 rounded-2xl transition-all border border-transparent hover:border-[#00A699]/20"
+                        >
                             <ShoppingBag className="w-6 h-6" />
                             {cartCount > 0 && (
                                 <Badge className="absolute -top-1 -right-1 px-1.5 min-w-[1.25rem] h-5 bg-[#FF6B4A] border-2 border-white flex items-center justify-center text-[10px]">
                                     {cartCount}
                                 </Badge>
                             )}
+                        </button>
+
+                        {/* ✅ TUTORIAL BUTTON */}
+                        <button
+                            onClick={onShowTutorial}
+                            title="Tutorial"
+                            className="hidden sm:flex items-center justify-center w-10 h-10 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-all text-gray-500 hover:text-[#00A699]"
+                        >
+                            <HelpCircle className="w-5 h-5" />
                         </button>
 
                         {/* LANGUAGE */}
@@ -141,11 +174,14 @@ export function Navigation({
                         <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                                 <button className="flex items-center gap-3 pl-2 pr-2 sm:pr-4 py-2 hover:bg-gray-50 rounded-full transition-all group">
-                                    <Avatar className="w-11 h-11 border-2 border-white shadow-md group-hover:scale-105 transition-transform">
+                                    {/* ✅ อัปเดตส่วน Avatar ให้แสดงรูปจากตัวแปร avatarImg */}
+                                    <Avatar className="w-11 h-11 border-2 border-white shadow-md group-hover:scale-105 transition-transform bg-white">
+                                        {avatarImg && <AvatarImage src={avatarImg} alt={userName} className="object-cover" />}
                                         <AvatarFallback className="bg-gradient-to-br from-[#FF7B4A] to-[#FF9A6A] text-white">
                                             <User className="w-6 h-6" />
                                         </AvatarFallback>
                                     </Avatar>
+
                                     <div className="text-left hidden sm:block">
                                         <p className="text-sm font-bold text-gray-900 leading-tight">{userName}</p>
                                         <p className="text-[10px] text-gray-500 font-medium uppercase">{t.viewProfile}</p>

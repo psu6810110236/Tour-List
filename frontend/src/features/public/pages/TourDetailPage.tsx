@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
-// ✅ ใช้ Path ที่ถูกต้องสำหรับโครงสร้างโปรเจกต์ของคุณ
 import { tourService } from '../../../services/api';
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 import { useScrollLock } from '../../../hooks/useScrollLock';
-// ✅ 1. สร้าง Interface สำหรับแผนการเดินทาง (Itinerary)
+
+// ✅ Interface สำหรับแผนการเดินทาง (Itinerary)
 interface ItineraryDay {
   day: number;
   title?: string;
@@ -20,12 +20,11 @@ interface ItineraryDay {
   [key: string]: unknown;
 }
 
-// ✅ 2. สร้าง Interface สำหรับข้อมูลทัวร์ (Tour) ให้ตรงกับ Database
 interface TourDetail {
   id: string | number;
   name?: string;
   name_th?: string;
-  province?: string | { name?: string; name_th?: string;[key: string]: unknown };
+  province?: string | { name?: string; name_th?: string; [key: string]: unknown };
   duration?: string;
   rating?: number;
   reviewCount?: number;
@@ -52,7 +51,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // ✅ 3. เปลี่ยนจาก useState<any> เป็น useState<TourDetail | null>
+  // ✅ useState<TourDetail | null> แทน useState<any>
   const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +60,9 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
+
   useScrollLock(showVideo);
+
   // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
   useEffect(() => {
     if (!id) return;
@@ -70,8 +71,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
       setLoading(true);
       setError(null);
 
-      try { // <--- ต้องมีคำว่า try นำหน้าเสมอเมื่อใช้คู่กับ catch
-
+      try {
         const response = await tourService.getById(id);
 
         // 🟢 ใช้ 'as unknown as TourDetail' เพื่อบอก TypeScript ว่า
@@ -113,7 +113,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
     );
   }
 
-  // 🟢 จัดการข้อมูลให้ปลอดภัย
   const provinceName = typeof tour.province === 'object' && tour.province !== null
     ? getLang(tour.province, 'name', language)
     : getLang(tour, 'province', language);
@@ -125,7 +124,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
-      {/* --- Hero Section (Video Banner) --- */}
+      {/* --- Hero Section --- */}
       <div className="relative h-[500px] overflow-hidden tour-card-tutorial">
         <div className="relative w-full h-full bg-gray-900">
           <img
@@ -278,7 +277,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
           </div>
 
-          {/* --- Right Column: Sidebar (1/3) --- */}
+          {/* --- Right Column: Sidebar --- */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
 
@@ -327,12 +326,15 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                   </div>
                 </div>
 
-                <button
-                  onClick={() => navigate(`/booking/${tour.id}`)}
-                  className="w-full bg-[#FF6B4A] hover:bg-[#ff5232] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 transition-all active:scale-[0.98] relative z-10"
-                >
-                  {t.bookNow}
-                </button>
+                {/* ปุ่ม Book Now */}
+                <div className="relative z-10">
+                  <button
+                    onClick={() => navigate(`/booking/${tour.id}`)}
+                    className="w-full bg-[#FF6B4A] hover:bg-[#ff5232] text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 transition-all active:scale-[0.98]"
+                  >
+                    {t.bookNow}
+                  </button>
+                </div>
 
                 <p className="text-center text-xs text-gray-400 mt-4">
                   Free cancellation up to 24 hours before start
