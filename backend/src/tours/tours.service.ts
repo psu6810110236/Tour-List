@@ -96,6 +96,17 @@ export class ToursService {
     return await this.provinceRepository.save(newProvince);
   }
 
+  async updateProvince(id: string, updateData: any) {
+    const province = await this.provinceRepository.findOne({ where: { id: id as any } });
+    if (!province) {
+      throw new NotFoundException(`ไม่พบจังหวัดรหัส ${id}`);
+    }
+    
+    // เอาข้อมูลใหม่มาทับข้อมูลเดิม
+    Object.assign(province, updateData);
+    return this.provinceRepository.save(province);
+  }
+
   async createTour(tourData: Partial<Tour>) {
     const newTour = this.tourRepository.create(tourData);
     const savedTour = await this.tourRepository.save(newTour); // บันทึก Tour ก่อน

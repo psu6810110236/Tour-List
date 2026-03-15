@@ -71,6 +71,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
+  const [isEditingProvince, setIsEditingProvince] = useState(false);
 
   // State นี้สำหรับเก็บรูปจังหวัดโดยเฉพาะ
   const [provinceImage, setProvinceImage] = useState<string>('');
@@ -303,19 +304,24 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     }
     
     try {
-      if (createNewProvince) {
-        const newProv = { 
+     if (createNewProvince) {
+        const provData = { 
           id: tourForm.provinceId!, 
           name: String(tourForm.province || ''), 
           name_th: String(tourForm.province || ''), 
           tourCount: 0, 
-          image: provinceImage || '', // 🟢 ดึงรูปจาก provinceImage แทน
+          image: provinceImage || '', 
           description: '', 
           description_th: '' 
         };
-        await tourService.createProvince(newProv);
+
+        // เช็คว่าเป็นการแก้ไข หรือ สร้างใหม่
+        if (isEditingProvince) {
+          await tourService.updateProvince(provData.id, provData); // ⚠️ ต้องมี API นี้ใน backend
+        } else {
+          await tourService.createProvince(provData);
+        }
       }
-      
       if (editingTourId) {
         await tourService.updateTour(editingTourId, tourForm);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "อัปเดตทัวร์สำเร็จ!" : "Tour updated successfully!");
