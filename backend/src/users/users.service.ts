@@ -79,10 +79,24 @@ export class UsersService {
   }
 
   async changePassword(id: string, oldPassword: string, newPassword: string): Promise<void> {
-    const user = await this.usersRepository.findOne({ where: { id } });
+    // 1. บังคับ select ฟิลด์ passwordHash ออกมาด้วย
+    const user = await this.usersRepository.findOne({ 
+      where: { id },
+      select: ['id', 'passwordHash'] // <--- จุดสำคัญที่ต้องเพิ่ม
+    });
+
     if (!user) throw new NotFoundException('User not found');
+
+    // 2. ถ้า user ไม่มีรหัสผ่านเดิม (เช่น สมัครผ่าน Google) ให้แจ้งเตือน
+    if (!user.passwordHash) {
+      throw new BadRequestException('บัญชีนี้ไม่มีรหัสผ่านเดิมให้แก้ไข (อาจเข้าสู่ระบบด้วยวิธีอื่น)');
+    }
+
+    // 3. เทียบรหัสผ่านเดิม
     const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
-    if (!isMatch) throw new BadRequestException('Incorrect current password');
+    if (!isMatch) throw new BadRequestException('รหัสผ่านเดิมไม่ถูกต้อง');
+
+    // 4. เข้ารหัสและบันทึกรหัสผ่านใหม่
     user.passwordHash = await bcrypt.hash(newPassword, 10);
     await this.usersRepository.save(user);
   }

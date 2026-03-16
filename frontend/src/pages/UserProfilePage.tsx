@@ -1,10 +1,10 @@
 // src/pages/UserProfilePage.tsx
 import { useState, useRef, useEffect } from "react";
 import {
-  User, Mail, Phone, Lock, Calendar, Settings, CreditCard,
-  ChevronRight, Check, X, Eye, EyeOff,
+  User, Mail, Phone, Calendar, Settings, CreditCard,
+  ChevronRight, Check, X,
   Camera, LogOut, MapPin, Clock, Users, BadgeCheck, Hourglass,
-  Shield, Trash2, MessageCircle,
+  MessageCircle,
 } from "lucide-react";
 import { useAuth } from "../features/auth/context/AuthContext";
 import { bookingService, userService } from "../services/api";
@@ -32,21 +32,12 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const [loadingBookings, setLoadingBookings] = useState(true);
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess]   = useState(false);
-  const [showOld, setShowOld]         = useState(false);
-  const [showNew, setShowNew]         = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [passwordError, setPasswordError]     = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const [editForm, setEditForm] = useState({
     fullName: displayFullName, email: user?.email || "", phone: "",
-  });
-  const [passwordForm, setPasswordForm] = useState({
-    oldPassword: "", newPassword: "", confirmPassword: "",
   });
 
   useEffect(() => {
@@ -152,27 +143,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       applyToUI(editForm.fullName, editForm.phone);
     } finally {
       setIsSavingProfile(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    setPasswordError("");
-    if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError(language === "th" ? "กรุณากรอกข้อมูลให้ครบ" : "Please fill in all fields"); return;
-    }
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError(language === "th" ? "รหัสผ่านใหม่ไม่ตรงกัน" : "Passwords do not match"); return;
-    }
-    if (passwordForm.newPassword.length < 8) {
-      setPasswordError(language === "th" ? "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" : "Min 8 characters"); return;
-    }
-    try {
-      await userService.changePassword({ oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword });
-      setPasswordSuccess(true);
-      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
-      setTimeout(() => { setPasswordSuccess(false); setShowPasswordModal(false); }, 2000);
-    } catch {
-      setPasswordError(language === "th" ? "รหัสผ่านเดิมไม่ถูกต้อง" : "Incorrect current password");
     }
   };
 
@@ -328,7 +298,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               <div className="px-6 py-5 space-y-4">
                 {[
                   { key: "fullName", label_th: "ชื่อ-นามสกุล", label_en: "Full Name",    icon: User,  value: displayFullName },
-                  { key: "email",    label_th: "อีเมล",         label_en: "Email",        icon: Mail,  value: user?.email     },
+                  { key: "email",    label_th: "อีเมล",        label_en: "Email",        icon: Mail,  value: user?.email     },
                   { key: "phone",    label_th: "เบอร์โทรศัพท์", label_en: "Phone Number", icon: Phone, value: displayPhone    },
                 ].map(({ key, label_th, label_en, icon: Icon, value }) => (
                   <div key={key}>
@@ -417,7 +387,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                   {[
                     { key: "fullName", label_th: "ชื่อ-นามสกุล",               label_en: "Full Name",         type: "text",  readOnly: false },
                     { key: "email",    label_th: "อีเมล (ไม่สามารถแก้ไขได้)",  label_en: "Email (Read-only)", type: "email", readOnly: true  },
-                    { key: "phone",    label_th: "เบอร์โทรศัพท์",               label_en: "Phone Number",      type: "tel",   readOnly: false },
+                    { key: "phone",    label_th: "เบอร์โทรศัพท์",              label_en: "Phone Number",      type: "tel",   readOnly: false },
                   ].map(({ key, label_th, label_en, type, readOnly }) => (
                     <div key={key}>
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">{language === "th" ? label_th : label_en}</label>
@@ -437,40 +407,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                 </div>
               </div>
 
-              <div>
-                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-gray-400" />{language === "th" ? "ความปลอดภัย" : "Security"}
-                </h4>
-                <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-sm">
-                  <button onClick={() => setShowPasswordModal(true)} className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-white border border-transparent group-hover:border-gray-200 transition-all">
-                        <Lock className="w-4 h-4 text-gray-600" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-bold text-gray-900 text-sm">{language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}</p>
-                        <p className="text-xs text-gray-500">{language === "th" ? "อัปเดตรหัสผ่านเพื่อความปลอดภัย" : "Update your password"}</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-bold text-red-600 mb-3 flex items-center gap-2">
-                  <Trash2 className="w-4 h-4 text-red-500" />{language === "th" ? "พื้นที่อันตราย" : "Danger Zone"}
-                </h4>
-                <div className="bg-red-50 p-5 rounded-2xl border border-red-100 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-bold text-red-900 text-sm">{language === "th" ? "ลบบัญชีผู้ใช้" : "Delete Account"}</p>
-                    <p className="text-xs text-red-600/80 mt-1">{language === "th" ? "การกระทำนี้ไม่สามารถย้อนกลับได้" : "This action cannot be undone."}</p>
-                  </div>
-                  <button className="bg-white text-red-600 border border-red-200 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm shrink-0">
-                    {language === "th" ? "ลบบัญชี" : "Delete"}
-                  </button>
-                </div>
-              </div>
             </div>
 
             <div className="shrink-0 p-5 border-t border-gray-100 bg-white">
@@ -488,76 +424,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                   ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   : <Check className="w-5 h-5" />}
                 {language === "th" ? "บันทึกการเปลี่ยนแปลง" : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Change Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
-            <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-extrabold text-gray-900">{language === "th" ? "เปลี่ยนรหัสผ่าน" : "Change Password"}</h3>
-              <button
-                onClick={() => { setShowPasswordModal(false); setPasswordError(""); setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" }); }}
-                className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-            <div className="px-7 py-6 space-y-4">
-              {passwordSuccess && (
-                <div className="flex items-center gap-2 bg-[#00A699] text-white px-4 py-3 rounded-xl text-sm font-semibold">
-                  <Check className="w-4 h-4" />{language === "th" ? "เปลี่ยนรหัสผ่านสำเร็จ!" : "Password changed!"}
-                </div>
-              )}
-              {passwordError && (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm font-semibold">
-                  <X className="w-4 h-4 shrink-0" /> {passwordError}
-                </div>
-              )}
-              {[
-                { key: "oldPassword",     label: language === "th" ? "รหัสผ่านเดิม"       : "Current Password", show: showOld,     toggle: () => setShowOld(p => !p)     },
-                { key: "newPassword",     label: language === "th" ? "รหัสผ่านใหม่"       : "New Password",     show: showNew,     toggle: () => setShowNew(p => !p)     },
-                { key: "confirmPassword", label: language === "th" ? "ยืนยันรหัสผ่านใหม่" : "Confirm Password", show: showConfirm, toggle: () => setShowConfirm(p => !p) },
-              ].map(({ key, label, show, toggle }) => (
-                <div key={key}>
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">{label}</label>
-                  <div className="relative">
-                    <input
-                      type={show ? "text" : "password"}
-                      value={passwordForm[key as keyof typeof passwordForm]}
-                      onChange={e => setPasswordForm(p => ({ ...p, [key]: e.target.value }))}
-                      placeholder="••••••••"
-                      className="w-full px-4 py-3 pr-12 bg-gray-50 border-2 border-gray-100 rounded-xl outline-none focus:bg-white focus:border-[#00A699] transition-all font-medium tracking-widest text-sm"
-                    />
-                    <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 shadow-sm">
-                      {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2">
-                {[
-                  { label: language === "th" ? "อย่างน้อย 8 ตัวอักษร" : "At least 8 characters", met: passwordForm.newPassword.length >= 8 },
-                  { label: language === "th" ? "รหัสผ่านตรงกัน"       : "Passwords match",        met: passwordForm.newPassword === passwordForm.confirmPassword && passwordForm.confirmPassword !== "" },
-                ].map(({ label, met }) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-colors ${met ? "bg-[#00A699]" : "bg-gray-200"}`}>
-                      {met && <Check className="w-2.5 h-2.5 text-white" />}
-                    </div>
-                    <span className={`text-xs font-medium ${met ? "text-[#00A699]" : "text-gray-400"}`}>{label}</span>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={handleChangePassword}
-                className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                <Lock className="w-5 h-5" />
-                {language === "th" ? "ยืนยันเปลี่ยนรหัสผ่าน" : "Confirm Change"}
               </button>
             </div>
           </div>
