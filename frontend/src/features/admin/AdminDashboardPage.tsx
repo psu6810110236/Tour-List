@@ -87,6 +87,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [popup, setPopup] = useState<{
     isOpen: boolean;
     type: 'alert' | 'confirm';
+    alertType?: 'success' | 'error';
     title: string;
     message: string;
     onConfirm?: () => void;
@@ -128,7 +129,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     fetchAdminData();
   }, []);
 
-  const showAlert = (title: string, message: string) => { setPopup({ isOpen: true, type: 'alert', title, message }); };
+  const showAlert = (title: string, message: string, alertType: 'success' | 'error' = 'success') => { 
+    setPopup({ isOpen: true, type: 'alert', alertType, title, message }); 
+  };
   const showConfirm = (title: string, message: string, onConfirm: () => void) => { setPopup({ isOpen: true, type: 'confirm', title, message, onConfirm }); };
   const closePopup = () => setPopup(prev => ({ ...prev, isOpen: false }));
 
@@ -300,7 +303,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
   const handleSaveTour = async () => {
     if (!(tourForm.name || tourForm.name_th) || !tourForm.provinceId) {
-      return showAlert(language === 'th' ? "ข้อมูลไม่ครบ" : "Incomplete Data", language === 'th' ? "กรุณากรอกชื่อทัวร์และเลือกจังหวัด" : "Please enter tour name and select province.");
+      return showAlert(
+        language === 'th' ? "ข้อมูลไม่ครบ" : "Incomplete Data", 
+        language === 'th' ? "กรุณากรอกชื่อทัวร์และเลือกจังหวัด" : "Please enter tour name and select province.",
+        'error' 
+      );
     }
     
     try {
