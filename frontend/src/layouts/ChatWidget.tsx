@@ -38,6 +38,7 @@ export default function ChatWidget() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [fileErrorPopup, setFileErrorPopup] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +109,16 @@ export default function ChatWidget() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isOpen, previewImage]);
+
+  // ล็อค body scroll เมื่อ chat เปิด
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -195,7 +206,7 @@ export default function ChatWidget() {
                   : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
               }`}>
                 {msg.isImage ? (
-                  <img src={msg.text} alt="sent image" className="rounded-lg max-w-full" />
+                  <img src={msg.text} alt="sent image" className="rounded-lg max-w-full cursor-zoom-in hover:opacity-90 transition" onClick={() => setEnlargedImage(msg.text)} />
                 ) : (
                   <p className="break-words whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 )}
@@ -270,6 +281,28 @@ export default function ChatWidget() {
           </form>
         </div>
       </div>
+
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <button
+            className="absolute top-5 right-5 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition"
+            onClick={() => setEnlargedImage(null)}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={enlargedImage}
+            alt="enlarged"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* File size error popup */}
       {fileErrorPopup && (

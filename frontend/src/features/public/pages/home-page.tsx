@@ -8,6 +8,7 @@ import {
   Map,
   MapPin,
   ArrowRight,
+  ArrowLeft,
   Star,
   TrendingUp,
   Flame,
@@ -16,6 +17,25 @@ import {
 } from "lucide-react";
 
 import { tourService } from "../../../services/api";
+
+// Map provinceId → ชื่อจังหวัดภาษาไทย (fallback กรณี API ไม่ส่ง province object มา)
+const PROVINCE_ID_TO_NAME: Record<string, { th: string; en: string }> = {
+  "province-1":  { th: "กรุงเทพมหานคร", en: "Bangkok" },
+  "province-2":  { th: "เชียงใหม่", en: "Chiang Mai" },
+  "province-3":  { th: "ภูเก็ต", en: "Phuket" },
+  "province-4":  { th: "กระบี่", en: "Krabi" },
+  "province-5":  { th: "สุราษฎร์ธานี", en: "Surat Thani" },
+  "province-6":  { th: "เชียงราย", en: "Chiang Rai" },
+  "province-7":  { th: "กาญจนบุรี", en: "Kanchanaburi" },
+  "province-8":  { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
+  "province-9":  { th: "ขอนแก่น", en: "Khon Kaen" },
+  "province-10": { th: "อยุธยา", en: "Ayutthaya" },
+  "province-11": { th: "สมุย", en: "Koh Samui" },
+  "province-12": { th: "พัทยา", en: "Pattaya" },
+  "province-13": { th: "หัวหิน", en: "Hua Hin" },
+  "province-14": { th: "เกาะช้าง", en: "Koh Chang" },
+  "province-15": { th: "ลำปาง", en: "Lampang" },
+};
 
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
@@ -241,21 +261,21 @@ export default function HomePage({ language }: HomePageProps) {
 
           <form
             onSubmit={handleSearch}
-            className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]"
+            className="search-bar w-[92%] max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] p-1.5 md:p-2.5 flex flex-row items-center gap-1 md:gap-3 transform transition-all hover:scale-[1.01]"
           >
-            <div className="flex items-center w-full px-2 text-gray-900">
-              <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
+            <div className="flex items-center flex-1 px-3 md:px-4 text-gray-900 overflow-hidden">
+              <Search className="w-4 h-4 md:w-6 md:h-6 text-[#00A699] mr-2 flex-shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.searchPlaceholder}
-                className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
+                className="w-full py-2.5 md:py-4 px-1 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-sm md:text-lg truncate"
               />
             </div>
             <button
               type="submit"
-              className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
+              className="bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-5 md:px-8 py-2.5 md:py-4 rounded-full font-bold text-sm md:text-lg transition shadow-lg shadow-orange-200/50 flex-shrink-0 whitespace-nowrap"
             >
               {t.searchBtn}
             </button>
@@ -353,76 +373,71 @@ export default function HomePage({ language }: HomePageProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {tours
-              .filter((tour) => !tour.isHidden)
-              .map((tour) => {
-                const provinceName =
-                  tour.province?.name_th && language === "th"
-                    ? tour.province.name_th
-                    : tour.province?.name && language === "en"
-                    ? tour.province.name
-                    : tour.provinceId || "จุดหมายยอดฮิต";
-                const tourName =
-                  language === "th" && tour.name_th ? tour.name_th : tour.name;
+            {tours.filter(tour => !tour.isHidden).map((tour) => {
+              const provinceMapping = tour.provinceId ? PROVINCE_ID_TO_NAME[tour.provinceId] : undefined;
+              const provinceName = language === 'th'
+                ? (tour.province?.name_th || provinceMapping?.th || tour.province?.name || tour.provinceId || 'จุดหมายยอดฮิต')
+                : (tour.province?.name || provinceMapping?.en || tour.province?.name_th || tour.provinceId || 'Popular Destination');
 
-                return (
-                  <div
-                    key={tour.id}
-                    className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
-                  >
-                    <div className="relative h-56 overflow-hidden bg-[#00A699]">
-                      <img
-                        src={tour.image || FALLBACK_IMAGE_URL}
-                        alt={tourName}
-                        className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${
-                          !tour.image ? "object-contain p-6" : "object-cover"
-                        }`}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = FALLBACK_IMAGE_URL;
-                          target.className =
-                            "w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500";
-                        }}
-                      />
-                      <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5" />
-                        {language === "th"
-                          ? `จองแล้ว ${tour.historicalBooked || 0} ที่`
-                          : `${tour.historicalBooked || 0} Booked`}
-                      </div>
-                    </div>
-                    <div className="p-6 flex-1 flex flex-col">
-                      <h3
-                        className="text-lg font-bold text-gray-800 mb-2 line-clamp-2"
-                        title={tourName}
-                      >
-                        {tourName}
-                      </h3>
-                      <p className="text-gray-500 text-sm mb-4 flex items-center gap-1.5 font-medium">
-                        <MapPin className="w-4 h-4 text-[#00A699]" />
-                        {provinceName}
-                      </p>
-                      <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col justify-end">
-                        <p className="text-gray-500 text-xs mb-1">
-                          {language === "th" ? "ราคาเริ่มต้น" : "Starting from"}
-                        </p>
-                        <p className="text-[#FF6B4A] font-bold text-2xl mb-4">
-                          ฿{tour.price.toLocaleString()}
-                        </p>
-                        <button
-                          onClick={() => onNavigate("tour", tour.id as any)}
-                          className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2.5 rounded-xl font-medium transition-colors flex justify-center items-center gap-2 cursor-pointer"
-                        >
-                          {language === "th"
-                            ? "ดูรายละเอียดทัวร์"
-                            : "View Tour Details"}
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </div>
+              const tourName = language === 'th' && tour.name_th ? tour.name_th : tour.name;
+
+              return (
+                <div
+                  key={tour.id}
+                  className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
+                >
+                  {/* ภาพทัวร์ และ Badge ยอดจอง */}
+                  <div className="relative h-56 overflow-hidden bg-[#00A699]">
+                    <img
+                      src={tour.image || FALLBACK_IMAGE_URL}
+                      alt={tourName}
+                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${!tour.image ? 'object-contain p-6' : 'object-cover'}`}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = FALLBACK_IMAGE_URL;
+                        target.className = "w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500";
+                      }}
+                    />
+
+                    {/* Badge ยอดคนจอง */}
+                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
+                      <Flame className="w-3.5 h-3.5" />
+                      {language === 'th' ? `จองแล้ว ${tour.historicalBooked || 0} ที่` : `${tour.historicalBooked || 0} Booked`}
                     </div>
                   </div>
-                );
-              })}
+                  
+                  <div className="p-6 flex-1 flex flex-col">
+                    <h3
+                      className="text-lg font-bold text-gray-800 mb-2 line-clamp-2"
+                      title={tourName}
+                    >
+                      {tourName}
+                    </h3>
+                    <p className="text-gray-500 text-sm mb-4 flex items-center gap-1.5 font-medium">
+                      <MapPin className="w-4 h-4 text-[#00A699]" />
+                      {provinceName}
+                    </p>
+                    <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col justify-end">
+                      <p className="text-gray-500 text-xs mb-1">
+                        {language === "th" ? "ราคาเริ่มต้น" : "Starting from"}
+                      </p>
+                      <p className="text-[#FF6B4A] font-bold text-2xl mb-4">
+                        ฿{tour.price.toLocaleString()}
+                      </p>
+                      <button
+                        onClick={() => onNavigate("tour", tour.id as any)}
+                        className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2.5 rounded-xl font-medium transition-colors flex justify-center items-center gap-2 cursor-pointer"
+                      >
+                        {language === "th"
+                          ? "ดูรายละเอียดทัวร์"
+                          : "View Tour Details"}
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -476,6 +491,7 @@ export default function HomePage({ language }: HomePageProps) {
                         "w-full h-full object-contain p-8 group-hover:scale-110 transition-transform duration-700";
                     }}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute bottom-6 left-6 right-6">
                     <div className="flex items-center gap-2 text-white mb-2">

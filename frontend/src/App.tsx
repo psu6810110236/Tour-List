@@ -247,7 +247,7 @@ function AppContent() {
 
           {/* Admin Only */}
           <Route element={<AdminRoute />}>
-            <Route path="/admin/dashboard" element={<AdminDashboardPage onNavigate={handleNavigate} language={language} />} />
+            <Route path="/admin/dashboard" element={<AdminDashboardPage onNavigate={handleNavigate} language={language} setLanguage={(lang) => setLanguage(lang as 'th' | 'en')} />} />
             <Route path="/admin/chat" element={<AdminChatPage />} />
           </Route>
 

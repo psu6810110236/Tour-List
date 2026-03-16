@@ -14,6 +14,7 @@ interface ToastData { id: number; type: ToastType; message: string; }
 
 function ToastContainer({ toasts, onRemove }: { toasts: ToastData[]; onRemove: (id: number) => void }) {
   return (
+    // ✅ top-20 = ลงมาใต้ navbar (navbar สูงประมาณ 72px) + right-4 ชิดขวา แทนกลาง
     <div className="fixed top-20 right-4 z-[9999] flex flex-col items-end gap-2.5 pointer-events-none w-full max-w-xs">
       {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />)}
     </div>
@@ -49,18 +50,24 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
       style={{
         transition: "all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
         opacity: visible && !leaving ? 1 : 0,
+        // ✅ slide in จากขวา แทน drop down จากบน
         transform: visible && !leaving ? "translateX(0) scale(1)" : "translateX(60px) scale(0.95)",
       }}
     >
       <div className={`relative flex items-center gap-3 ${config.bg} border ${config.border} rounded-2xl px-4 py-3.5 shadow-lg shadow-black/[0.06] overflow-hidden`}>
+        {/* accent bar ซ้าย */}
         <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.accent} rounded-l-2xl`} />
+        {/* icon */}
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${config.iconBg}`}>
           <Icon className={`w-4 h-4 ${config.iconColor}`} />
         </div>
+        {/* message */}
         <p className="flex-1 text-sm font-semibold text-gray-800 leading-snug">{toast.message}</p>
+        {/* close */}
         <button onClick={handleClose} className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 ml-1">
           <X className="w-3.5 h-3.5" />
         </button>
+        {/* progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-100 overflow-hidden">
           <div className={`h-full ${config.progressColor}`} style={{ animation: "toastProgress 3.8s linear forwards" }} />
         </div>
@@ -83,7 +90,7 @@ function useToast() {
 
 interface BookingPageProps {
   tour?: Tour | null;
-  bookingData?: any;
+  bookingData?: any; // รับ bookingData เต็มเมื่อย้อนกลับจากหน้าชำระเงิน
   onNavigate: (page: string, data?: any) => void;
   language: Language;
   onAddToCart?: (item: any) => void;
@@ -97,6 +104,7 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
   const [localTour, setLocalTour] = useState<Tour | null>(tour || bookingData?.tour || null);
   const [loading, setLoading] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1));
+  // ✅ restore ค่าเดิมถ้ามี bookingData ส่งมา (กรณีย้อนกลับจากหน้าชำระเงิน)
   const [selectedDate, setSelectedDate] = useState(bookingData?.date || "");
   const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string }>({ isOpen: false, startDate: "", endDate: "" });
   const [travelers, setTravelers] = useState(bookingData?.travelers || 0);
@@ -108,6 +116,7 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
 
   const { toasts, show: showToast, remove: removeToast } = useToast();
 
+  // ดึง profile จาก API (GET /users/profile) แล้ว fallback ไป localStorage / AuthContext
   const handleAutofill = async () => {
     setAutofillLoading(true);
     try {
@@ -174,7 +183,7 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
         try {
           const resp = await tourService.getById(String(params.id));
           const data = resp.data;
-          console.log('✅ localTour fetched:', data);
+          console.log('✅ localTour fetched:', data); // debug
           setLocalTour(data);
         } catch (err) {
           console.error("Failed to fetch tour:", err);
@@ -192,32 +201,56 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
     }
   }, [localTour]);
 
+  // 🟢 ระบบตรวจสอบและตัดยอดที่นั่งแบบ Real-time
   useEffect(() => {
     if (!localTour || !selectedDate) return;
+    
     const fetchSeats = async () => {
       try {
-        const max = localTour.maxCapacity || 10;
+        const max = Number(localTour.maxCapacity) || 10;
         const res = await bookingService.getAllBookings();
         const bookings = res.data || [];
+        
         const bookedCount = bookings
-          .filter((b: any) =>
-            String(b.tourId) === String(localTour.id) &&
-            (b.travelDate === selectedDate || b.date === selectedDate) &&
-            !['REJECTED', 'CANCELLED', 'FAILED'].includes(b.status?.toUpperCase())
-          )
+          .filter((b: any) => {
+            // 1. เช็คว่าเป็นทัวร์เดียวกัน
+            const isSameTour = String(b.tourId) === String(localTour.id) || String((b.tour as any)?.id) === String(localTour.id);
+            
+            // 2. แปลงวันที่จาก Database ให้เป็น YYYY-MM-DD เพื่อเอามาเทียบให้ตรงกันเป๊ะๆ
+            const bDateObj = new Date(b.travelDate || b.date || '');
+            const bDateStr = !isNaN(bDateObj.getTime()) 
+              ? `${bDateObj.getFullYear()}-${String(bDateObj.getMonth() + 1).padStart(2, '0')}-${String(bDateObj.getDate()).padStart(2, '0')}`
+              : '';
+            const isSameDate = bDateStr === selectedDate;
+
+            // 3. เอาเฉพาะสถานะที่ไม่ได้ถูกยกเลิก (ยังจองอยู่)
+            const isNotCancelled = !['REJECTED', 'CANCELLED', 'FAILED'].includes(b.status?.toUpperCase());
+
+            return isSameTour && isSameDate && isNotCancelled;
+          })
+          // รวมจำนวนคนที่จองไปแล้วทั้งหมดในวันนั้น
           .reduce((sum: number, b: any) => sum + Number(b.travelers || 0), 0);
 
+        // 4. คำนวณที่นั่งคงเหลือ
         const remain = max - bookedCount;
         setAvailableSeats(remain > 0 ? remain : 0);
         setIsFull(remain <= 0);
 
-        if (travelers > remain && remain > 0) setTravelers(remain);
-        else if (remain <= 0) setTravelers(0);
-        else if (travelers === 0 && remain > 0) setTravelers(1);
-      } catch {
+        // 5. ปรับตัวเลขคนจองอัตโนมัติ ไม่ให้เกินที่นั่งว่าง
+        if (travelers > remain && remain > 0) {
+          setTravelers(remain); // ถ้ากรอกไว้เกิน ให้หดลงมาเท่าที่ว่าง
+        } else if (remain <= 0) {
+          setTravelers(0); // ถ้าเต็มแล้ว บังคับเป็น 0
+        } else if (travelers <= 0 && remain > 0) {
+          setTravelers(1); // ถ้าว่างอยู่ ให้ตั้งต้นที่ 1 คนเสมอ
+        }
+        
+      } catch (error) {
+        console.error("Error calculating seats:", error);
         setAvailableSeats(localTour?.maxCapacity || 10);
       }
     };
+    
     fetchSeats();
   }, [localTour, selectedDate]);
 
@@ -231,7 +264,11 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
       showToast(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date.", "warning");
       return false;
     }
-    if (isFull || travelers <= 0) {
+    if (travelers <= 0) {
+      showToast(language === "th" ? "กรุณาเลือกจำนวนผู้เดินทาง" : "Please select the number of travelers.", "warning");
+      return false;
+    }
+    if (isFull) {
       showToast(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date.", "error");
       return false;
     }
@@ -245,6 +282,7 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
   const handleAddToCart = () => {
     if (isFull || !validateForm()) return;
 
+    // ✅ safeguard ชื่อทัวร์ — ป้องกันกรณี field ไม่ตรง
     const tourToAdd = {
       ...localTour,
       name: localTour?.name || localTour?.name_th || "ทัวร์",
@@ -312,12 +350,16 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
     <div className="min-h-screen bg-[#F7F9FA] pb-28 font-sans">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
+      {/* ── Header ── */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
+          {/* Main row */}
           <div className="flex items-center justify-between gap-4 py-4">
 
+            {/* LEFT: back + title */}
             <div className="flex items-center gap-4 min-w-0">
+              {/* back */}
               <button
                 onClick={() => onNavigate("tour-detail", localTour)}
                 className="flex items-center gap-2 text-gray-400 hover:text-[#00A699] transition-all group flex-shrink-0"
@@ -328,8 +370,10 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
                 <span className="text-sm font-semibold hidden sm:block">{language === 'th' ? 'ย้อนกลับ' : 'Back'}</span>
               </button>
 
+              {/* divider */}
               <div className="w-px h-8 bg-gray-200 flex-shrink-0 mx-2" />
 
+              {/* title block */}
               <div className="min-w-0">
                 <h1 className="text-xl md:text-2xl font-extrabold text-gray-900 leading-tight">{t.title}</h1>
                 <p className="text-sm text-gray-400 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md mt-0.5">
@@ -338,6 +382,7 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
               </div>
             </div>
 
+            {/* RIGHT: badge + price */}
             <div className="flex-shrink-0 text-right">
               <span className="inline-flex items-center gap-1.5 bg-[#00A699]/10 text-[#00A699] px-3 py-1.5 rounded-xl text-xs font-bold border border-[#00A699]/20">
                 {localTour.tripType === 'multiple-days'
@@ -354,20 +399,22 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
             </div>
           </div>
 
+          {/* Step indicator */}
           <div className="border-t border-gray-100">
             {(() => {
               const hasDate     = !!selectedDate;
               const hasTraveler = travelers > 0;
               const hasContact  = !!(contactInfo.fullName && contactInfo.email && contactInfo.phone);
               const steps = [
-                { num: 1, label: language === 'th' ? 'เลือกวันที่'   : 'Select Date', done: hasDate,                     active: !hasDate },
+                { num: 1, label: language === 'th' ? 'เลือกวันที่'   : 'Select Date', done: hasDate,                    active: !hasDate },
                 { num: 2, label: language === 'th' ? 'ผู้เดินทาง'    : 'Travelers',   done: hasDate && hasTraveler,       active: hasDate && !hasContact },
-                { num: 3, label: language === 'th' ? 'ข้อมูลติดต่อ' : 'Contact',     done: hasContact,                   active: hasDate && hasTraveler && !hasContact },
+                { num: 3, label: language === 'th' ? 'ข้อมูลติดต่อ' : 'Contact',     done: hasContact,                  active: hasDate && hasTraveler && !hasContact },
               ];
               return (
                 <div className="flex">
                   {steps.map((step, i) => (
                     <div key={step.num} className="flex-1 relative flex items-center justify-center py-3">
+                      {/* active underline */}
                       <div className={`absolute bottom-0 left-0 right-0 h-[2px] rounded-t-sm transition-all duration-300 ${
                         step.done ? 'bg-[#00A699]' : step.active ? 'bg-[#00A699]/30' : 'bg-transparent'
                       }`} />
@@ -391,7 +438,6 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
 
         </div>
       </div>
-
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
@@ -497,6 +543,7 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
             <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border transition-shadow ${autofillFlash ? 'border-[#00A699] ring-2 ring-[#00A699]/20' : 'border-gray-100'} ${isFull ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'}`}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">{t.personalInfo}</h2>
+                {/* ✅ ปุ่ม Autofill จากโปรไฟล์ */}
                 {user && (
                   <button
                     onClick={handleAutofill}

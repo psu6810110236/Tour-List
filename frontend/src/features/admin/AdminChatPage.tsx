@@ -28,6 +28,7 @@ export default function AdminChatPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null); // 🟢 เพิ่ม State สำหรับรูปพรีวิว
   const [socket, setSocket] = useState<Socket | null>(null);
   const [fileErrorPopup, setFileErrorPopup] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null); // 🟢 เพิ่มตัวนี้
@@ -246,7 +247,8 @@ export default function AdminChatPage() {
                           <img
                             src={msg.content}
                             alt="sent"
-                            className="rounded-xl max-w-full max-h-72 object-cover border border-white/10"
+                            className="rounded-xl max-w-full max-h-72 object-cover border border-white/10 cursor-zoom-in hover:opacity-90 transition"
+                            onClick={() => setEnlargedImage(msg.content)}
                           />
                         ) : (
                           <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-all">{msg.content}</p>
@@ -346,6 +348,28 @@ export default function AdminChatPage() {
           </div>
         )}
       </div>
+
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <button
+            className="absolute top-5 right-5 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition"
+            onClick={() => setEnlargedImage(null)}
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={enlargedImage}
+            alt="enlarged"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {fileErrorPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

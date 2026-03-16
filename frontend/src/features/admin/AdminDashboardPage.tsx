@@ -23,6 +23,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Globe,
   EyeOff
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
@@ -37,10 +38,11 @@ import { tourService, bookingService } from '../../services/api';
 interface AdminDashboardProps {
   onNavigate: (page: string, data?: any) => void;
   language: Language;
+  setLanguage: (lang: Language) => void;
 }
 
 
-export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
+export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'tours'>('overview');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
@@ -87,6 +89,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [popup, setPopup] = useState<{
     isOpen: boolean;
     type: 'alert' | 'confirm';
+    alertType?: 'success' | 'error';
     title: string;
     message: string;
     onConfirm?: () => void;
@@ -128,7 +131,9 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     fetchAdminData();
   }, []);
 
-  const showAlert = (title: string, message: string) => { setPopup({ isOpen: true, type: 'alert', title, message }); };
+  const showAlert = (title: string, message: string, alertType: 'success' | 'error' = 'success') => { 
+    setPopup({ isOpen: true, type: 'alert', alertType, title, message }); 
+  };
   const showConfirm = (title: string, message: string, onConfirm: () => void) => { setPopup({ isOpen: true, type: 'confirm', title, message, onConfirm }); };
   const closePopup = () => setPopup(prev => ({ ...prev, isOpen: false }));
 
@@ -300,7 +305,11 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
   const handleSaveTour = async () => {
     if (!(tourForm.name || tourForm.name_th) || !tourForm.provinceId) {
-      return showAlert(language === 'th' ? "ข้อมูลไม่ครบ" : "Incomplete Data", language === 'th' ? "กรุณากรอกชื่อทัวร์และเลือกจังหวัด" : "Please enter tour name and select province.");
+      return showAlert(
+        language === 'th' ? "ข้อมูลไม่ครบ" : "Incomplete Data", 
+        language === 'th' ? "กรุณากรอกชื่อทัวร์และเลือกจังหวัด" : "Please enter tour name and select province.",
+        'error' 
+      );
     }
     
     try {
@@ -523,14 +532,26 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 <p className="text-gray-500 text-sm">{t.subtitle}</p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              {/* 🟢 ปุ่มเปลี่ยนภาษา EN / TH */}
+              <button
+                onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
+                className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm hover:shadow-md px-4 py-2 h-10 rounded-full transition-all active:scale-95"
+              >
+                <Globe className="w-5 h-5 text-[#00A699]" />
+                <span className="font-extrabold text-slate-700 text-sm tracking-wide">
+                  {language === 'th' ? 'TH' : 'EN'}
+                </span>
+              </button>
 
-            <button
-              onClick={() => onNavigate('home')}
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>{t.exit}</span>
-            </button>
+              <button
+                onClick={() => onNavigate('home')}
+                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 h-10 px-4 rounded-xl transition font-medium"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>{t.exit}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -646,7 +667,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         {booking.status?.toLowerCase() === 'rejected' && <XCircle className="w-5 h-5 text-red-600" />}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
+                        <div className="font-semibold text-gray-900 line-clamp-1">
+  {(() => {
+    const realTour = allTours.find(t => String(t.id) === String(booking.tourId || (booking.tour as any)?.id));
+    if (realTour) return getLang(realTour, 'name', language) || realTour.name_th || realTour.name;
+    const snapName = getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language);
+    const thName = (booking as any).tourName_th || (booking as any).tourNameSnapshot_th || (booking as any).tourName;
+    return (snapName === 'Tour from Cart' && thName) ? thName : (snapName || thName || '-');
+  })()}
+</div>
                         <div className="text-sm text-gray-600">{booking.id}</div>
                       </div>
                     </div>
@@ -768,9 +797,26 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         </td>
 
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
-                        </td>
+                          <td className="px-6 py-4">
+    <div className="font-medium text-gray-900 line-clamp-2">
+      {(() => {
+        // 1. วิ่งไปค้นหาชื่อทัวร์ของแท้จากคลังทัวร์ (allTours)
+        const realTour = allTours.find(t => String(t.id) === String(booking.tourId || (booking.tour as any)?.id));
+        
+        // 2. ถ้าเจอทัวร์ในคลัง ให้แสดงชื่อ (EN -> TH -> ปกติ)
+        if (realTour) return getLang(realTour, 'name', language) || realTour.name_th || realTour.name;
+        
+        // 3. กรณีทัวร์โดนลบไปแล้ว ให้ดึงประวัติเก่ามาโชว์ 
+        const snapName = getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language);
+        
+        // 🟢 ใช้ (booking as any) เพื่อบอก TypeScript ว่าไม่ต้องตรวจตัวแปรพวกนี้
+        const thName = (booking as any).tourName_th || (booking as any).tourNameSnapshot_th || (booking as any).tourName;
+        
+        // ถ้าชื่อมันดันเป็น Tour from Cart ให้บังคับเอาชื่อภาษาไทยมาโชว์แทน
+        return (snapName === 'Tour from Cart' && thName) ? thName : (snapName || thName || '-');
+      })()}
+    </div>
+  </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {new Date((booking as any).travelDate || (booking as any).date || 0).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}
                         </td>
@@ -870,7 +916,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                       {isCancelled && <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><XCircle className="w-3 h-3"/> REJECTED</span>}
                     </div>
                     
-                    <div className="font-bold text-gray-900 mb-4 line-clamp-1">{getLang(booking, 'tourNameSnapshot', language)}</div>
+                    <div className="font-bold text-gray-900 mb-4 line-clamp-2">
+  {(() => {
+    const realTour = allTours.find(t => String(t.id) === String(booking.tourId || (booking.tour as any)?.id));
+    if (realTour) return getLang(realTour, 'name', language) || realTour.name_th || realTour.name;
+    const snapName = getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language);
+    const thName = (booking as any).tourName_th || (booking as any).tourNameSnapshot_th || (booking as any).tourName;
+    return (snapName === 'Tour from Cart' && thName) ? thName : (snapName || thName || '-');
+  })()}
+</div>
 
                     <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => window.open(booking.paymentSlip, '_blank')}>
                       {booking.paymentSlip ? (
@@ -1041,8 +1095,10 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
 
                             <td className="px-6 py-4 text-sm font-bold text-[#00A699]">{tour.id}</td>
                             <td className="px-6 py-4">
-                              <div className="font-medium text-gray-900">{getLang(tour, 'name', language)}</div>
-                            </td>
+    <div className="font-medium text-gray-900 line-clamp-2" title={tour.name_th || tour.name}>
+      {getLang(tour, 'name', language) || tour.name_th || tour.name || '-'}
+    </div>
+  </td>
                             <td className="px-6 py-4 text-sm text-gray-900">
                               {typeof tour.province === 'object' && tour.province !== null
                                 ? getLang(tour.province, 'name', language)
@@ -1568,8 +1624,14 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       {popup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
-            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'}`}>
-              {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> : <CheckCircle className="w-10 h-10" />}
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${
+              popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 
+              popup.alertType === 'error' ? 'bg-red-50 border-red-100 text-red-500' : // 🔴 ถ้าเป็น error ให้ใช้สีแดง
+              'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]' // 🟢 นอกนั้นใช้สีเขียว
+            }`}>
+              {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> : 
+               popup.alertType === 'error' ? <XCircle className="w-10 h-10" /> : // 🔴 ถ้าเป็น error ให้โชว์กากบาท
+               <CheckCircle className="w-10 h-10" />}
             </div>
             <h3 className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">{popup.title}</h3>
             <p className="text-gray-500 mb-8 leading-relaxed text-sm">{popup.message}</p>

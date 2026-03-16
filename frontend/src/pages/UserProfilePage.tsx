@@ -35,6 +35,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess]   = useState(false);
+  const [imageError, setImageError]           = useState("");
 
   const [editForm, setEditForm] = useState({
     fullName: displayFullName, email: user?.email || "", phone: "",
@@ -101,7 +102,14 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || file.size > 5 * 1024 * 1024) return;
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError(language === "th" ? "ขนาดไฟล์รูปภาพต้องไม่เกิน 5 MB" : "Image size must be less than 5 MB");
+      setTimeout(() => setImageError(""), 1500);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
@@ -163,7 +171,24 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans pb-12">
+    <div className="min-h-screen bg-gray-50 font-sans pb-12 relative">
+
+      {/* Image Error Pop-up (แก้ให้ลอยบนสุดแบบชัวร์ๆ) */}
+      {imageError && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
+          <div className="bg-white px-6 py-8 rounded-3xl shadow-2xl flex flex-col items-center gap-3 w-full max-w-sm text-center">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center shrink-0 mb-2">
+              <X className="w-8 h-8 text-red-500" strokeWidth={3} />
+            </div>
+            <p className="font-extrabold text-gray-900 text-xl">
+              {language === "th" ? "อัปโหลดไม่สำเร็จ" : "Upload Failed"}
+            </p>
+            <p className="text-red-600 font-bold text-base">
+              {imageError}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <div
@@ -406,7 +431,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
                   ))}
                 </div>
               </div>
-
             </div>
 
             <div className="shrink-0 p-5 border-t border-gray-100 bg-white">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Upload, Lock, QrCode, CreditCard, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { ArrowLeft, Upload, Lock, QrCode, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { getLang } from "../../data/mockData";
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
@@ -18,7 +18,6 @@ interface PaymentPageProps {
 export function PaymentPage({ bookingData, cartItems = [], onNavigate, language, onClearCart }: PaymentPageProps) {
   const { user } = useAuth();
   const [localBooking, setLocalBooking] = useState<any>(bookingData || null);
-  const [selectedMethod, setSelectedMethod] = useState<"qrcode" | "card">("qrcode");
   const [isProcessing, setIsProcessing] = useState(false);
   const [slipImage, setSlipImage] = useState<string | null>(null);
 
@@ -102,7 +101,7 @@ export function PaymentPage({ bookingData, cartItems = [], onNavigate, language,
       return;
     }
 
-    if (selectedMethod === "qrcode" && (!slipImage || slipImage === "")) {
+    if (!slipImage || slipImage === "") {
       showAlert(
         language === "th" ? "ข้อมูลไม่ครบถ้วน" : "Missing Information",
         language === "th" ? "กรุณาอัปโหลดสลิปโอนเงินเพื่อยืนยันการชำระเงิน" : "Please upload a payment slip to confirm.",
@@ -122,7 +121,6 @@ export function PaymentPage({ bookingData, cartItems = [], onNavigate, language,
           travelers: item.travelers || item.pax,
           totalPrice: item.totalPrice,
           paymentSlip: slipImage || undefined,
-          // ✅ Safer fallbacks from HEAD — handles cart items where tour object may be partial
           tourNameSnapshot: item.tour?.name || item.tourName || "Tour from Cart",
           tourNameSnapshot_th: item.tour?.name_th || item.tourName_th || item.tourName || "ทัวร์จากตะกร้า",
           contactName: item.contactInfo?.fullName,
@@ -186,7 +184,6 @@ export function PaymentPage({ bookingData, cartItems = [], onNavigate, language,
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <button
           onClick={() => { 
-            // ส่ง bookingData เต็มกลับไป เพื่อให้หน้าจองโหลด date/travelers/contactInfo ครบ
             const data = localBooking || bookingData;
             if (data?.tour?.id) onNavigate("booking", data);
             else onNavigate("booking", data);
@@ -202,118 +199,52 @@ export function PaymentPage({ bookingData, cartItems = [], onNavigate, language,
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">
-                {language === 'th' ? 'เลือกช่องทางการชำระเงิน' : 'Select Payment Method'}
+              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <QrCode className="w-6 h-6 text-[#00A699]" />
+                {language === 'th' ? 'ชำระเงินผ่าน QR Code' : 'Payment via QR Code'}
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  onClick={() => setSelectedMethod("qrcode")}
-                  className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-200 text-left ${
-                    selectedMethod === "qrcode"
-                      ? "border-[#00A699] bg-[#00A699]/5 shadow-sm"
-                      : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedMethod === "qrcode" ? "bg-[#00A699] text-white" : "bg-gray-100 text-gray-400"}`}>
-                    <QrCode className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-gray-900">{t.qrCode}</div>
-                    <div className="text-sm text-gray-500 mt-0.5">{language === "en" ? "Any banking app" : "แอปธนาคารใดก็ได้"}</div>
-                  </div>
-                  {selectedMethod === "qrcode" && (
-                    <div className="absolute top-4 right-4 w-3 h-3 bg-[#00A699] rounded-full ring-4 ring-teal-100" />
-                  )}
-                </button>
 
-                <button
-                  onClick={() => setSelectedMethod("card")}
-                  className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-200 text-left ${
-                    selectedMethod === "card"
-                      ? "border-[#00A699] bg-[#00A699]/5 shadow-sm"
-                      : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedMethod === "card" ? "bg-[#00A699] text-white" : "bg-gray-100 text-gray-400"}`}>
-                    <CreditCard className="w-6 h-6" />
+              <div className="flex flex-col items-center justify-center py-6">
+                {slipImage ? (
+                  <div className="relative mb-6 text-center">
+                    <img src={slipImage} alt="Uploaded Slip" className="w-48 h-auto max-h-64 object-contain rounded-xl shadow-md border" />
+                    <button
+                      onClick={() => setSlipImage(null)}
+                      className="text-red-500 text-sm mt-3 hover:underline font-medium block w-full text-center"
+                    >
+                      {language === "th" ? "ลบรูปภาพ" : "Remove Image"}
+                    </button>
                   </div>
-                  <div>
-                    <div className="font-bold text-gray-900">{t.creditCard}</div>
-                    <div className="text-sm text-gray-500 mt-0.5">Visa, Mastercard, JCB</div>
+                ) : (
+                  <div className="bg-gray-50 p-6 rounded-3xl border-2 border-dashed border-gray-200 mb-6">
+                    {/* เปลี่ยนขนาด QR Code เป็น w-64 h-64 */}
+                    <img
+                      src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/1200px-QR_code_for_mobile_English_Wikipedia.svg.png"
+                      alt="Payment QR"
+                      className="w-64 h-64 mix-blend-multiply opacity-80"
+                    />
                   </div>
-                  {selectedMethod === "card" && (
-                    <div className="absolute top-4 right-4 w-3 h-3 bg-[#00A699] rounded-full ring-4 ring-teal-100" />
-                  )}
-                </button>
+                )}
+
+                <label className="w-full max-w-sm cursor-pointer group">
+                  <div className={`border py-4 rounded-2xl transition-colors flex items-center justify-center gap-3 font-semibold ${
+                    slipImage
+                      ? 'bg-green-50 border-green-200 text-green-600'
+                      : 'bg-teal-50 hover:bg-teal-100 border-teal-100 text-[#00A699]'
+                  }`}>
+                    {slipImage ? <CheckCircle className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
+                    <span>
+                      {slipImage
+                        ? (language === "en" ? "Slip Uploaded" : "อัปโหลดสลิปสำเร็จ")
+                        : (language === "en" ? "Upload Slip" : "อัปโหลดสลิปโอนเงิน")}
+                    </span>
+                  </div>
+                  <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+                </label>
+                <p className="text-gray-400 text-sm mt-4">
+                  {language === "th" ? "รองรับไฟล์ JPG, PNG ขนาดไม่เกิน 5MB" : "Supports JPG, PNG up to 5MB"}
+                </p>
               </div>
-            </div>
-
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
-              {selectedMethod === "qrcode" ? (
-                <div className="flex flex-col items-center justify-center py-6">
-                  {slipImage ? (
-                    <div className="relative mb-6 text-center">
-                      <img src={slipImage} alt="Uploaded Slip" className="w-48 h-auto max-h-64 object-contain rounded-xl shadow-md border" />
-                      <button
-                        onClick={() => setSlipImage(null)}
-                        className="text-red-500 text-sm mt-3 hover:underline font-medium block w-full text-center"
-                      >
-                        {language === "th" ? "ลบรูปภาพ" : "Remove Image"}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 p-6 rounded-3xl border-2 border-dashed border-gray-200 mb-6">
-                      <img
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/1200px-QR_code_for_mobile_English_Wikipedia.svg.png"
-                        alt="Payment QR"
-                        className="w-48 h-48 mix-blend-multiply opacity-80"
-                      />
-                    </div>
-                  )}
-
-                  <label className="w-full max-w-sm cursor-pointer group">
-                    <div className={`border py-4 rounded-2xl transition-colors flex items-center justify-center gap-3 font-semibold ${
-                      slipImage
-                        ? 'bg-green-50 border-green-200 text-green-600'
-                        : 'bg-teal-50 hover:bg-teal-100 border-teal-100 text-[#00A699]'
-                    }`}>
-                      {slipImage ? <CheckCircle className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
-                      <span>
-                        {slipImage
-                          ? (language === "en" ? "Slip Uploaded" : "อัปโหลดสลิปสำเร็จ")
-                          : (language === "en" ? "Upload Slip" : "อัปโหลดสลิปโอนเงิน")}
-                      </span>
-                    </div>
-                    <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-                  </label>
-                  <p className="text-gray-400 text-sm mt-4">
-                    {language === "th" ? "รองรับไฟล์ JPG, PNG ขนาดไม่เกิน 5MB" : "Supports JPG, PNG up to 5MB"}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-5 py-2">
-                  <h3 className="font-bold text-gray-900 mb-2">
-                    {language === "en" ? "Enter Card Details" : "กรอกข้อมูลบัตร"}
-                  </h3>
-                  <input
-                    type="text"
-                    placeholder={t.cardNumber}
-                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder={t.expiry}
-                      className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all"
-                    />
-                    <input
-                      type="text"
-                      placeholder="CVV"
-                      className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all"
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 

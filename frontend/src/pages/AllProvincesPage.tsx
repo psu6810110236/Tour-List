@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MapPin, ArrowRight, Search, Compass, Map, Filter, X,
+  MapPin, ArrowRight, Search,  Map, Filter, X,
   ChevronLeft, ChevronRight // 🟢 เพิ่มไอคอนลูกศร
 } from "lucide-react"; // 🟢 เพิ่ม Filter, X เข้ามา
 
@@ -82,56 +82,7 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
     fetchProvinces();
   }, []);
 
-  const getRegionForProvince = (provinceId: string, name_th?: string) => {
-    const id = provinceId.toLowerCase();
-    const th = (name_th || "").toLowerCase();
-
-    // ภาคเหนือ
-    const north = ["chiang-mai","chiang-rai","lampang","lamphun","phrae","nan","phayao","mae-hong-son",
-      "tak","uttaradit","sukhothai","phitsanulok","phichit","kamphaeng-phet","phetchabun",
-      "เชียงใหม่","เชียงราย","ลำปาง","ลำพูน","แพร่","น่าน","พะเยา","แม่ฮ่องสอน",
-      "ตาก","อุตรดิตถ์","สุโขทัย","พิษณุโลก","พิจิตร","กำแพงเพชร","เพชรบูรณ์"];
-
-    // ภาคกลาง
-    const central = ["bangkok","ayutthaya","nonthaburi","pathum-thani","samut-prakan","samut-sakhon",
-      "samut-songkhram","nakhon-pathom","ang-thong","sing-buri","chai-nat","saraburi",
-      "lopburi","nakhon-sawan","uthai-thani","suphan-buri",
-      "กรุงเทพ","อยุธยา","นนทบุรี","ปทุมธานี","สมุทรปราการ","สมุทรสาคร",
-      "สมุทรสงคราม","นครปฐม","อ่างทอง","สิงห์บุรี","ชัยนาท","สระบุรี",
-      "ลพบุรี","นครสวรรค์","อุทัยธานี","สุพรรณบุรี"];
-
-    // ภาคอีสาน
-    const northeast = ["khon-kaen","udon-thani","nakhon-ratchasima","korat","buriram","surin",
-      "si-saket","ubon-ratchathani","yasothon","chaiyaphum","amnat-charoen","mukdahan",
-      "nakhon-phanom","sakon-nakhon","loei","nong-khai","nong-bua-lamphu","kalasin","roi-et","maha-sarakham",
-      "ขอนแก่น","อุดรธานี","นครราชสีมา","บุรีรัมย์","สุรินทร์","ศรีสะเกษ",
-      "อุบลราชธานี","ยโสธร","ชัยภูมิ","อำนาจเจริญ","มุกดาหาร","นครพนม",
-      "สกลนคร","เลย","หนองคาย","หนองบัวลำภู","กาฬสินธุ์","ร้อยเอ็ด","มหาสารคาม"];
-
-    // ภาคตะวันออก
-    const east = ["chonburi","pattaya","trat","rayong","chanthaburi","sa-kaeo","prachinburi","nakhon-nayok",
-      "ชลบุรี","ตราด","ระยอง","จันทบุรี","สระแก้ว","ปราจีนบุรี","นครนายก"];
-
-    // ภาคตะวันตก
-    const west = ["kanchanaburi","ratchaburi","phetchaburi","prachuap-khiri-khan","nakhon-pathom",
-      "กาญจนบุรี","ราชบุรี","เพชรบุรี","ประจวบคีรีขันธ์"];
-
-    // ภาคใต้
-    const south = ["phuket","krabi","surat-thani","songkhla","phang-nga","trang","nakhon-si-thammarat",
-      "satun","pattani","yala","narathiwat","chumphon","ranong",
-      "ภูเก็ต","กระบี่","สุราษฎร์ธานี","สงขลา","พังงา","ตรัง","นครศรีธรรมราช",
-      "สตูล","ปัตตานี","ยะลา","นราธิวาส","ชุมพร","ระนอง"];
-
-    const check = (list: string[]) => list.some(p => id.includes(p) || th.includes(p));
-
-    if (check(north)) return "north";
-    if (check(northeast)) return "northeast";
-    if (check(east)) return "east";
-    if (check(west)) return "west";
-    if (check(south)) return "south";
-    if (check(central)) return "central";
-    return "central"; // default
-  };
+  
 
   const filteredProvinces = provinces.filter((province) => {
     const searchLower = searchQuery.toLowerCase();
@@ -139,7 +90,7 @@ export default function AllProvincesPage({ language = "th" }: AllProvincesPagePr
       (province.name && province.name.toLowerCase().includes(searchLower)) ||
       (province.name_th && province.name_th.includes(searchLower));
 
-    const provinceRegion = province.region || getRegionForProvince(province.id, province.name_th);
+    const provinceRegion = province.region;
     const matchRegion = selectedRegion === "all" || provinceRegion === selectedRegion;
 
     return matchSearch && matchRegion;

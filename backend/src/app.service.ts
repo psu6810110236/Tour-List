@@ -34,7 +34,29 @@ export class AppService implements OnApplicationBootstrap {
 
   // ดึงจังหวัดทั้งหมด
   async getAllProvinces() {
-    return await this.provinceRepository.find();
+    // 1. ดึงข้อมูลจังหวัดทั้งหมดมาปกติ
+    const provinces = await this.provinceRepository.find();
+
+    // 2. ให้นับจำนวนทัวร์ที่มีอยู่ "จริงๆ" ในตาราง Tour โดยแยกตาม provinceId
+    const tourCounts = await this.tourRepository
+      .createQueryBuilder('tour')
+      .select('tour.provinceId', 'provinceId')
+      .addSelect('COUNT(tour.id)', 'count')
+      .where('tour.isHidden = false') // 🟢 (เสริม) ไม่นับรวมทัวร์ที่ถูกซ่อน (isHidden: true)
+      .groupBy('tour.provinceId')
+      .getRawMany();
+
+    // 3. นำจำนวนทัวร์จริงๆ ที่นับได้ ไปแทนที่ค่า tourCount เดิม
+    return provinces.map(province => {
+      // หาดูว่าจังหวัดนี้มีทัวร์กี่อันจากที่ Query มา
+      const match = tourCounts.find(t => t.provinceId === province.id);
+
+      return {
+        ...province,
+        // ถ้าเจอให้นำค่ามาแปลงเป็นตัวเลข ถ้าไม่เจอแปลว่าไม่มีทัวร์ให้เป็น 0
+        tourCount: match ? parseInt(match.count, 10) : 0
+      };
+    });
   }
 
   // ดึงทัวร์ทั้งหมด
@@ -50,18 +72,23 @@ export class AppService implements OnApplicationBootstrap {
 
   // ดึงรายละเอียดทัวร์รายตัว
   async getTourById(id: number) {
-    return await this.tourRepository.findOne({ where: { id } });
+    return await this.tourRepository.findOne({ 
+      where: { id },
+      relations: ['province'] // 🟢 เติมบรรทัดนี้
+    });
   }
 
   // ระบบ Search & Filter ทัวร์ (รองรับ Price, Province)
   async searchTours(query: { provinceId?: string; maxPrice?: number; minPrice?: number }) {
     const where: any = {};
-
     if (query.provinceId) where.provinceId = query.provinceId;
     if (query.maxPrice) where.price = LessThanOrEqual(query.maxPrice);
     if (query.minPrice) where.price = MoreThanOrEqual(query.minPrice);
 
-    return await this.tourRepository.find({ where });
+    return await this.tourRepository.find({ 
+      where,
+      relations: ['province'] // 🟢 เติมบรรทัดนี้
+    });
   }
 
   // ======================================================
@@ -188,7 +215,8 @@ export class AppService implements OnApplicationBootstrap {
           region: "central"
         };
         return {
-          id: `province-${index + 1}`,
+          id: detail.name_en.toLowerCase().replace(/\s+/g, '-'), 
+          
           name: detail.name_en,
           name_th: name,
           description: detail.desc_en,
