@@ -239,7 +239,11 @@ export function BookingPage({ tour, bookingData, onNavigate, language }: Booking
       showToast(language === "th" ? "กรุณาเลือกวันที่เดินทาง" : "Please select a travel date.", "warning");
       return false;
     }
-    if (isFull || travelers <= 0) {
+    if (travelers <= 0) {
+      showToast(language === "th" ? "กรุณาเลือกจำนวนผู้เดินทาง" : "Please select the number of travelers.", "warning");
+      return false;
+    }
+    if (isFull) {
       showToast(language === "th" ? "ขออภัย ทัวร์รอบนี้เต็มแล้ว" : "Sorry, this tour is fully booked for this date.", "error");
       return false;
     }
