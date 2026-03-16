@@ -38,7 +38,6 @@ import { tourService, bookingService } from '../../services/api';
 interface AdminDashboardProps {
   onNavigate: (page: string, data?: any) => void;
   language: Language;
-  etLanguage: (lang: Language) => void;
   setLanguage: (lang: Language) => void;
 }
 
@@ -790,9 +789,9 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                         </td>
 
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
-                        </td>
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
+                          </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {new Date((booking as any).travelDate || (booking as any).date || 0).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}
                         </td>
@@ -1063,8 +1062,10 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
 
                             <td className="px-6 py-4 text-sm font-bold text-[#00A699]">{tour.id}</td>
                             <td className="px-6 py-4">
-                              <div className="font-medium text-gray-900">{getLang(tour, 'name', language)}</div>
-                            </td>
+    <div className="font-medium text-gray-900 line-clamp-2" title={tour.name_th || tour.name}>
+      {getLang(tour, 'name', language) || tour.name_th || tour.name || '-'}
+    </div>
+  </td>
                             <td className="px-6 py-4 text-sm text-gray-900">
                               {typeof tour.province === 'object' && tour.province !== null
                                 ? getLang(tour.province, 'name', language)
