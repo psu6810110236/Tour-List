@@ -72,19 +72,23 @@ export class AppService implements OnApplicationBootstrap {
 
   // ดึงรายละเอียดทัวร์รายตัว
   async getTourById(id: number) {
-    return await this.tourRepository.findOne({ where: { id } });
+    return await this.tourRepository.findOne({ 
+      where: { id },
+      relations: ['province'] // 🟢 เติมบรรทัดนี้
+    });
   }
 
   // ระบบ Search & Filter ทัวร์ (รองรับ Price, Province)
   async searchTours(query: { provinceId?: string; maxPrice?: number; minPrice?: number }) {
     const where: any = {};
-
     if (query.provinceId) where.provinceId = query.provinceId;
     if (query.maxPrice) where.price = LessThanOrEqual(query.maxPrice);
     if (query.minPrice) where.price = MoreThanOrEqual(query.minPrice);
 
-    return await this.tourRepository.find({ where });
-    
+    return await this.tourRepository.find({ 
+      where,
+      relations: ['province'] // 🟢 เติมบรรทัดนี้
+    });
   }
 
   // ======================================================
@@ -211,7 +215,8 @@ export class AppService implements OnApplicationBootstrap {
           region: "central"
         };
         return {
-          id: `province-${index + 1}`,
+          id: detail.name_en.toLowerCase().replace(/\s+/g, '-'), 
+          
           name: detail.name_en,
           name_th: name,
           description: detail.desc_en,

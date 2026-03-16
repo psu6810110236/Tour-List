@@ -16,6 +16,25 @@ import {
 
 import { tourService } from "../../../services/api";
 
+// Map provinceId → ชื่อจังหวัดภาษาไทย (fallback กรณี API ไม่ส่ง province object มา)
+const PROVINCE_ID_TO_NAME: Record<string, { th: string; en: string }> = {
+  "province-1":  { th: "กรุงเทพมหานคร", en: "Bangkok" },
+  "province-2":  { th: "เชียงใหม่", en: "Chiang Mai" },
+  "province-3":  { th: "ภูเก็ต", en: "Phuket" },
+  "province-4":  { th: "กระบี่", en: "Krabi" },
+  "province-5":  { th: "สุราษฎร์ธานี", en: "Surat Thani" },
+  "province-6":  { th: "เชียงราย", en: "Chiang Rai" },
+  "province-7":  { th: "กาญจนบุรี", en: "Kanchanaburi" },
+  "province-8":  { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
+  "province-9":  { th: "ขอนแก่น", en: "Khon Kaen" },
+  "province-10": { th: "อยุธยา", en: "Ayutthaya" },
+  "province-11": { th: "สมุย", en: "Koh Samui" },
+  "province-12": { th: "พัทยา", en: "Pattaya" },
+  "province-13": { th: "หัวหิน", en: "Hua Hin" },
+  "province-14": { th: "เกาะช้าง", en: "Koh Chang" },
+  "province-15": { th: "ลำปาง", en: "Lampang" },
+};
+
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 
@@ -304,9 +323,10 @@ export default function HomePage({ language }: HomePageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {tours.filter(tour => !tour.isHidden).map((tour) => {
-              const provinceName = tour.province?.name_th && language === 'th' ? tour.province.name_th :
-                tour.province?.name && language === 'en' ? tour.province.name :
-                  tour.provinceId || 'จุดหมายยอดฮิต';
+              const provinceMapping = tour.provinceId ? PROVINCE_ID_TO_NAME[tour.provinceId] : undefined;
+              const provinceName = language === 'th'
+                ? (tour.province?.name_th || provinceMapping?.th || tour.province?.name || tour.provinceId || 'จุดหมายยอดฮิต')
+                : (tour.province?.name || provinceMapping?.en || tour.province?.name_th || tour.provinceId || 'Popular Destination');
 
               const tourName = language === 'th' && tour.name_th ? tour.name_th : tour.name;
 
