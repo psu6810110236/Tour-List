@@ -72,26 +72,21 @@ export default function ChatWidget() {
   useEffect(() => {
     fetch(`http://localhost:3000/chat/messages/${activeUserId}`)
       .then(res => {
-        if (!res.ok) throw new Error('Network response was not ok');
+        if (!res.ok) return []; // guest หรือ userId ไม่มีใน DB → คืน array เปล่า ไม่ throw
         return res.json();
       })
       .then(data => {
-        if (Array.isArray(data)) {
-          const mapped = data.map((msg: any) => ({
-            id: msg.id,
-            senderType: (msg.senderId === activeUserId ? 'user' : 'admin') as 'user' | 'admin',
-            text: msg.content,
-            timestamp: new Date(msg.createdAt),
-            isImage: msg.content.startsWith('data:image')
-          }));
-          // ถ้าระบบส่งประวัติมา ให้เอาอันเก่าที่ fetch ได้มาแสดงเลย 
-          // (อาจจะตั้งเงื่อนไขเอาข้อความ welcome ไปต่อท้ายได้ถ้าต้องการ)
-          if (mapped.length > 0) {
-              setMessages(mapped);
-          }
-        }
+        if (!Array.isArray(data) || data.length === 0) return;
+        const mapped = data.map((msg: any) => ({
+          id: msg.id,
+          senderType: (msg.senderId === activeUserId ? 'user' : 'admin') as 'user' | 'admin',
+          text: msg.content,
+          timestamp: new Date(msg.createdAt),
+          isImage: msg.content?.startsWith('data:image') ?? false
+        }));
+        setMessages(mapped);
       })
-      .catch(err => console.error('โหลดแชทล้มเหลว:', err));
+      .catch(() => { /* โหลดประวัติล้มเหลว — แสดงเฉพาะ welcome message */ });
   }, [activeUserId]);
 
   useEffect(() => {
@@ -185,7 +180,7 @@ export default function ChatWidget() {
               {!isUser && (
                 <div className="w-7 h-7 rounded-full bg-[#00A699]/10 flex items-center justify-center text-[10px] text-[#00A699] font-bold mr-2 mt-auto mb-1">RH</div>
               )}
-              <div className={`max-w-[80%] p-3 text-[13px] leading-relaxed shadow-sm ${
+              <div className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${
                 isUser
                   ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
                   : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
@@ -193,9 +188,9 @@ export default function ChatWidget() {
                 {msg.isImage ? (
                   <img src={msg.text} alt="sent image" className="rounded-lg max-w-full" />
                 ) : (
-                  <p className="break-all">{msg.text}</p>
+                  <p className="break-words whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 )}
-                <div className={`text-[9px] mt-1 text-right opacity-70 ${isUser ? 'text-white' : 'text-gray-400'}`}>
+                <div className={`text-[9px] mt-1 text-right opacity-60 ${isUser ? 'text-white' : 'text-gray-400'}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
