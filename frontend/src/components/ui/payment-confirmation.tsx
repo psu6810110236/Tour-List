@@ -10,7 +10,7 @@ interface PaymentConfirmationProps {
   cartItems?: any[]; // 🌟 เพิ่มตัวนี้แล้วครับ
 }
 
-export function PaymentConfirmation({ bookingData, onNavigate, language, cartItems }: PaymentConfirmationProps) {
+export function PaymentConfirmation({ bookingData, onNavigate, language }: PaymentConfirmationProps) {
   const t = translations[language].confirmation;
   const b = translations[language].booking;
 

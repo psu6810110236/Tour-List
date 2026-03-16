@@ -1,19 +1,27 @@
-// cart.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+// backend/src/cart/cart.service.ts
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './cart.entity';
 import { CartItem } from './cart-item.entity';
 import { AddToCartDto } from './add-to-cart.dto';
+import { Tour } from '../entities/tour.entity'; // เพิ่ม import นี้
 
 @Injectable()
 export class CartService {
   constructor(
     @InjectRepository(Cart) private cartRepo: Repository<Cart>,
     @InjectRepository(CartItem) private cartItemRepo: Repository<CartItem>,
+    @InjectRepository(Tour) private tourRepo: Repository<Tour>, // เพิ่มการ inject TourRepository
   ) {}
 
   async addToCart(userId: string, dto: AddToCartDto) {
+    // 1. ดึงข้อมูลทัวร์เพื่อเอา "ราคาจริง" มาใช้คำนวณ ห้ามเชื่อราคาจากหน้าบ้าน
+    const tour = await this.tourRepo.findOne({ where: { id: Number(dto.tourId) } });
+    if (!tour) throw new NotFoundException('ไม่พบข้อมูลทัวร์');
+    
+    const realTotalPrice = tour.price * dto.pax;
+
     let cart = await this.cartRepo.findOne({ where: { userId }, relations: ['items'] });
     if (!cart) {
       cart = this.cartRepo.create({ userId });
@@ -26,15 +34,20 @@ export class CartService {
 
     if (existingItem) {
       existingItem.pax += dto.pax;
-      existingItem.totalPrice = Number(existingItem.totalPrice) + Number(dto.totalPrice);
+      // ใช้ราคาจริงคูณจำนวนคนใหม่
+      existingItem.totalPrice = tour.price * existingItem.pax;
       return this.cartItemRepo.save(existingItem);
     }
 
-    const newItem = this.cartItemRepo.create({ ...dto, cart });
+    // สร้างไอเทมใหม่โดยใช้ราคาที่คำนวณเองที่หลังบ้าน
+    const newItem = this.cartItemRepo.create({ 
+      ...dto, 
+      totalPrice: realTotalPrice, // ใช้ราคาที่ปลอดภัย
+      cart 
+    });
     return this.cartItemRepo.save(newItem);
   }
 
-  // ✅ เปลี่ยนชื่อจาก getCart → getCartItemsByUserId ให้ตรงกับ controller
   async getCartItemsByUserId(userId: string) {
     const cart = await this.cartRepo.findOne({
       where: { userId },
@@ -43,7 +56,6 @@ export class CartService {
     return cart?.items ?? [];
   }
 
-  // ✅ เพิ่ม removeFromCart ที่หายไป
   async removeFromCart(userId: string, cartItemId: string) {
     const item = await this.cartItemRepo.findOne({
       where: { id: cartItemId },
@@ -51,7 +63,7 @@ export class CartService {
     });
 
     if (!item) throw new NotFoundException('Cart item not found');
-    if (item.cart.userId !== userId) throw new NotFoundException('Cart item not found');
+    if (item.cart.userId !== userId) throw new NotFoundException('Access denied');
 
     await this.cartItemRepo.remove(item);
     return { message: 'Removed successfully' };

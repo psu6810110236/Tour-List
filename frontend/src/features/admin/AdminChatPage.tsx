@@ -27,6 +27,8 @@ export default function AdminChatPage() {
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null); // 🟢 เพิ่ม State สำหรับรูปพรีวิว
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [fileErrorPopup, setFileErrorPopup] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null); // 🟢 เพิ่มตัวนี้
@@ -130,8 +132,9 @@ export default function AdminChatPage() {
     const file = e.target.files?.[0];
     if (!file || !socket || !selectedUser || !user) return;
 
-    if (file.size > 1024 * 1024) {
-      alert("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 1MB");
+    if (file.size > 2 * 1024 * 1024) {
+      setFileErrorPopup(true);
+      e.target.value = '';
       return;
     }
 
@@ -244,7 +247,8 @@ export default function AdminChatPage() {
                           <img
                             src={msg.content}
                             alt="sent"
-                            className="rounded-xl max-w-full max-h-72 object-cover border border-white/10"
+                            className="rounded-xl max-w-full max-h-72 object-cover border border-white/10 cursor-zoom-in hover:opacity-90 transition"
+                            onClick={() => setEnlargedImage(msg.content)}
                           />
                         ) : (
                           <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-all">{msg.content}</p>
@@ -344,6 +348,48 @@ export default function AdminChatPage() {
           </div>
         )}
       </div>
+
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <button
+            className="absolute top-5 right-5 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition"
+            onClick={() => setEnlargedImage(null)}
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={enlargedImage}
+            alt="enlarged"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {fileErrorPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl p-6 mx-4 shadow-2xl text-center max-w-sm w-full">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <p className="font-semibold text-gray-900 mb-1">ไฟล์มีขนาดใหญ่เกินไป</p>
+            <p className="text-sm text-gray-500 mb-4">กรุณาเลือกรูปที่มีขนาดไม่เกิน 2MB</p>
+            <button
+              onClick={() => setFileErrorPopup(false)}
+              className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2 rounded-xl font-semibold text-sm transition"
+            >
+              ตกลง
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

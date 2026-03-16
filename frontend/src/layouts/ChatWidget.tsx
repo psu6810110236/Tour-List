@@ -37,6 +37,8 @@ export default function ChatWidget() {
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [fileErrorPopup, setFileErrorPopup] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,26 +74,21 @@ export default function ChatWidget() {
   useEffect(() => {
     fetch(`http://localhost:3000/chat/messages/${activeUserId}`)
       .then(res => {
-        if (!res.ok) throw new Error('Network response was not ok');
+        if (!res.ok) return []; // guest หรือ userId ไม่มีใน DB → คืน array เปล่า ไม่ throw
         return res.json();
       })
       .then(data => {
-        if (Array.isArray(data)) {
-          const mapped = data.map((msg: any) => ({
-            id: msg.id,
-            senderType: (msg.senderId === activeUserId ? 'user' : 'admin') as 'user' | 'admin',
-            text: msg.content,
-            timestamp: new Date(msg.createdAt),
-            isImage: msg.content.startsWith('data:image')
-          }));
-          // ถ้าระบบส่งประวัติมา ให้เอาอันเก่าที่ fetch ได้มาแสดงเลย 
-          // (อาจจะตั้งเงื่อนไขเอาข้อความ welcome ไปต่อท้ายได้ถ้าต้องการ)
-          if (mapped.length > 0) {
-              setMessages(mapped);
-          }
-        }
+        if (!Array.isArray(data) || data.length === 0) return;
+        const mapped = data.map((msg: any) => ({
+          id: msg.id,
+          senderType: (msg.senderId === activeUserId ? 'user' : 'admin') as 'user' | 'admin',
+          text: msg.content,
+          timestamp: new Date(msg.createdAt),
+          isImage: msg.content?.startsWith('data:image') ?? false
+        }));
+        setMessages(mapped);
       })
-      .catch(err => console.error('โหลดแชทล้มเหลว:', err));
+      .catch(() => { /* โหลดประวัติล้มเหลว — แสดงเฉพาะ welcome message */ });
   }, [activeUserId]);
 
   useEffect(() => {
@@ -105,6 +102,16 @@ export default function ChatWidget() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isOpen, previewImage]);
+
+  // ล็อค body scroll เมื่อ chat เปิด
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -123,8 +130,9 @@ export default function ChatWidget() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) {
-      alert("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 1MB");
+    if (file.size > 2 * 1024 * 1024) {
+      setFileErrorPopup(true);
+      e.target.value = '';
       return;
     }
     const reader = new FileReader();
@@ -185,17 +193,17 @@ export default function ChatWidget() {
               {!isUser && (
                 <div className="w-7 h-7 rounded-full bg-[#00A699]/10 flex items-center justify-center text-[10px] text-[#00A699] font-bold mr-2 mt-auto mb-1">RH</div>
               )}
-              <div className={`max-w-[80%] p-3 text-[13px] leading-relaxed shadow-sm ${
+              <div className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${
                 isUser
                   ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
                   : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
               }`}>
                 {msg.isImage ? (
-                  <img src={msg.text} alt="sent image" className="rounded-lg max-w-full" />
+                  <img src={msg.text} alt="sent image" className="rounded-lg max-w-full cursor-zoom-in hover:opacity-90 transition" onClick={() => setEnlargedImage(msg.text)} />
                 ) : (
-                  <p className="break-all">{msg.text}</p>
+                  <p className="break-words whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 )}
-                <div className={`text-[9px] mt-1 text-right opacity-70 ${isUser ? 'text-white' : 'text-gray-400'}`}>
+                <div className={`text-[9px] mt-1 text-right opacity-60 ${isUser ? 'text-white' : 'text-gray-400'}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
@@ -266,6 +274,49 @@ export default function ChatWidget() {
           </form>
         </div>
       </div>
+
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <button
+            className="absolute top-5 right-5 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition"
+            onClick={() => setEnlargedImage(null)}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={enlargedImage}
+            alt="enlarged"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* File size error popup */}
+      {fileErrorPopup && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 rounded-[24px]">
+          <div className="bg-white rounded-2xl p-6 mx-4 shadow-2xl text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <p className="font-semibold text-gray-900 mb-1">ไฟล์มีขนาดใหญ่เกินไป</p>
+            <p className="text-sm text-gray-500 mb-4">กรุณาเลือกรูปที่มีขนาดไม่เกิน 2MB</p>
+            <button
+              onClick={() => setFileErrorPopup(false)}
+              className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2 rounded-xl font-semibold text-sm transition"
+            >
+              ตกลง
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
