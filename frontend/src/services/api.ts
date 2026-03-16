@@ -1,4 +1,3 @@
-// src/services/api.ts
 import axios from 'axios';
 import type { Tour, Province, Booking } from '../types';
 
@@ -19,6 +18,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// เพิ่ม Interceptor สำหรับดักจับ Token Expired (401)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const tourService = {
   search: (params: { provinceId?: string; minPrice?: string; maxPrice?: string; startDate?: string; sort?: string; tripDays?: string }) =>
     api.get<Tour[]>('/tours/search', { params }),
@@ -26,11 +38,11 @@ export const tourService = {
   getProvinces: () => api.get<Province[]>('/tours/provinces'),
   getById: (id: string) => api.get<Tour>(`/tours/${id}`),
   createProvince: (data: Partial<Province>) => api.post('/tours/provinces', data),
-  updateProvince: (id: string, data: any) => axios.patch(`${API_URL}/provinces/${id}`, data),
+  // ✅ แก้เป็น api.patch และใช้ path ที่ถูกต้อง
+  updateProvince: (id: string, data: any) => api.patch(`/tours/provinces/${id}`, data),
   createTour: (data: Partial<Tour>) => api.post('/tours', data),
   updateTour: (id: string, data: Partial<Tour>) => api.put(`/tours/${id}`, data),
   deleteTour: (id: string) => api.delete(`/tours/${id}`),
-  
 };
 
 export const bookingService = {
@@ -42,7 +54,8 @@ export const bookingService = {
   updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) =>
     api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
-  deleteProvince: (id: string) => axios.delete(`http://localhost:3000/provinces/${id}`),
+  // ✅ แก้เป็น api.delete และลบ http://localhost:3000 ออก
+  deleteProvince: (id: string) => api.delete(`/tours/provinces/${id}`),
 };
 
 export interface AddToCartPayload {
