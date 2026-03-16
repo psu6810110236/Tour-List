@@ -252,7 +252,7 @@ export function Navigation({
 
                     <button onClick={() => { onToggleLanguage(); setIsMobileMenuOpen(false); }} className="flex items-center gap-4 p-4 rounded-2xl font-bold text-gray-600 hover:bg-gray-50">
                         <Globe className="w-5 h-5 text-[#00A699]" />
-                        {language === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
+                        {language === 'th' ? 'เปลี่ยนเป็นภาษาอังกฤษ (English)' : 'Switch to Thai (ภาษาไทย)'}
                     </button>
 
                     {/* Mobile Logout */}
