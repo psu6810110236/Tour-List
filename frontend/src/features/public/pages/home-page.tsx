@@ -179,8 +179,8 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
 
         {/* 🟢 ปุ่มลูกศร เปลี่ยนรูปซ้าย-ขวา (แสดงตอน Hover) */}
-        
-       
+
+
 
         {/* ⚪ ส่วนเนื้อหา (Content) - คงดีไซน์เดิมของคุณไว้เป๊ะๆ */}
         <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center">
@@ -217,20 +217,23 @@ export default function HomePage({ language }: HomePageProps) {
           </p>
 
           {/* Search Bar (อันเดิมของคุณ - ผมปรับ padding และ shadow นิดหน่อยให้เข้ากัน) */}
-          <form onSubmit={handleSearch} className="search-bar max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-full shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] p-2.5 flex flex-col md:flex-row items-center gap-2 md:gap-3 transform transition-all hover:scale-[1.01]">
-            <div className="flex items-center w-full px-2 text-gray-900">
-              <Search className="w-5 h-5 md:w-6 md:h-6 text-[#00A699] ml-2 md:ml-4" />
+          <form
+            onSubmit={handleSearch}
+            className="search-bar w-[92%] max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] p-1.5 md:p-2.5 flex flex-row items-center gap-1 md:gap-3 transform transition-all hover:scale-[1.01]"
+          >
+            <div className="flex items-center flex-1 px-3 md:px-4 text-gray-900 overflow-hidden">
+              <Search className="w-4 h-4 md:w-6 md:h-6 text-[#00A699] mr-2 flex-shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t.searchPlaceholder}
-                className="flex-1 py-3 md:py-4 px-2 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-base md:text-lg"
+                className="w-full py-2.5 md:py-4 px-1 text-gray-900 placeholder:text-gray-400 outline-none bg-transparent text-sm md:text-lg truncate"
               />
             </div>
             <button
               type="submit"
-              className="w-full md:w-auto bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-8 py-3 md:py-4 rounded-full font-bold text-base md:text-lg transition shadow-lg shadow-orange-200"
+              className="bg-[#FF6B4A] hover:bg-[#ff5232] text-white px-5 md:px-8 py-2.5 md:py-4 rounded-full font-bold text-sm md:text-lg transition shadow-lg shadow-orange-200/50 flex-shrink-0 whitespace-nowrap"
             >
               {t.searchBtn}
             </button>
@@ -317,9 +320,8 @@ export default function HomePage({ language }: HomePageProps) {
                     <img
                       src={tour.image || FALLBACK_IMAGE_URL}
                       alt={tourName}
-                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${
-                        !tour.image ? 'object-contain p-6' : 'object-cover'
-                      }`}
+                      className={`w-full h-full group-hover:scale-110 transition-transform duration-500 ${!tour.image ? 'object-contain p-6' : 'object-cover'
+                        }`}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = FALLBACK_IMAGE_URL;
