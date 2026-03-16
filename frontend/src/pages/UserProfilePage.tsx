@@ -25,7 +25,7 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const { user, logout } = useAuth() as any;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [profileImage, setProfileImage]       = useState<string | null>(localStorage.getItem("userProfileImage"));
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [displayFullName, setDisplayFullName] = useState(user?.fullName || "Normal User");
   const [displayPhone, setDisplayPhone]       = useState("");
   const [bookings, setBookings]               = useState<any[]>([]);

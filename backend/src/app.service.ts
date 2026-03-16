@@ -272,48 +272,53 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   private async seedUsers() {
-    const adminEmail = 'admin@test.com';
-    const userEmail = 'user@test.com';
-    const password = 'password123';
+    // แก้ #4: อ่าน credential จาก env แทน hardcode
+    // ใน .env ตั้ง SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, SEED_USER_EMAIL, SEED_USER_PASSWORD
+    const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@test.com';
+    const userEmail = process.env.SEED_USER_EMAIL || 'user@test.com';
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+    const userPassword = process.env.SEED_USER_PASSWORD;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // ถ้าไม่มี env → ใน production ให้ skip การ seed (ไม่สร้าง account เริ่มต้น)
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction && (!adminPassword || !userPassword)) {
+      console.log('⚠️  Skipping seedUsers in production: SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD not set');
+      return;
+    }
+
+    const password = adminPassword || 'password123-change-me';
+    const hashedAdminPassword = await bcrypt.hash(password, 10);
+    const hashedUserPassword = await bcrypt.hash(userPassword || 'password123-change-me', 10);
 
     const adminRole = await this.roleRepository.findOne({ where: { name: 'ADMIN' } });
     const userRole = await this.roleRepository.findOne({ where: { name: 'USER' } });
 
     if (adminRole) {
       const existingAdmin = await this.userRepository.findOne({ where: { email: adminEmail } });
-      if (existingAdmin) {
-        existingAdmin.passwordHash = hashedPassword;
-        await this.userRepository.save(existingAdmin);
-        console.log('✅ Updated Admin password to hashed version');
-      } else {
+      if (!existingAdmin) {
         await this.userRepository.save({
           email: adminEmail,
-          passwordHash: hashedPassword,
-          fullName: 'Admin Tester',
+          passwordHash: hashedAdminPassword,
+          fullName: 'Admin',
           role: adminRole,
           provider: 'local',
         });
-        console.log('✅ Seeded Admin User');
+        console.log(`✅ Seeded Admin User: ${adminEmail}`);
       }
     }
 
     if (userRole) {
       const existingUser = await this.userRepository.findOne({ where: { email: userEmail } });
-      if (existingUser) {
-        existingUser.passwordHash = hashedPassword;
-        await this.userRepository.save(existingUser);
-        console.log('✅ Updated User password to hashed version');
-      } else {
+      if (!existingUser) {
         await this.userRepository.save({
           email: userEmail,
-          passwordHash: hashedPassword,
+          passwordHash: hashedUserPassword,
           fullName: 'Normal User',
           role: userRole,
           provider: 'local',
         });
-        console.log('✅ Seeded Normal User');
+        console.log(`✅ Seeded Normal User: ${userEmail}`);
       }
     }
   }

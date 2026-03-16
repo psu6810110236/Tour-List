@@ -25,18 +25,28 @@ export class AuthController {
     return req.user;
   }
 
-  // Route สำหรับเริ่มล็อคอินด้วย Google
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth(@Request() req) {}
 
-  // Route รับ Callback จาก Google
   @Get('google/callback')
-  @UseGuards(AuthGuard('google')) 
+  @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Request() req, @Res() res: Response) {
     const authResult = await this.authService.googleLogin(req);
-    // Redirect กลับไปที่ Frontend พร้อมแนบ Token และข้อมูลผู้ใช้
-    const frontendUrl = 'http://localhost:5173/login';
-    res.redirect(`${frontendUrl}?token=${authResult.access_token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
+
+    // ใช้ env var แทน hardcode localhost — ถ้าไม่มีค่าจะ fallback เป็น dev
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // แก้ #6: ส่ง token ผ่าน httpOnly cookie แทน URL query string
+    // เพื่อไม่ให้ token ติดอยู่ใน browser history / server logs
+    res.cookie('auth_token', authResult.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS only ใน production
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 1 วัน
+    });
+
+    // ส่งแค่ข้อมูล user ใน URL (ไม่ใช่ token) เพื่อให้ frontend ทราบว่า login สำเร็จ
+    res.redirect(`${frontendUrl}/login?user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
   }
 }
