@@ -1575,8 +1575,14 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       {popup.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
-            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]'}`}>
-              {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> : <CheckCircle className="w-10 h-10" />}
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${
+              popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' : 
+              popup.alertType === 'error' ? 'bg-red-50 border-red-100 text-red-500' : // 🔴 ถ้าเป็น error ให้ใช้สีแดง
+              'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]' // 🟢 นอกนั้นใช้สีเขียว
+            }`}>
+              {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> : 
+               popup.alertType === 'error' ? <XCircle className="w-10 h-10" /> : // 🔴 ถ้าเป็น error ให้โชว์กากบาท
+               <CheckCircle className="w-10 h-10" />}
             </div>
             <h3 className="text-2xl font-extrabold text-gray-900 mb-3 tracking-tight">{popup.title}</h3>
             <p className="text-gray-500 mb-8 leading-relaxed text-sm">{popup.message}</p>
