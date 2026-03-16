@@ -196,13 +196,13 @@ export default function HomePage({ language }: HomePageProps) {
               <>
                 <span className="font-light opacity-80">ค้นพบความมหัศจรรย์</span><br />
                 {/* 🟢 เปลี่ยน Gradient ให้ทึบทั้งหมด และเพิ่ม Drop Shadow สีแบรนด์ */}
-                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#00fff0] via-[#00A699] to-[#005f58] drop-shadow-xl">ประเทศไทย</span>
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#7ffffe] via-[#00e5d3] to-[#00bfb0] drop-shadow-xl">ประเทศไทย</span>
               </>
             ) : (
               <>
                 <span className="font-light opacity-80">Discover Amazing</span><br />
                 {/* เน้น "Thailand" ด้วยตัวหนาและไล่สีแบบ Smooth (ทึบทั้งหมด) */}
-                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#00fff0] via-[#00A699] to-[#005f58] drop-shadow-xl">Thailand</span>
+                <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#ffffff] via-[#00e5d3] to-[#00bfb0] drop-shadow-xl">Thailand</span>
               </>
             )}
           </h1>
