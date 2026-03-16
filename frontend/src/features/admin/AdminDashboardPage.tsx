@@ -667,7 +667,15 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                         {booking.status?.toLowerCase() === 'rejected' && <XCircle className="w-5 h-5 text-red-600" />}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
+                        <div className="font-semibold text-gray-900 line-clamp-1">
+  {(() => {
+    const realTour = allTours.find(t => String(t.id) === String(booking.tourId || (booking.tour as any)?.id));
+    if (realTour) return getLang(realTour, 'name', language) || realTour.name_th || realTour.name;
+    const snapName = getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language);
+    const thName = (booking as any).tourName_th || (booking as any).tourNameSnapshot_th || (booking as any).tourName;
+    return (snapName === 'Tour from Cart' && thName) ? thName : (snapName || thName || '-');
+  })()}
+</div>
                         <div className="text-sm text-gray-600">{booking.id}</div>
                       </div>
                     </div>
@@ -790,8 +798,25 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
 
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{booking.id}</td>
                           <td className="px-6 py-4">
-                            <div className="font-medium text-gray-900">{getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language)}</div>
-                          </td>
+    <div className="font-medium text-gray-900 line-clamp-2">
+      {(() => {
+        // 1. วิ่งไปค้นหาชื่อทัวร์ของแท้จากคลังทัวร์ (allTours)
+        const realTour = allTours.find(t => String(t.id) === String(booking.tourId || (booking.tour as any)?.id));
+        
+        // 2. ถ้าเจอทัวร์ในคลัง ให้แสดงชื่อ (EN -> TH -> ปกติ)
+        if (realTour) return getLang(realTour, 'name', language) || realTour.name_th || realTour.name;
+        
+        // 3. กรณีทัวร์โดนลบไปแล้ว ให้ดึงประวัติเก่ามาโชว์ 
+        const snapName = getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language);
+        
+        // 🟢 ใช้ (booking as any) เพื่อบอก TypeScript ว่าไม่ต้องตรวจตัวแปรพวกนี้
+        const thName = (booking as any).tourName_th || (booking as any).tourNameSnapshot_th || (booking as any).tourName;
+        
+        // ถ้าชื่อมันดันเป็น Tour from Cart ให้บังคับเอาชื่อภาษาไทยมาโชว์แทน
+        return (snapName === 'Tour from Cart' && thName) ? thName : (snapName || thName || '-');
+      })()}
+    </div>
+  </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {new Date((booking as any).travelDate || (booking as any).date || 0).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}
                         </td>
@@ -891,7 +916,15 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                       {isCancelled && <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><XCircle className="w-3 h-3"/> REJECTED</span>}
                     </div>
                     
-                    <div className="font-bold text-gray-900 mb-4 line-clamp-1">{getLang(booking, 'tourNameSnapshot', language)}</div>
+                    <div className="font-bold text-gray-900 mb-4 line-clamp-2">
+  {(() => {
+    const realTour = allTours.find(t => String(t.id) === String(booking.tourId || (booking.tour as any)?.id));
+    if (realTour) return getLang(realTour, 'name', language) || realTour.name_th || realTour.name;
+    const snapName = getLang(booking, 'tourName', language) || getLang(booking, 'tourNameSnapshot', language);
+    const thName = (booking as any).tourName_th || (booking as any).tourNameSnapshot_th || (booking as any).tourName;
+    return (snapName === 'Tour from Cart' && thName) ? thName : (snapName || thName || '-');
+  })()}
+</div>
 
                     <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => window.open(booking.paymentSlip, '_blank')}>
                       {booking.paymentSlip ? (
