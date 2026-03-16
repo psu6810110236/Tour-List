@@ -10,6 +10,9 @@ export class Review {
   @Column({ type: 'int' })
   rating: number; 
 
+  @Column()
+  tourId: string;
+
   @Column({ type: 'text', nullable: true })
   comment: string;
 
@@ -20,7 +23,11 @@ export class Review {
   @JoinColumn({ name: 'tourId' }) 
   tour: Tour;  
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'userId' }) 
   user: User;
+  
+  @Column()
+  userId: string;
+
 }

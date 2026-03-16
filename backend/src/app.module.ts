@@ -24,7 +24,7 @@ import { CartModule } from './cart/cart.module';
 import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { ReviewsModule } from './reviews/reviews.module';
+import { ReviewModule } from './reviews/reviews.module';
 import { ToursModule } from './tours/tours.module';
 import { BookingsModule } from './booking/bookings.module';
 
@@ -72,7 +72,7 @@ import { BookingsModule } from './booking/bookings.module';
     TypeOrmModule.forFeature([Role, Province, Tour, User, Review, CartItem]),
     UsersModule,
     AuthModule,
-    ReviewsModule,
+    ReviewModule,
     ChatModule,
     ToursModule,
     BookingsModule,

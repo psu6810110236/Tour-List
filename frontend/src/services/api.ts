@@ -45,12 +45,11 @@ export const tourService = {
   deleteTour: (id: string) => api.delete(`/tours/${id}`),
 };
 
+// สมมติเพื่อนบอกว่าใช้ /reviews/tour/:tourId
 export const reviewService = {
-  getReviewsByTourId: (tourId: string) => axios.get(`${API_URL}/tours/${tourId}/reviews`),
+  getReviewsByTourId: (tourId: string) => api.get(`/reviews/tour/${tourId}`),
   createReview: (tourId: string, data: { rating: number; comment: string }) => 
-    axios.post(`${API_URL}/tours/${tourId}/reviews`, data, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } // ต้องส่ง Token เพื่อให้รู้ว่าใครรีวิว
-    }),
+    api.post(`/reviews/tour/${tourId}`, data), 
 };
 
 export const bookingService = {
