@@ -45,6 +45,14 @@ export const tourService = {
   deleteTour: (id: string) => api.delete(`/tours/${id}`),
 };
 
+export const reviewService = {
+  getReviewsByTourId: (tourId: string) => axios.get(`${API_URL}/tours/${tourId}/reviews`),
+  createReview: (tourId: string, data: { rating: number; comment: string }) => 
+    axios.post(`${API_URL}/tours/${tourId}/reviews`, data, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } // ต้องส่ง Token เพื่อให้รู้ว่าใครรีวิว
+    }),
+};
+
 export const bookingService = {
   getAllBookings: () => api.get<Booking[]>('/bookings'),
   getMyBookings: () => api.get<Booking[]>('/bookings/my'),
