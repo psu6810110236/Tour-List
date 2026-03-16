@@ -1,11 +1,4 @@
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  ManyToOne, 
-  CreateDateColumn, 
-  JoinColumn 
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
 import { Role } from './role.entity';
 
 @Entity()
@@ -16,8 +9,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  // 🔒 เพิ่ม select: false เพื่อความปลอดภัย ป้องกันรหัสผ่านหลุดไปกับ API อื่น
-  @Column({ nullable: true, select: false })
+  @Column({ nullable: true })
   passwordHash: string;
 
   @Column()
@@ -43,17 +35,15 @@ export class User {
   @Column({ default: false })
   isEmailVerified: boolean;
 
-  // 🔒 ซ่อน Token ต่างๆ เพื่อความปลอดภัยเช่นกัน
-  @Column({ nullable: true, select: false })
+  @Column({ nullable: true })
   verificationToken: string;
 
-  @Column({ nullable: true, select: false })
+  @Column({ nullable: true })
   resetPasswordToken: string;
 
   @Column({ type: 'timestamp', nullable: true })
   resetPasswordExpires: Date;
 
-  // 🔒 ซ่อน Refresh Token
-  @Column({ nullable: true, select: false })
+  @Column({ nullable: true })
   hashedRefreshToken: string;
 }
