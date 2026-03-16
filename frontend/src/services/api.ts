@@ -1,4 +1,3 @@
-// src/services/api.ts
 import axios from 'axios';
 import type { Tour, Province, Booking } from '../types';
 
@@ -12,13 +11,25 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // 🟢 แก้จาก access_token เป็น token ให้ตรงกับ AuthContext
-  const token = localStorage.getItem('token'); 
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+// เพิ่ม Interceptor สำหรับดักจับ Token Expired (401)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const tourService = {
   search: (params: { provinceId?: string; minPrice?: string; maxPrice?: string; startDate?: string; sort?: string; tripDays?: string }) =>
@@ -27,6 +38,8 @@ export const tourService = {
   getProvinces: () => api.get<Province[]>('/tours/provinces'),
   getById: (id: string) => api.get<Tour>(`/tours/${id}`),
   createProvince: (data: Partial<Province>) => api.post('/tours/provinces', data),
+  // ✅ แก้เป็น api.patch และใช้ path ที่ถูกต้อง
+  updateProvince: (id: string, data: any) => api.patch(`/tours/provinces/${id}`, data),
   createTour: (data: Partial<Tour>) => api.post('/tours', data),
   updateTour: (id: string, data: Partial<Tour>) => api.put(`/tours/${id}`, data),
   deleteTour: (id: string) => api.delete(`/tours/${id}`),
@@ -36,16 +49,15 @@ export const bookingService = {
   getAllBookings: () => api.get<Booking[]>('/bookings'),
   getMyBookings: () => api.get<Booking[]>('/bookings/my'),
   createBooking: (data: any) => api.post('/bookings', data),
-  
-  // 🟢 เพิ่มการรับ data (reason) เข้าไป
-  updateBookingStatus: (id: string, status: string, reason?: string) => api.patch(`/bookings/${id}/status`, { status, reason }),
-  updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) => api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
-  
+  updateBookingStatus: (id: string, status: string, reason?: string) =>
+    api.patch(`/bookings/${id}/status`, { status, reason }),
+  updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) =>
+    api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
-  deleteProvince: (id: string) => axios.delete(`http://localhost:3000/provinces/${id}`),
+  // ✅ แก้เป็น api.delete และลบ http://localhost:3000 ออก
+  deleteProvince: (id: string) => api.delete(`/tours/provinces/${id}`),
 };
 
-// 🌟 ส่วนที่เพิ่มใหม่สำหรับระบบตะกร้า (Cart)
 export interface AddToCartPayload {
   tourId: string;
   selectedDate: string;
@@ -54,14 +66,13 @@ export interface AddToCartPayload {
 }
 
 export const addToCartAPI = async (payload: AddToCartPayload) => {
-  // 🟢 ใช้ 'api' instance ที่ตั้งค่า baseURL ไว้แล้ว และมันจะแนบ Token ให้อัตโนมัติจาก interceptor ด้านบน
   const response = await api.post('/cart/add', payload);
   return response.data;
 };
-// เพิ่มต่อท้ายไฟล์เดิม
+
 export const userService = {
-  // GET โปรไฟล์ตัวเอง (ถ้า backend มี endpoint นี้)
-  getMe: () => api.get('/auth/me'),
+  // ✅ แก้จาก /auth/me → /users/me (endpoint จริงใน backend)
+  getProfile: () => api.get('/users/me'),
 
   // PATCH /users/me — แก้ชื่อ + เบอร์
   updateProfile: (data: { fullName?: string; phone?: string }) =>

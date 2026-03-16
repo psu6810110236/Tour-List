@@ -37,12 +37,25 @@ export class BookingsService {
   async createBooking(userId: string, bookingData: any) {
     const bookingId = randomUUID();
 
-    let numericTourId = Number(String(bookingData.tourId).replace(/\D/g, ''));
-    if (!numericTourId || isNaN(numericTourId)) numericTourId = 1;
+    // 1. ตรวจสอบว่ามี tourId และเป็นตัวเลขจริง (ห้าม Force เป็น 1)
+    const numericTourId = Number(bookingData.tourId);
+    if (!numericTourId || isNaN(numericTourId)) {
+      throw new BadRequestException('รหัสทัวร์ไม่ถูกต้อง');
+    }
+
+    // 2. ตรวจสอบว่าทัวร์มีอยู่จริง
+    const tour = await this.tourRepository.findOne({ where: { id: numericTourId as any } });
+    if (!tour) throw new NotFoundException('ไม่พบทัวร์ที่ระบุ');
+
+    // 3. ตรวจสอบจำนวนผู้เดินทาง (ห้ามเป็น 0 หรือติดลบ)
+    const travelers = Number(bookingData.travelers);
+    if (!travelers || travelers <= 0) {
+      throw new BadRequestException('จำนวนผู้เดินทางต้องมากกว่า 0');
+    }
 
     const newBooking = this.bookingRepository.create({
       ...bookingData,
-      travelers: Number(bookingData.travelers) || 1, // 🌟 ป้องกัน undefined หรือ string
+      travelers: travelers,
       id: bookingId,
       status: 'PENDING', 
       paymentStatus: bookingData.paymentSlip ? 'VERIFYING' : 'PENDING',

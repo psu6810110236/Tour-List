@@ -32,7 +32,7 @@ export class AuthController {
 
   // Route รับ Callback จาก Google
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(AuthGuard('google')) 
   async googleAuthRedirect(@Request() req, @Res() res: Response) {
     const authResult = await this.authService.googleLogin(req);
     // Redirect กลับไปที่ Frontend พร้อมแนบ Token และข้อมูลผู้ใช้

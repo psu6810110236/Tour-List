@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 
-import { tourService } from '../../../services/api';
+import { tourService } from '../../../services/api'; 
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
@@ -51,7 +51,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // ✅ useState<TourDetail | null> แทน useState<any>
   const [tour, setTour] = useState<TourDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,37 +62,28 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
   useScrollLock(showVideo);
 
-  // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database
+  // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database (แบบไม่มีรีวิว)
   useEffect(() => {
     if (!id) return;
 
     const fetchTourDetail = async () => {
       setLoading(true);
       setError(null);
-
-      try {
+      
+      try { 
         const response = await tourService.getById(id);
-
-        // 🟢 ใช้ 'as unknown as TourDetail' เพื่อบอก TypeScript ว่า
-        // เรารู้ว่า Type มันคืออะไร ให้แปลงเป็น TourDetail ซะ จะได้ไม่ Error
         setTour(response.data as unknown as TourDetail);
-
       } catch (err: unknown) {
         console.error("Error fetching tour details:", err);
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("ไม่สามารถโหลดข้อมูลทัวร์ได้");
-        }
+        setError("ไม่สามารถโหลดข้อมูลทัวร์ได้");
       } finally {
         setLoading(false);
       }
     };
-
+    
     fetchTourDetail();
   }, [id]);
 
-  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-gray-50">
@@ -102,7 +92,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
     );
   }
 
-  // Error State
   if (error || !tour) {
     return (
       <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 gap-4">
@@ -140,7 +129,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
             </div>
           </button>
         </div>
-
+      
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
 
         <button
@@ -161,16 +150,16 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">{getLang(tour, 'name', language)}</h1>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
-                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                <span className="text-white font-semibold">{tour.rating || 0}</span>
-                <span className="text-white/80">({tour.reviewCount || 0} {language === 'th' ? 'รีวิว' : 'reviews'})</span>
-              </div>
+               <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 pointer-events-auto">
+                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                 <span className="text-white font-semibold">{tour.rating || 0}</span>
+                 <span className="text-white/80">({tour.reviewCount || 0} {language === 'th' ? 'รีวิว' : 'reviews'})</span>
+               </div>
             </div>
           </div>
         </div>
       </div>
-
+    
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
 
@@ -183,7 +172,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">{getLang(tour, 'description', language)}</p>
             </div>
 
-            {/* Highlights */}
             {currentHighlights.length > 0 && (
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-[#00A699] pl-4">{t.highlights}</h2>
@@ -200,7 +188,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
               </div>
             )}
 
-            {/* Itinerary */}
             {currentItinerary.length > 0 && (
               <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 border-l-4 border-[#00A699] pl-4">{t.itinerary}</h2>
@@ -274,7 +261,6 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                 </div>
               </div>
             )}
-
           </div>
 
           {/* --- Right Column: Sidebar --- */}

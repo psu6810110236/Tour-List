@@ -2,9 +2,9 @@
 import { useState, useRef, useEffect } from "react";
 import {
   User, Mail, Phone, Lock, Calendar, Settings, CreditCard,
-  Bell, ChevronRight, Check, X, Eye, EyeOff,
+  ChevronRight, Check, X, Eye, EyeOff,
   Camera, LogOut, MapPin, Clock, Users, BadgeCheck, Hourglass,
-  Shield, Trash2, BellRing, MessageCircle,
+  Shield, Trash2, MessageCircle,
 } from "lucide-react";
 import { useAuth } from "../features/auth/context/AuthContext";
 import { bookingService, userService } from "../services/api";
@@ -27,13 +27,12 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
   const [profileImage, setProfileImage]       = useState<string | null>(localStorage.getItem("userProfileImage"));
   const [displayFullName, setDisplayFullName] = useState(user?.fullName || "Normal User");
-  const [displayPhone, setDisplayPhone]       = useState((user as any)?.phone || "");
+  const [displayPhone, setDisplayPhone]       = useState("");
   const [bookings, setBookings]               = useState<any[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showNotifModal, setShowNotifModal]       = useState(false);
 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess]   = useState(false);
@@ -44,24 +43,46 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   const [editForm, setEditForm] = useState({
-    fullName: displayFullName, email: user?.email || "", phone: displayPhone,
+    fullName: displayFullName, email: user?.email || "", phone: "",
   });
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: "", newPassword: "", confirmPassword: "",
   });
-  const [notifSettings, setNotifSettings] = useState({
-    booking: true, promotion: true, system: false, email: true,
-  });
 
   useEffect(() => {
-    if (user) {
-      const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const name  = storedUser.fullName || user.fullName || "Normal User";
-      const phone = storedUser.phone    || user.phone    || "";
-      setDisplayFullName(name);
-      setDisplayPhone(phone);
-      setEditForm(prev => ({ ...prev, fullName: name, phone }));
-    }
+    const loadProfile = async () => {
+      try {
+        if (userService?.getProfile) {
+          const res = await userService.getProfile();
+          const data = res.data || res;
+          const name  = data.fullName || user?.fullName || "Normal User";
+          const phone = data.phone || "";
+          setDisplayFullName(name);
+          setDisplayPhone(phone);
+          setEditForm(prev => ({ ...prev, fullName: name, phone, email: data.email || user?.email || "" }));
+          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+          storedUser.fullName = name;
+          storedUser.phone    = phone;
+          localStorage.setItem("user", JSON.stringify(storedUser));
+          localStorage.setItem("userProfile", JSON.stringify({ fullName: name, email: data.email || user?.email, phone }));
+        } else {
+          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+          const name  = storedUser.fullName || user?.fullName || "Normal User";
+          const phone = storedUser.phone    || "";
+          setDisplayFullName(name);
+          setDisplayPhone(phone);
+          setEditForm(prev => ({ ...prev, fullName: name, phone }));
+        }
+      } catch {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const name  = storedUser.fullName || user?.fullName || "Normal User";
+        const phone = storedUser.phone    || "";
+        setDisplayFullName(name);
+        setDisplayPhone(phone);
+        setEditForm(prev => ({ ...prev, fullName: name, phone }));
+      }
+    };
+    if (user) loadProfile();
   }, [user]);
 
   useEffect(() => {
@@ -102,25 +123,36 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
   const handleSaveProfile = async () => {
     setIsSavingProfile(true);
-    const updateUI = () => {
-      setDisplayFullName(editForm.fullName);
-      setDisplayPhone(editForm.phone);
+
+    const applyToUI = (name: string, phone: string) => {
+      setDisplayFullName(name);
+      setDisplayPhone(phone);
       try {
-        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        storedUser.fullName = editForm.fullName;
-        storedUser.phone    = editForm.phone;
-        localStorage.setItem('user', JSON.stringify(storedUser));
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        storedUser.fullName = name;
+        storedUser.phone    = phone;
+        localStorage.setItem("user", JSON.stringify(storedUser));
+        localStorage.setItem("userProfile", JSON.stringify({
+          fullName: name,
+          email: editForm.email,
+          phone,
+        }));
         window.dispatchEvent(new Event("userInfoUpdated"));
       } catch {}
       setProfileSuccess(true);
-      setTimeout(() => { setProfileSuccess(false); setShowSettingsModal(false); }, 1000);
+      setTimeout(() => { setProfileSuccess(false); setShowSettingsModal(false); }, 1200);
     };
+
     try {
-      if (userService?.updateProfile)
+      if (userService?.updateProfile) {
         await userService.updateProfile({ fullName: editForm.fullName, phone: editForm.phone });
-      updateUI();
-    } catch { updateUI(); }
-    finally { setIsSavingProfile(false); }
+      }
+      applyToUI(editForm.fullName, editForm.phone);
+    } catch {
+      applyToUI(editForm.fullName, editForm.phone);
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -135,7 +167,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
       setPasswordError(language === "th" ? "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" : "Min 8 characters"); return;
     }
     try {
-      // @ts-ignore
       await userService.changePassword({ oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword });
       setPasswordSuccess(true);
       setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
@@ -159,7 +190,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
     { icon: Calendar,   label_th: "ดูประวัติการจองทั้งหมด", label_en: "View All Bookings", action: () => onNavigate("bookings"),        color: "text-[#00A699]",  bg: "bg-teal-50"   },
     { icon: Settings,   label_th: "ตั้งค่าบัญชี",            label_en: "Account Settings",  action: () => setShowSettingsModal(true),    color: "text-blue-600",   bg: "bg-blue-50"   },
     { icon: CreditCard, label_th: "วิธีการชำระเงิน",          label_en: "Payment Methods",   action: () => onNavigate("payment-methods"), color: "text-purple-600", bg: "bg-purple-50" },
-    { icon: Bell,       label_th: "การแจ้งเตือน",             label_en: "Notifications",     action: () => setShowNotifModal(true),       color: "text-orange-600", bg: "bg-orange-50" },
   ];
 
   return (
@@ -216,9 +246,9 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label_th: "การจองทั้งหมด",  label_en: "Total Bookings", value: totalBookings,                     icon: <Calendar className="w-5 h-5 text-gray-400" />,                valueColor: "text-gray-900"  },
-            { label_th: "รอตรวจสอบ",      label_en: "Pending",        value: pendingCount,                     icon: <span className="text-xl leading-none">⏳</span>,               valueColor: "text-amber-500" },
-            { label_th: "อนุมัติแล้ว",    label_en: "Approved",       value: approvedCount,                    icon: <Check className="w-5 h-5 text-green-500" strokeWidth={2.5} />,  valueColor: "text-green-500" },
-            { label_th: "ยอดใช้จ่ายรวม",  label_en: "Total Spent",    value: `฿${totalSpent.toLocaleString()}`, icon: <CreditCard className="w-5 h-5 text-teal-500" />,              valueColor: "text-gray-900"  },
+            { label_th: "รอตรวจสอบ",      label_en: "Pending",        value: pendingCount,                      icon: <span className="text-xl leading-none">⏳</span>,               valueColor: "text-amber-500" },
+            { label_th: "อนุมัติแล้ว",    label_en: "Approved",       value: approvedCount,                     icon: <Check className="w-5 h-5 text-green-500" strokeWidth={2.5} />,  valueColor: "text-green-500" },
+            { label_th: "ยอดใช้จ่ายรวม",  label_en: "Total Spent",    value: `฿${totalSpent.toLocaleString()}`, icon: <CreditCard className="w-5 h-5 text-teal-500" />,               valueColor: "text-gray-900"  },
           ].map(({ label_th, label_en, value, icon, valueColor }) => (
             <div key={label_th} className="bg-white rounded-2xl px-5 py-5 shadow-md border border-gray-100">
               <div className="flex items-center justify-between mb-3">
@@ -321,8 +351,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
 
           {/* Right */}
           <div className="space-y-6">
-
-            {/* Quick Menu */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-6 py-5 border-b border-gray-100">
                 <h2 className="text-lg font-extrabold text-gray-900">{language === "th" ? "เมนูด่วน" : "Quick Menu"}</h2>
@@ -340,7 +368,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
               </div>
             </div>
 
-            {/* ✅ Help card — เพิ่ม relative z-10 เพื่อให้ปุ่มกดได้ */}
             <div
               className="rounded-2xl p-6 text-white relative z-10"
               style={{ background: "linear-gradient(135deg, #00A699 0%, #2196F3 100%)" }}
@@ -361,62 +388,6 @@ export function UserProfilePage({ language, onNavigate }: UserProfilePageProps) 
           </div>
         </div>
       </div>
-
-      {/* Modal: การแจ้งเตือน */}
-      {showNotifModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-orange-500" />
-                </div>
-                <h3 className="text-lg font-extrabold text-gray-900">{language === "th" ? "การแจ้งเตือน" : "Notifications"}</h3>
-              </div>
-              <button onClick={() => setShowNotifModal(false)} className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-
-            <div className="px-6 py-5 space-y-3">
-              {[
-                { key: "booking",   label_th: "การแจ้งเตือนการจอง",     label_en: "Booking updates",     desc_th: "อัปเดตสถานะการจองและการชำระเงิน", desc_en: "Booking status & payment updates", icon: Calendar, color: "text-[#00A699]",  bg: "bg-teal-50"   },
-                { key: "promotion", label_th: "โปรโมชั่นและข้อเสนอ",    label_en: "Promotions & offers", desc_th: "ส่วนลดและดีลพิเศษสำหรับคุณ",      desc_en: "Discounts and special deals",      icon: BellRing, color: "text-purple-600", bg: "bg-purple-50" },
-                { key: "system",    label_th: "การแจ้งเตือนระบบ",        label_en: "System notifications",desc_th: "ข่าวสารและการอัปเดตจากระบบ",       desc_en: "System news and updates",          icon: Settings, color: "text-blue-600",   bg: "bg-blue-50"   },
-                { key: "email",     label_th: "รับการแจ้งเตือนทางอีเมล", label_en: "Email notifications", desc_th: "ส่งสรุปไปยังอีเมลของคุณ",           desc_en: "Send summaries to your email",      icon: Mail,     color: "text-gray-600",   bg: "bg-gray-100"  },
-              ].map(({ key, label_th, label_en, desc_th, desc_en, icon: Icon, color, bg }) => (
-                <div key={key} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center shrink-0`}>
-                      <Icon className={`w-5 h-5 ${color}`} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">{language === "th" ? label_th : label_en}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{language === "th" ? desc_th : desc_en}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setNotifSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))}
-                    className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ml-3 ${notifSettings[key as keyof typeof notifSettings] ? 'bg-[#00A699]' : 'bg-gray-200'}`}
-                  >
-                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${notifSettings[key as keyof typeof notifSettings] ? 'translate-x-7' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="px-6 pb-6">
-              <button
-                onClick={() => setShowNotifModal(false)}
-                className="w-full bg-[#00A699] hover:bg-[#008c81] text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                <Check className="w-5 h-5" />
-                {language === "th" ? "บันทึกการตั้งค่า" : "Save Settings"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Settings Modal */}
       {showSettingsModal && (

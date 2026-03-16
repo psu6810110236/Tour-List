@@ -12,15 +12,15 @@ export class Message {
   @Column()
   senderId: string;
 
-  // 👇 เพิ่มคอลัมน์นี้: เพื่อระบุคนรับ (Admin หรือ User)
   @Column({ nullable: true })
   receiverId: string;
 
-  @ManyToOne(() => User)
+  // nullable + onDelete NO ACTION เพื่อรองรับ guest ID ที่ไม่มีใน users table
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
   @JoinColumn({ name: 'senderId' })
   sender: User;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
   @JoinColumn({ name: 'receiverId' })
   receiver: User;
 

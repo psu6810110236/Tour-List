@@ -1,4 +1,10 @@
-import { Injectable, ConflictException, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  InternalServerErrorException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
@@ -49,26 +55,38 @@ export class UsersService {
     }
   }
 
-  // ✅ อัปเดตโปรไฟล์ (ชื่อ + เบอร์)
-  async updateProfile(id: string, data: { fullName?: string; phone?: string }): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { id } });
-    if (!user) throw new NotFoundException('ไม่พบผู้ใช้');
-    if (data.fullName) user.fullName = data.fullName;
-    if (data.phone !== undefined) (user as any).phone = data.phone;
-    return this.usersRepository.save(user);
+  async getProfile(id: string): Promise<Partial<User>> {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      select: ['id', 'fullName', 'email', 'phone', 'provider', 'createdAt'],
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
-  // ✅ เปลี่ยนรหัสผ่าน
+  async updateProfile(id: string, data: { fullName?: string; phone?: string }): Promise<Partial<User>> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    if (data.fullName) user.fullName = data.fullName;
+    if (data.phone !== undefined) user.phone = data.phone;
+    await this.usersRepository.save(user);
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+    };
+  }
+
   async changePassword(id: string, oldPassword: string, newPassword: string): Promise<void> {
     const user = await this.usersRepository.findOne({ where: { id } });
-    if (!user) throw new NotFoundException('ไม่พบผู้ใช้');
+    if (!user) throw new NotFoundException('User not found');
     const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
-    if (!isMatch) throw new BadRequestException('รหัสผ่านเดิมไม่ถูกต้อง');
+    if (!isMatch) throw new BadRequestException('Incorrect current password');
     user.passwordHash = await bcrypt.hash(newPassword, 10);
     await this.usersRepository.save(user);
   }
 
-  // ✅ จัดการ Google OAuth
   async findOrCreateGoogleUser(profile: any): Promise<User> {
     let user = await this.usersRepository.findOne({
       where: { email: profile.email },
@@ -84,7 +102,6 @@ export class UsersService {
         fullName: `${profile.firstName} ${profile.lastName}`,
         provider: 'google',
         role: userRole,
-        // ไม่ต้องใส่ passwordHash
       });
       user = await this.usersRepository.save(user);
     }

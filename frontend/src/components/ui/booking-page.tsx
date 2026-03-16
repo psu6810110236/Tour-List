@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, X } from "lucide-react";
+import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, X, Sparkles } from "lucide-react";
 import type { Tour } from "../../types/index";
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 import { useCart } from "../../context/CartContext";
 import { tourService, bookingService } from "../../services/api";
 import { useScrollLock } from "../../hooks/useScrollLock";
+import { useAuth } from "../../features/auth/context/AuthContext";
 
 type ToastType = "success" | "error" | "warning";
 interface ToastData { id: number; type: ToastType; message: string; }
 
 function ToastContainer({ toasts, onRemove }: { toasts: ToastData[]; onRemove: (id: number) => void }) {
   return (
-    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-3 pointer-events-none w-full max-w-sm px-4">
+    <div className="fixed top-20 right-4 z-[9999] flex flex-col items-end gap-2.5 pointer-events-none w-full max-w-xs">
       {toasts.map((toast) => <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />)}
     </div>
   );
@@ -35,26 +36,33 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: numbe
   };
 
   const config = {
-    success: { bg: "bg-white", border: "border-[#00A699]/25", accent: "bg-[#00A699]", iconBg: "bg-[#00A699]/10", iconColor: "text-[#00A699]", Icon: CheckCircle, progressColor: "bg-[#00A699]" },
-    error: { bg: "bg-white", border: "border-red-200", accent: "bg-red-500", iconBg: "bg-red-50", iconColor: "text-red-500", Icon: XCircle, progressColor: "bg-red-500" },
-    warning: { bg: "bg-white", border: "border-amber-200", accent: "bg-amber-400", iconBg: "bg-amber-50", iconColor: "text-amber-500", Icon: AlertCircle, progressColor: "bg-amber-400" },
+    success: { bg: "bg-white", border: "border-[#00A699]/20", accent: "bg-[#00A699]", iconBg: "bg-[#00A699]/10", iconColor: "text-[#00A699]", Icon: CheckCircle, progressColor: "bg-[#00A699]" },
+    error:   { bg: "bg-white", border: "border-red-200",       accent: "bg-red-500",   iconBg: "bg-red-50",        iconColor: "text-red-500",   Icon: XCircle,     progressColor: "bg-red-500"   },
+    warning: { bg: "bg-white", border: "border-amber-200",     accent: "bg-amber-400", iconBg: "bg-amber-50",      iconColor: "text-amber-500", Icon: AlertCircle, progressColor: "bg-amber-400" },
   }[toast.type];
 
   const { Icon } = config;
 
   return (
-    <div className="pointer-events-auto w-full" style={{ transition: "all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)", opacity: visible && !leaving ? 1 : 0, transform: visible && !leaving ? "translateY(0) scale(1)" : "translateY(-20px) scale(0.95)" }}>
-      <div className={`relative flex items-start gap-3 ${config.bg} border ${config.border} rounded-2xl px-4 py-3.5 shadow-xl shadow-black/8 overflow-hidden`}>
+    <div
+      className="pointer-events-auto w-full"
+      style={{
+        transition: "all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        opacity: visible && !leaving ? 1 : 0,
+        transform: visible && !leaving ? "translateX(0) scale(1)" : "translateX(60px) scale(0.95)",
+      }}
+    >
+      <div className={`relative flex items-center gap-3 ${config.bg} border ${config.border} rounded-2xl px-4 py-3.5 shadow-lg shadow-black/[0.06] overflow-hidden`}>
         <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.accent} rounded-l-2xl`} />
-        <div className={`mt-0.5 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${config.iconBg}`}>
-          <Icon className={`w-5 h-5 ${config.iconColor}`} />
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${config.iconBg}`}>
+          <Icon className={`w-4 h-4 ${config.iconColor}`} />
         </div>
-        <p className="flex-1 text-sm font-semibold text-gray-800 leading-snug pt-1.5">{toast.message}</p>
-        <button onClick={handleClose} className="mt-1 text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0">
-          <X className="w-4 h-4" />
+        <p className="flex-1 text-sm font-semibold text-gray-800 leading-snug">{toast.message}</p>
+        <button onClick={handleClose} className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 ml-1">
+          <X className="w-3.5 h-3.5" />
         </button>
-        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gray-100 rounded-b-2xl overflow-hidden">
-          <div className={`h-full ${config.progressColor} rounded-b-2xl`} style={{ animation: "toastProgress 3.8s linear forwards" }} />
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-100 overflow-hidden">
+          <div className={`h-full ${config.progressColor}`} style={{ animation: "toastProgress 3.8s linear forwards" }} />
         </div>
       </div>
       <style>{`@keyframes toastProgress { from { width: 100%; } to { width: 0%; } }`}</style>
@@ -75,26 +83,87 @@ function useToast() {
 
 interface BookingPageProps {
   tour?: Tour | null;
+  bookingData?: any;
   onNavigate: (page: string, data?: any) => void;
   language: Language;
   onAddToCart?: (item: any) => void;
 }
 
-export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
+export function BookingPage({ tour, bookingData, onNavigate, language }: BookingPageProps) {
   const { addToCart } = useCart();
+  const { user, token } = useAuth();
   const t = translations[language].booking;
   const params = useParams();
-  const [localTour, setLocalTour] = useState<Tour | null>(tour || null);
+  const [localTour, setLocalTour] = useState<Tour | null>(tour || bookingData?.tour || null);
   const [loading, setLoading] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1));
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(bookingData?.date || "");
   const [datePopup, setDatePopup] = useState<{ isOpen: boolean; startDate: string; endDate: string }>({ isOpen: false, startDate: "", endDate: "" });
-  const [travelers, setTravelers] = useState(1);
-  const [contactInfo, setContactInfo] = useState({ fullName: "", email: "", phone: "", specialRequests: "" });
+  const [travelers, setTravelers] = useState(bookingData?.travelers || 0);
+  const [contactInfo, setContactInfo] = useState(bookingData?.contactInfo || { fullName: "", email: "", phone: "", specialRequests: "" });
   const [availableSeats, setAvailableSeats] = useState<number>(10);
   const [isFull, setIsFull] = useState<boolean>(false);
+  const [autofillLoading, setAutofillLoading] = useState(false);
+  const [autofillFlash, setAutofillFlash] = useState(false);
 
   const { toasts, show: showToast, remove: removeToast } = useToast();
+
+  const handleAutofill = async () => {
+    setAutofillLoading(true);
+    try {
+      let profileData = { fullName: "", email: "", phone: "" };
+
+      if (token) {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          profileData = {
+            fullName: data.fullName || "",
+            email: data.email || "",
+            phone: data.phone || "",
+          };
+          localStorage.setItem("userProfile", JSON.stringify(profileData));
+        } else {
+          throw new Error("API error");
+        }
+      } else {
+        const cached = localStorage.getItem("userProfile");
+        if (cached) {
+          profileData = JSON.parse(cached);
+        } else {
+          profileData = { fullName: user?.fullName || "", email: user?.email || "", phone: "" };
+        }
+      }
+
+      setContactInfo((prev: typeof contactInfo) => ({
+        ...prev,
+        fullName: profileData.fullName,
+        email: profileData.email,
+        phone: profileData.phone,
+      }));
+      setAutofillFlash(true);
+      setTimeout(() => setAutofillFlash(false), 1500);
+      showToast(
+        language === "th" ? "กรอกข้อมูลจากโปรไฟล์แล้ว ✓" : "Auto-filled from your profile ✓",
+        "success"
+      );
+    } catch {
+      setContactInfo((prev: typeof contactInfo) => ({
+        ...prev,
+        fullName: user?.fullName || "",
+        email: user?.email || "",
+      }));
+      showToast(
+        language === "th" ? "กรอกข้อมูลบางส่วนแล้ว (ไม่พบเบอร์โทร)" : "Partially filled — phone not found",
+        "warning"
+      );
+    } finally {
+      setAutofillLoading(false);
+    }
+  };
+
   const totalPrice = (localTour?.price || 0) * travelers;
   useScrollLock(datePopup.isOpen);
 
@@ -105,7 +174,7 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
         try {
           const resp = await tourService.getById(String(params.id));
           const data = resp.data;
-          console.log('✅ localTour fetched:', data); // debug
+          console.log('✅ localTour fetched:', data);
           setLocalTour(data);
         } catch (err) {
           console.error("Failed to fetch tour:", err);
@@ -154,7 +223,7 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setContactInfo((prev) => ({ ...prev, [name]: value }));
+    setContactInfo((prev: typeof contactInfo) => ({ ...prev, [name]: value }));
   };
 
   const validateForm = () => {
@@ -176,7 +245,6 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
   const handleAddToCart = () => {
     if (isFull || !validateForm()) return;
 
-    // ✅ safeguard ชื่อทัวร์ — ป้องกันกรณี field ไม่ตรง
     const tourToAdd = {
       ...localTour,
       name: localTour?.name || localTour?.name_th || "ทัวร์",
@@ -244,21 +312,83 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
     <div className="min-h-screen bg-[#F7F9FA] pb-28 font-sans">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button onClick={() => onNavigate("tour-detail", localTour)} className="flex items-center gap-2 text-gray-500 hover:text-[#00A699] transition-colors mb-2 font-medium">
-            <ArrowLeft className="w-5 h-5" />
-            <span>{t.back}</span>
-          </button>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">{t.title}</h1>
-            <span className="bg-[#00A699]/10 text-[#00A699] px-4 py-1.5 rounded-full text-sm font-bold w-fit border border-[#00A699]/20">
-              {localTour.tripType === 'multiple-days'
-                ? (language === 'th' ? `ทริป ${localTour.tripDays || 1} วัน` : `${localTour.tripDays || 1} Days Trip`)
-                : (language === 'th' ? 'ทริปไปเช้าเย็นกลับ' : 'One Day Trip')}
-            </span>
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          <div className="flex items-center justify-between gap-4 py-4">
+
+            <div className="flex items-center gap-4 min-w-0">
+              <button
+                onClick={() => onNavigate("tour-detail", localTour)}
+                className="flex items-center gap-2 text-gray-400 hover:text-[#00A699] transition-all group flex-shrink-0"
+              >
+                <div className="w-8 h-8 rounded-xl bg-gray-100 group-hover:bg-[#00A699]/10 border border-gray-200 group-hover:border-[#00A699]/30 flex items-center justify-center transition-all">
+                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                </div>
+                <span className="text-sm font-semibold hidden sm:block">{language === 'th' ? 'ย้อนกลับ' : 'Back'}</span>
+              </button>
+
+              <div className="w-px h-8 bg-gray-200 flex-shrink-0 mx-2" />
+
+              <div className="min-w-0">
+                <h1 className="text-xl md:text-2xl font-extrabold text-gray-900 leading-tight">{t.title}</h1>
+                <p className="text-sm text-gray-400 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md mt-0.5">
+                  {language === "th" && localTour.name_th ? localTour.name_th : localTour.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 text-right">
+              <span className="inline-flex items-center gap-1.5 bg-[#00A699]/10 text-[#00A699] px-3 py-1.5 rounded-xl text-xs font-bold border border-[#00A699]/20">
+                {localTour.tripType === 'multiple-days'
+                  ? (language === 'th' ? `🗓 ทริป ${localTour.tripDays || 1} วัน` : `🗓 ${localTour.tripDays || 1}-Day Trip`)
+                  : (language === 'th' ? '☀️ ไปเช้าเย็นกลับ' : '☀️ Day Trip')}
+              </span>
+              {localTour.price && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {language === 'th' ? 'ราคาเริ่มต้น ' : 'From '}
+                  <span className="text-[#00A699] font-bold">฿{Number(localTour.price).toLocaleString()}</span>
+                  {language === 'th' ? '/ท่าน' : '/pax'}
+                </p>
+              )}
+            </div>
           </div>
-          <p className="text-gray-500 mt-1">{language === "th" && localTour.name_th ? localTour.name_th : localTour.name}</p>
+
+          <div className="border-t border-gray-100">
+            {(() => {
+              const hasDate     = !!selectedDate;
+              const hasTraveler = travelers > 0;
+              const hasContact  = !!(contactInfo.fullName && contactInfo.email && contactInfo.phone);
+              const steps = [
+                { num: 1, label: language === 'th' ? 'เลือกวันที่'   : 'Select Date', done: hasDate,                     active: !hasDate },
+                { num: 2, label: language === 'th' ? 'ผู้เดินทาง'    : 'Travelers',   done: hasDate && hasTraveler,       active: hasDate && !hasContact },
+                { num: 3, label: language === 'th' ? 'ข้อมูลติดต่อ' : 'Contact',     done: hasContact,                   active: hasDate && hasTraveler && !hasContact },
+              ];
+              return (
+                <div className="flex">
+                  {steps.map((step, i) => (
+                    <div key={step.num} className="flex-1 relative flex items-center justify-center py-3">
+                      <div className={`absolute bottom-0 left-0 right-0 h-[2px] rounded-t-sm transition-all duration-300 ${
+                        step.done ? 'bg-[#00A699]' : step.active ? 'bg-[#00A699]/30' : 'bg-transparent'
+                      }`} />
+                      <div className="flex items-center gap-2">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-all ${
+                          step.done ? 'bg-[#00A699] text-white' : step.active ? 'bg-[#00A699]/15 text-[#00A699] border-2 border-[#00A699]/40' : 'bg-gray-100 text-gray-400'
+                        }`}>
+                          {step.done ? '✓' : step.num}
+                        </div>
+                        <span className={`text-xs font-semibold transition-colors ${
+                          step.done ? 'text-[#00A699]' : step.active ? 'text-gray-800' : 'text-gray-400'
+                        }`}>{step.label}</span>
+                      </div>
+                      {i < 2 && <div className="absolute right-0 top-1/4 bottom-1/4 w-px bg-gray-100" />}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+
         </div>
       </div>
 
@@ -364,8 +494,22 @@ export function BookingPage({ tour, onNavigate, language }: BookingPageProps) {
             </div>
 
             {/* Contact Info */}
-            <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 transition-shadow ${isFull ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'}`}>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">{t.personalInfo}</h2>
+            <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-sm border transition-shadow ${autofillFlash ? 'border-[#00A699] ring-2 ring-[#00A699]/20' : 'border-gray-100'} ${isFull ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'}`}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">{t.personalInfo}</h2>
+                {user && (
+                  <button
+                    onClick={handleAutofill}
+                    disabled={autofillLoading || isFull}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#00A699]/10 hover:bg-[#00A699]/20 text-[#00A699] rounded-xl text-sm font-bold transition-all active:scale-95 border border-[#00A699]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sparkles className={`w-4 h-4 ${autofillLoading ? 'animate-spin' : ''}`} />
+                    {autofillLoading
+                      ? (language === "th" ? "กำลังโหลด..." : "Loading...")
+                      : (language === "th" ? "กรอกจากโปรไฟล์" : "Fill from Profile")}
+                  </button>
+                )}
+              </div>
               <div className="space-y-4">
                 <input name="fullName" type="text" placeholder={t.fullName} value={contactInfo.fullName} onChange={handleInputChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all" required disabled={isFull} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

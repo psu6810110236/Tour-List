@@ -11,6 +11,16 @@ interface ChatMessage {
   isImage?: boolean;
 }
 
+// ฟังก์ชันสำหรับสร้างหรือดึง Guest ID ชั่วคราว
+const getGuestId = () => {
+  let guestId = localStorage.getItem('guest_chat_id');
+  if (!guestId) {
+    guestId = 'guest_' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('guest_chat_id', guestId);
+  }
+  return guestId;
+};
+
 export default function ChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -27,20 +37,23 @@ export default function ChatWidget() {
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [fileErrorPopup, setFileErrorPopup] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // กำหนด ID ที่จะใช้ (ถ้าล็อกอินใช้ user.id ถ้ายังให้ใช้ guest id)
+  const activeUserId = user?.id || getGuestId();
+
   useEffect(() => {
     const newSocket = io('http://localhost:3000', {
-      query: { role: 'user', userId: user?.id },
+      query: { role: 'user', userId: activeUserId },
     });
     setSocket(newSocket);
 
     newSocket.on('receiveMessage', (msg: any) => {
-      if (!user?.id) return;
-      const isMe = msg.senderId === user.id || msg.sender?.id === user.id;
+      const isMe = msg.senderId === activeUserId || msg.sender?.id === activeUserId;
       setMessages((prev) => {
         if (prev.some(m => m.id === msg.id)) return prev;
         const isImg = msg.content && msg.content.startsWith('data:image');
@@ -55,24 +68,33 @@ export default function ChatWidget() {
     });
 
     return () => { newSocket.disconnect(); };
-  }, [user?.id]);
+  }, [activeUserId]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    fetch(`http://localhost:3000/chat/messages/${user.id}`)
-      .then(res => res.json())
+    fetch(`http://localhost:3000/chat/messages/${activeUserId}`)
+      .then(res => {
+        if (!res.ok) return []; // guest หรือ userId ไม่มีใน DB → คืน array เปล่า ไม่ throw
+        return res.json();
+      })
       .then(data => {
+        if (!Array.isArray(data) || data.length === 0) return;
         const mapped = data.map((msg: any) => ({
           id: msg.id,
-          senderType: msg.senderId === user.id ? 'user' : 'admin',
+          senderType: (msg.senderId === activeUserId ? 'user' : 'admin') as 'user' | 'admin',
           text: msg.content,
           timestamp: new Date(msg.createdAt),
-          isImage: msg.content.startsWith('data:image')
+          isImage: msg.content?.startsWith('data:image') ?? false
         }));
         setMessages(mapped);
       })
-      .catch(err => console.error('โหลดแชทล้มเหลว:', err));
-  }, [user?.id]);
+      .catch(() => { /* โหลดประวัติล้มเหลว — แสดงเฉพาะ welcome message */ });
+  }, [activeUserId]);
+
+  useEffect(() => {
+    const handleOpenChat = () => setIsOpen(true);
+    window.addEventListener("openChatWidget", handleOpenChat);
+    return () => window.removeEventListener("openChatWidget", handleOpenChat);
+  }, []);
 
   // ✅ รับ event จาก UserProfilePage ปุ่ม "ติดต่อเรา"
   useEffect(() => {
@@ -89,23 +111,24 @@ export default function ChatWidget() {
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((!input.trim() && !previewImage) || !socket || !user) return;
+    if ((!input.trim() && !previewImage) || !socket) return;
 
     if (previewImage) {
-      socket.emit('sendMessage', { content: previewImage, senderId: user.id });
+      socket.emit('sendMessage', { content: previewImage, senderId: activeUserId });
       setPreviewImage(null);
     }
     if (input.trim()) {
-      socket.emit('sendMessage', { content: input, senderId: user.id });
+      socket.emit('sendMessage', { content: input, senderId: activeUserId });
       setInput('');
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user?.id) return;
-    if (file.size > 1024 * 1024) {
-      alert("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 1MB");
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setFileErrorPopup(true);
+      e.target.value = '';
       return;
     }
     const reader = new FileReader();
@@ -121,7 +144,7 @@ export default function ChatWidget() {
     }
   };
 
-  if (!user) return null;
+  // ลบ if (!user) return null; ออกไปแล้ว เพื่อให้ทุกคนเห็นปุ่มแชท
 
   if (!isOpen) {
     return (
@@ -134,6 +157,7 @@ export default function ChatWidget() {
     );
   }
 
+  // ส่วน UI ด้านล่าง (return <div>...) เหมือนเดิมทุกอย่างครับ
   return (
     <div className="fixed bottom-6 right-6 w-[360px] h-[550px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden border border-gray-100 z-50 font-sans animate-in slide-in-from-bottom-5 duration-300">
 
@@ -165,7 +189,7 @@ export default function ChatWidget() {
               {!isUser && (
                 <div className="w-7 h-7 rounded-full bg-[#00A699]/10 flex items-center justify-center text-[10px] text-[#00A699] font-bold mr-2 mt-auto mb-1">RH</div>
               )}
-              <div className={`max-w-[80%] p-3 text-[13px] leading-relaxed shadow-sm ${
+              <div className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${
                 isUser
                   ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
                   : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
@@ -173,9 +197,9 @@ export default function ChatWidget() {
                 {msg.isImage ? (
                   <img src={msg.text} alt="sent image" className="rounded-lg max-w-full" />
                 ) : (
-                  <p className="break-all">{msg.text}</p>
+                  <p className="break-words whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 )}
-                <div className={`text-[9px] mt-1 text-right opacity-70 ${isUser ? 'text-white' : 'text-gray-400'}`}>
+                <div className={`text-[9px] mt-1 text-right opacity-60 ${isUser ? 'text-white' : 'text-gray-400'}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
@@ -246,6 +270,27 @@ export default function ChatWidget() {
           </form>
         </div>
       </div>
+
+      {/* File size error popup */}
+      {fileErrorPopup && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 rounded-[24px]">
+          <div className="bg-white rounded-2xl p-6 mx-4 shadow-2xl text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <p className="font-semibold text-gray-900 mb-1">ไฟล์มีขนาดใหญ่เกินไป</p>
+            <p className="text-sm text-gray-500 mb-4">กรุณาเลือกรูปที่มีขนาดไม่เกิน 2MB</p>
+            <button
+              onClick={() => setFileErrorPopup(false)}
+              className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2 rounded-xl font-semibold text-sm transition"
+            >
+              ตกลง
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

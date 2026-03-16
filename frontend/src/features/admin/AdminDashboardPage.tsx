@@ -71,12 +71,17 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [formLang, setFormLang] = useState<Language>(language);
   const [createNewProvince, setCreateNewProvince] = useState(false);
+  const [isEditingProvince, setIsEditingProvince] = useState(false);
 
   // State นี้สำหรับเก็บรูปจังหวัดโดยเฉพาะ
   const [provinceImage, setProvinceImage] = useState<string>('');
 
   // State สำหรับปฏิทินแอดมิน
   const [adminMonth, setAdminMonth] = useState(new Date(2026, 2, 1));
+
+  // State สำหรับระบบค้นหาจังหวัด
+  const [isProvinceOpen, setIsProvinceOpen] = useState(false);
+  const [provinceSearch, setProvinceSearch] = useState('');
 
   // State สำหรับ Popup
   const [popup, setPopup] = useState<{
@@ -164,34 +169,54 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
   };
 
-  const handleApprovePayment = (bookingId: string) => {
+ const handleApprovePayment = (bookingId: string) => {
     showConfirm(language === 'th' ? "ยืนยันยอดชำระเงิน" : "Confirm Payment", language === 'th' ? `สลิปถูกต้อง อนุมัติยอดเงินสำหรับ ${bookingId} ใช่หรือไม่?` : `Slip is valid, approve payment?`, async () => {
+      
+      // เปลี่ยนเป็น APPROVED ให้ตรงกับฐานข้อมูล
+      setBookingsList((prev) => prev.map((booking) => 
+        booking.id === bookingId 
+          ? { ...booking, status: 'APPROVED', paymentStatus: 'completed' } as any 
+          : booking
+      ));
+
       try {
-        await bookingService.updatePaymentStatus(bookingId, 'completed');
-        fetchAdminData();
+        await Promise.all([
+          bookingService.updatePaymentStatus(bookingId, 'COMPLETED'),
+          bookingService.updateBookingStatus(bookingId, 'APPROVED') // 🟢 จุดที่แก้! ส่งคำว่า APPROVED ไป
+        ]);
+        
         setSelectedBooking(null);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ยืนยันยอดชำระเงินเรียบร้อยแล้ว" : "Payment verified successfully.");
       } catch (error) {
+        await fetchAdminData(); 
         showAlert(language === 'th' ? "ข้อผิดพลาด" : "Error", language === 'th' ? "เกิดข้อผิดพลาดในการยืนยันสลิป" : "Error verifying payment.");
         closePopup();
       }
     });
   };
-
   const handleRejectPayment = (bookingId: string) => {
     const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธสลิป (เช่น ยอดเงินไม่ตรง):" : "Please enter rejection reason (e.g., Invalid amount):");
     if (reason === null) return;
 
     showConfirm(language === 'th' ? "ปฏิเสธสลิปและยกเลิก" : "Reject Payment & Booking", language === 'th' ? `สลิปไม่ถูกต้อง ปฏิเสธยอดเงินและยกเลิกการจองใช่หรือไม่?` : `Slip invalid, reject payment and cancel booking?`, async () => {
+      
+      // เปลี่ยนเป็น REJECTED
+      setBookingsList((prev) => prev.map((booking) => 
+        booking.id === bookingId 
+          ? { ...booking, status: 'REJECTED', paymentStatus: 'failed' } as any 
+          : booking
+      ));
+
       try {
         await Promise.all([
-          bookingService.updatePaymentStatus(bookingId, 'failed', reason),
-          bookingService.updateBookingStatus(bookingId, 'rejected', reason)
+          bookingService.updatePaymentStatus(bookingId, 'FAILED', reason),
+          bookingService.updateBookingStatus(bookingId, 'REJECTED', reason) // 🟢 จุดที่แก้! ส่งคำว่า REJECTED ไป
         ]);
-        fetchAdminData();
+        
         setSelectedBooking(null);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธสลิปและยกเลิกการจองแล้ว" : "Payment rejected and booking cancelled.");
       } catch (error) {
+        await fetchAdminData();
         closePopup();
       }
     });
@@ -279,19 +304,24 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     }
     
     try {
-      if (createNewProvince) {
-        const newProv = { 
+     if (createNewProvince) {
+        const provData = { 
           id: tourForm.provinceId!, 
           name: String(tourForm.province || ''), 
           name_th: String(tourForm.province || ''), 
           tourCount: 0, 
-          image: provinceImage || '', // 🟢 ดึงรูปจาก provinceImage แทน
+          image: provinceImage || '', 
           description: '', 
           description_th: '' 
         };
-        await tourService.createProvince(newProv);
+
+        // เช็คว่าเป็นการแก้ไข หรือ สร้างใหม่
+        if (isEditingProvince) {
+          await tourService.updateProvince(provData.id, provData); // ⚠️ ต้องมี API นี้ใน backend
+        } else {
+          await tourService.createProvince(provData);
+        }
       }
-      
       if (editingTourId) {
         await tourService.updateTour(editingTourId, tourForm);
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "อัปเดตทัวร์สำเร็จ!" : "Tour updated successfully!");
@@ -438,13 +468,15 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
     });
 
   const filteredPayments = bookingsList
-    .filter(b => b.paymentStatus?.toLowerCase() === 'verifying')
+    // 🟢 เอาตัวกรองสถานะและตัวกรองสลิปออกไปเลยครับ เพราะระบบเราบังคับแนบสลิปมาตั้งแต่แรกแล้ว
     .filter(b => {
+      // ระบบค้นหา (Search)
       const searchLower = (paymentSearch || '').toLowerCase();
       const tourName = getLang(b, 'tourName', language) || getLang(b, 'tourNameSnapshot', language) || '';
       return String(b.id || '').toLowerCase().includes(searchLower) || String(tourName).toLowerCase().includes(searchLower);
     })
     .sort((a, b) => {
+      // ระบบเรียงลำดับ (Sort)
       const dateA = new Date(a.bookingDate || (a as any).createdAt || 0).getTime();
       const dateB = new Date(b.bookingDate || (b as any).createdAt || 0).getTime();
 
@@ -453,7 +485,6 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
       if (paymentSort === 'amountDesc') return (b.totalPrice || 0) - (a.totalPrice || 0);
       return 0;
     });
-
   // 3. กรองทัวร์
   const filteredTours = allTours 
     .filter(t => {
@@ -785,13 +816,13 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
           </div>
         )}
 
-        {/* ================= PAYMENTS TAB ================= */}
+       {/* ================= PAYMENTS TAB ================= */}
         {activeTab === 'payments' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">ตรวจสลิปโอนเงิน (Payment Verification)</h2>
-                <p className="text-gray-600 mt-1">รายการด้านล่างคือลูกค้าที่ส่งสลิปมาแล้ว รอแอดมินยืนยันยอดเงิน</p>
+                <p className="text-gray-600 mt-1">ประวัติการชำระเงินและรายการที่รอตรวจสอบ</p>
               </div>
               <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
 
@@ -821,54 +852,85 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPayments.map((booking) => (
-                <div key={booking.id} className="bg-white rounded-3xl p-6 shadow-lg border-t-4 border-blue-400 relative">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm text-gray-600 font-mono">{booking.id}</span>
-                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold animate-pulse">WAITING SLIP</span>
-                  </div>
-                  <div className="font-bold text-gray-900 mb-4 line-clamp-1">{getLang(booking, 'tourNameSnapshot', language)}</div>
+              {filteredPayments.map((booking) => {
+                const isConfirmed = booking.status?.toUpperCase() === 'APPROVED'; 
+                const isCancelled = booking.status?.toUpperCase() === 'REJECTED';
+                const isPending = !isConfirmed && !isCancelled;
+                
+                const borderColor = isConfirmed ? 'border-green-500' : isCancelled ? 'border-red-400' : 'border-blue-400';
 
-                  <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-blue-400 transition" onClick={() => window.open(booking.paymentSlip, '_blank')}>
-                    {booking.paymentSlip ? (
-                      <img src={booking.paymentSlip} alt="slip" className="w-full h-full object-cover" />
+                return (
+                  <div key={booking.id} className={`bg-white rounded-3xl p-6 shadow-lg border-t-4 ${borderColor} relative transition-all duration-300 hover:-translate-y-1`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-sm text-gray-600 font-mono">{booking.id}</span>
+                      
+                      {/* 🟢 ป้าย Badge แสดงสถานะ */}
+                      {isPending && <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold animate-pulse">WAITING SLIP</span>}
+                      {isConfirmed && <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3"/> APPROVED</span>}
+                      {isCancelled && <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"><XCircle className="w-3 h-3"/> REJECTED</span>}
+                    </div>
+                    
+                    <div className="font-bold text-gray-900 mb-4 line-clamp-1">{getLang(booking, 'tourNameSnapshot', language)}</div>
+
+                    <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => window.open(booking.paymentSlip, '_blank')}>
+                      {booking.paymentSlip ? (
+                        <>
+                          <img src={booking.paymentSlip} alt="slip" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white font-semibold text-sm bg-black/50 px-3 py-1 rounded-lg">ดูรูปเต็ม</span>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-gray-400 flex flex-col items-center"><FileText className="w-6 h-6 mb-2" /> ไม่มีสลิปแนบมา</span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                      <div>
+                        <div className="text-gray-600 mb-1">{t.payment.amount}</div>
+                        <div className="font-bold text-[#00A699] text-lg">฿{booking.totalPrice?.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-600 mb-1">{t.payment.paymentDate}</div>
+                        <div className="font-semibold text-gray-900">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
+                      </div>
+                    </div>
+
+                    {/* 🟢 ซ่อนปุ่มถ้าจัดการไปแล้ว โชว์เป็นข้อความแทน */}
+                    {isPending ? (
+                      <div className="flex gap-3">
+                        <button onClick={() => handleApprovePayment(booking.id)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                          <CheckCircle className="w-4 h-4" /> อนุมัติสลิป
+                        </button>
+                        <button onClick={() => handleRejectPayment(booking.id)} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
+                          <XCircle className="w-4 h-4" /> ปฏิเสธ
+                        </button>
+                      </div>
                     ) : (
-                      <span className="text-gray-400 flex flex-col items-center"><FileText className="w-6 h-6 mb-2" /> ไม่มีสลิปแนบมา</span>
+                      <div className={`mt-2 text-center py-2.5 rounded-xl font-bold border flex items-center justify-center gap-2 ${isConfirmed ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                        {isConfirmed ? (
+                          <><CheckCircle className="w-4 h-4" /> ตรวจสอบและอนุมัติแล้ว</>
+                        ) : (
+                          <><XCircle className="w-4 h-4" /> ปฏิเสธการชำระเงินแล้ว</>
+                        )}
+                      </div>
                     )}
                   </div>
+                );
+              })}
 
-                  <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                    <div>
-                      <div className="text-gray-600 mb-1">{t.payment.amount}</div>
-                      <div className="font-bold text-[#00A699] text-lg">฿{booking.totalPrice?.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-600 mb-1">{t.payment.paymentDate}</div>
-                      <div className="font-semibold text-gray-900">{booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH') : '-'}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button onClick={() => handleApprovePayment(booking.id)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
-                      <CheckCircle className="w-4 h-4" /> อนุมัติสลิป
-                    </button>
-                    <button onClick={() => handleRejectPayment(booking.id)} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-2.5 rounded-xl font-bold transition flex items-center justify-center gap-2">
-                      <XCircle className="w-4 h-4" /> ปฏิเสธ
-                    </button>
-                  </div>
-                </div>
-              ))}
               {filteredPayments.length === 0 && (
-                <div className="col-span-full bg-white rounded-3xl p-12 text-center shadow-lg border">
-                  <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle className="w-10 h-10" /></div>
+                <div className="col-span-full bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
+                  <div className="w-20 h-20 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-10 h-10" />
+                  </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">ตรวจสอบสลิปครบหมดแล้ว!</h3>
-                  <p className="text-gray-600">{language === 'th' ? 'ไม่มีรายการโอนเงินที่ต้องรอตรวจสอบในขณะนี้' : 'All caught up! No pending payments.'}</p>
+                  <p className="text-gray-600">{language === 'th' ? 'ไม่มีรายการชำระเงินในระบบขณะนี้' : 'All caught up! No payments found.'}</p>
                 </div>
               )}
             </div>
           </div>
         )}
-
        {/* ================= TOURS TAB ================= */}
         {activeTab === 'tours' && (
           <div className="space-y-6 animate-in fade-in duration-500">
@@ -1056,23 +1118,122 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                   <div className="bg-[#00A699]/5 p-6 rounded-2xl border-2 border-dashed border-[#00A699]/20">
                     <div className="flex justify-between items-center mb-4">
                       <label className="font-bold flex items-center gap-2"><MapPin size={18} /> {language === 'th' ? 'ระบุจังหวัด' : 'Specify Province'}</label>
-                      <button onClick={() => setCreateNewProvince(!createNewProvince)} className="text-xs font-bold text-[#00A699] hover:underline">
-                        {createNewProvince ? (language === 'th' ? 'เลือกจังหวัดที่มีอยู่' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
-                      </button>
+                      <div className="flex gap-4">
+                        {/* 🟢 ปุ่มแก้ไข (โชว์เมื่อเลือกจังหวัดแล้ว และไม่ได้อยู่ในหน้าฟอร์ม) */}
+                        {tourForm.provinceId && !createNewProvince && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const selectedProv = allProvinces.find(p => p.id === tourForm.provinceId);
+                              if (selectedProv) {
+                                setTourForm({ ...tourForm, provinceId: selectedProv.id, province: getLang(selectedProv, 'name', language) });
+                                setProvinceImage(selectedProv.image || '');
+                                setIsEditingProvince(true);
+                                setCreateNewProvince(true);
+                              }
+                            }}
+                            className="text-xs font-bold text-orange-500 hover:text-orange-600 hover:underline flex items-center gap-1"
+                          >
+                            <Edit className="w-3 h-3" /> {language === 'th' ? 'แก้ไขจังหวัดนี้' : 'Edit this Province'}
+                          </button>
+                        )}
+
+                        <button 
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            if (createNewProvince) {
+                              setCreateNewProvince(false);
+                              setIsEditingProvince(false);
+                              if (isEditingProvince) {
+                                setTourForm({ ...tourForm, provinceId: '', province: '' });
+                                setProvinceImage('');
+                              }
+                            } else {
+                              setTourForm({ ...tourForm, provinceId: '', province: '' });
+                              setProvinceImage('');
+                              setIsEditingProvince(false);
+                              setCreateNewProvince(true);
+                            }
+                          }} 
+                          className="text-xs font-bold text-[#00A699] hover:underline"
+                        >
+                          {createNewProvince ? (language === 'th' ? 'กลับไปเลือกจังหวัด' : 'Back to Select') : (language === 'th' ? '+ สร้างจังหวัดใหม่' : '+ Add New Province')}
+                        </button>
+                      </div>
                     </div>
 
                     {!createNewProvince ? (
-                      <select className="w-full p-4 bg-white border rounded-xl font-bold" value={tourForm.provinceId || ''} onChange={handleSelectProvince}>
-                        <option value="">-- {language === 'th' ? 'กรุณาเลือกจังหวัด' : 'Select Province'} --</option>
-                        {allProvinces.map(p => <option key={p.id} value={p.id}>{getLang(p, 'name', language)}</option>)}
-                      </select>
+                      /* ================= ระบบเลือกจังหวัดแบบค้นหาได้ ================= */
+                      <div className="relative">
+                        <div 
+                          className="w-full p-4 bg-white border rounded-xl font-bold cursor-pointer flex justify-between items-center focus:ring-2 focus:ring-[#00A699]"
+                          onClick={() => setIsProvinceOpen(!isProvinceOpen)}
+                        >
+                          <span className={tourForm.provinceId ? "text-gray-900" : "text-gray-400 font-normal"}>
+                            {tourForm.provinceId 
+                              ? getLang(allProvinces.find(p => p.id === tourForm.provinceId) || {}, 'name', language) || (language === 'th' ? '-- กรุณาเลือกจังหวัด --' : '-- Select Province --')
+                              : (language === 'th' ? '-- กรุณาเลือกจังหวัด --' : '-- Select Province --')}
+                          </span>
+                          <span className="text-gray-400 text-xs">▼</span>
+                        </div>
+
+                        {isProvinceOpen && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                            <div className="p-2 border-b border-gray-100 bg-gray-50">
+                              <input
+                                type="text"
+                                placeholder={language === 'th' ? "🔍 พิมพ์ชื่อจังหวัดเพื่อค้นหา..." : "🔍 Search province..."}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-normal focus:outline-none focus:ring-2 focus:ring-[#00A699]/20 focus:border-[#00A699] transition-all"
+                                value={provinceSearch}
+                                onChange={(e) => setProvinceSearch(e.target.value)}
+                                onClick={(e) => e.stopPropagation()} 
+                                autoFocus
+                              />
+                            </div>
+                            <ul className="max-h-60 overflow-y-auto p-1 font-normal">
+                              {allProvinces
+                                .filter((p) => getLang(p, 'name', language)?.toLowerCase().includes(provinceSearch.toLowerCase()))
+                                .map((province) => (
+                                  <li
+                                    key={province.id}
+                                    className="px-3 py-2 hover:bg-[#00A699]/10 hover:text-[#00A699] rounded-lg cursor-pointer text-sm text-gray-700 transition-colors"
+                                    onClick={() => {
+                                      setTourForm({ ...tourForm, provinceId: province.id, province: province.name });
+                                      setIsProvinceOpen(false);
+                                      setProvinceSearch('');
+                                    }}
+                                  >
+                                    {getLang(province, 'name', language)}
+                                  </li>
+                                ))}
+                              {allProvinces.filter((p) => getLang(p, 'name', language)?.toLowerCase().includes(provinceSearch.toLowerCase())).length === 0 && (
+                                <li className="px-3 py-4 text-center text-gray-400 text-sm">
+                                  {language === 'th' ? 'ไม่พบชื่อจังหวัดที่ค้นหา' : 'No province found'}
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="space-y-4 animate-in fade-in duration-300">
                         <div className="grid grid-cols-2 gap-4">
-                          <input placeholder="Province ID (e.g., hat-yai)" className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" onChange={e => setTourForm({ ...tourForm, provinceId: e.target.value })} />
-                          <input placeholder="Province Name (TH/EN)" className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" onChange={e => setTourForm({ ...tourForm, province: e.target.value })} />
+                          {/* 🟢 ล็อคช่อง ID ไว้ถ้ากำลังแก้ไข (ป้องกัน ID เปลี่ยน) */}
+                          <input 
+                            placeholder="Province ID (e.g., hat-yai)" 
+                            className={`p-4 border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition ${isEditingProvince ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`} 
+                            value={tourForm.provinceId || ''}
+                            disabled={isEditingProvince}
+                            onChange={e => setTourForm({ ...tourForm, provinceId: e.target.value })} 
+                          />
+                          <input 
+                            placeholder="Province Name (TH/EN)" 
+                            className="p-4 bg-white border rounded-xl focus:ring-2 focus:ring-[#00A699] outline-none transition" 
+                            value={(tourForm.province as string) || ''}
+                            onChange={e => setTourForm({ ...tourForm, province: e.target.value })} 
+                          />
                         </div>
-                        
+                          
                         <div className="bg-white p-4 border rounded-xl">
                           <label className="block text-sm font-bold text-gray-700 mb-2">
                             {language === 'th' ? 'รูปภาพจังหวัด (URL)' : 'Province Image (URL)'}
@@ -1143,20 +1304,22 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                     <div className="space-y-4">
 
                       {/* 🌟 2. เลือกประเภททริป จำนวนวัน และปฏิทินของแอดมิน */}
+                      {/* 🌟 2. เลือกประเภททริป จำนวนวัน และปฏิทินของแอดมิน */}
                       <div className="p-5 border border-blue-100 bg-blue-50/30 rounded-2xl space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'ประเภททริป' : 'Trip Type'}</label>
-                            <select className="w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm"
+                            <select className="w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-400"
                               value={tourForm.tripType || 'one-day'}
                               onChange={e => setTourForm({ ...tourForm, tripType: e.target.value })}>
                               <option value="one-day">One Day (ไปเช้าเย็นกลับ)</option>
-                              <option value="multiple-days">Multiple Days (หลายวัน)</option>
+                              <option value="multiple-days">Multiple Days (หลายวัน/ไม่รวมที่พัก)</option>
+                              <option value="package">Package (หลายวัน + มีที่พัก)</option>
                             </select>
                           </div>
                           <div>
                             <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'จำนวนวันเดินทาง' : 'Trip Days'}</label>
-                            <input type="number" className={`w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm ${tourForm.tripType === 'one-day' ? 'opacity-50' : ''}`}
+                            <input type="number" className={`w-full p-3 bg-white border border-blue-100 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-400 ${tourForm.tripType === 'one-day' ? 'opacity-50' : ''}`}
                               min="1"
                               value={tourForm.tripDays || 1}
                               disabled={tourForm.tripType === 'one-day'}
@@ -1164,7 +1327,19 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                           </div>
                         </div>
 
-                        <div>
+                        {/* 🟢 แสดงช่องกรอกชื่อที่พักอัตโนมัติเมื่อเลือก Package */}
+                        {tourForm.tripType === 'package' && (
+                          <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="block font-bold text-blue-600 mb-2">{language === 'th' ? 'ชื่อที่พัก (Accommodation)' : 'Accommodation'}</label>
+                            <input className="w-full p-3 bg-white border border-blue-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" 
+                              placeholder={language === 'th' ? "เช่น โรงแรม ABC ภูเก็ต" : "e.g., ABC Hotel Phuket"}
+                              value={tourForm.accommodation || ''}
+                              onChange={e => setTourForm({ ...tourForm, accommodation: e.target.value })} 
+                            />
+                          </div>
+                        )}
+
+                        <div> 
                           <label className="block font-bold text-blue-600 mb-2">
                             {language === 'th' ? 'กำหนดวันเปิดรอบ (จิ้มที่ปฏิทินเพื่อเพิ่ม/ลบ)' : 'Available Dates (Click to toggle)'}
                           </label>
@@ -1221,34 +1396,7 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                         onChange={e => setTourForm({ ...tourForm, duration_th: e.target.value, duration: e.target.value })} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t mt-6">
-                    <div className="space-y-4">
-                      <label className="block font-bold">{language === 'th' ? 'ประเภททัวร์' : 'Tour Type'}</label>
-                      <select 
-                        className="w-full p-4 bg-gray-50 border rounded-2xl"
-                        value={tourForm.tourType || 'oneday'}
-                        onChange={e => setTourForm({ ...tourForm, tourType: e.target.value as 'oneday' | 'package' })}
-                      >
-                        <option value="oneday">{language === 'th' ? 'One Day Trip (ไปเช้าเย็นกลับ)' : 'One Day Trip'}</option>
-                        <option value="package">{language === 'th' ? 'Package (พร้อมที่พัก)' : 'Package with Hotel'}</option>
-                      </select>
-                    </div>
-                    <div className="space-y-4">
-                      <label className="block font-bold text-orange-600">{language === 'th' ? 'จำนวนรับสูงสุด (คน)' : 'Max Capacity'}</label>
-                      <input type="number" className="w-full p-4 bg-orange-50 border border-orange-200 rounded-2xl font-bold" 
-                        value={tourForm.maxCapacity ?? ''}
-                        onChange={e => setTourForm({ ...tourForm, maxCapacity: Number(e.target.value) })} />
-                    </div>
-                  </div>
-
-                  {tourForm.tourType === 'package' && (
-                    <div className="pt-4">
-                      <label className="block font-bold">{language === 'th' ? 'ชื่อที่พัก' : 'Accommodation'}</label>
-                      <input className="w-full p-4 bg-gray-50 border rounded-2xl" placeholder={language === 'th' ? "เช่น โรงแรม ABC ภูเก็ต" : "e.g., ABC Hotel Phuket"}
-                        value={tourForm.accommodation || ''}
-                        onChange={e => setTourForm({ ...tourForm, accommodation: e.target.value })} />
-                    </div>
-                  )}
+                  
 
                   
                   {/* 🟢 ส่วนที่เพิ่มใหม่: จุดเด่น สิ่งที่รวม และสิ่งที่ไม่รวม */}

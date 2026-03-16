@@ -38,16 +38,17 @@ export class ChatService {
         return message;
     }
 
-    // 2. ดึงข้อความทั้งหมดของ User คนนั้น (Support 1-on-1 Chat)
+    // 2. ดึงข้อความทั้งหมดของ User คนนั้น (Support 1-on-1 Chat + Guest)
     async getMessagesByUser(userId: string): Promise<Message[]> {
-        return await this.messageRepository.find({
-            where: [
-                { senderId: userId },   // ข้อความที่ User ส่ง
-                { receiverId: userId }, // ข้อความที่ Admin ตอบกลับหา User
-            ],
-            relations: ['sender', 'receiver'], // ⭐ จำเป็นมากสำหรับแสดงผลฝั่งซ้าย/ขวา
-            order: { createdAt: 'ASC' },       // เรียงจากเก่าไปใหม่
-        });
+        // ใช้ QueryBuilder + LEFT JOIN เพื่อรองรับ guest ID ที่ไม่มีใน users table
+        // LEFT JOIN จะไม่ throw แม้ foreign key จะหาไม่เจอ
+        return await this.messageRepository
+            .createQueryBuilder('message')
+            .leftJoinAndSelect('message.sender', 'sender')
+            .leftJoinAndSelect('message.receiver', 'receiver')
+            .where('message.senderId = :userId OR message.receiverId = :userId', { userId })
+            .orderBy('message.createdAt', 'ASC')
+            .getMany();
     }
 
     // 3. ดึงรายชื่อลูกค้าที่เคยทักมา (Contacts) สำหรับหน้า Admin Dashboard
