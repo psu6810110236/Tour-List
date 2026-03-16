@@ -8,7 +8,8 @@ import {
   DollarSign,
   Star,
   TrendingUp,
-  X
+  X,
+  Clock
 } from "lucide-react";
 
 import { tourService } from "../../../services/api";
@@ -17,19 +18,35 @@ import type { Province } from "../../../data/mockData";
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
 
+interface Tour {
+  id: string | number;
+  name?: string;
+  name_th?: string;
+  description?: string;
+  description_th?: string;
+  price: number | string;
+  image?: string;
+  rating?: number | string; // 🟢 เผื่อ API ส่งมาเป็น String
+  reviewCount?: number | string; // 🟢 เผื่อ API ส่งมาเป็น String
+  duration?: string;
+  duration_th?: string;
+  isHidden?: boolean;
+  [key: string]: unknown;
+}
+
 interface ProvincePageProps {
   province: Province;
-  onNavigate: (page: string, data?: any) => void;
+  onNavigate: (page: string, data?: unknown) => void;
   language: Language;
 }
 
 export function ProvincePage({ province, onNavigate, language }: ProvincePageProps) {
-  const [tours, setTours] = useState<any[]>([]); // เปลี่ยนเป็น any[] ชั่วคราวเพื่อให้รับ Object จาก DB ได้
+  const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
-    minPrice: "", maxPrice: "", sortBy: "popular",
+    minPrice: "", maxPrice: "", sortBy: "popular", tripDays: ""
   });
 
   const t = translations[language].provinceDetail;
@@ -38,38 +55,32 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
 
   useEffect(() => {
     const fetchTours = async () => {
+      if (!province?.id) return; 
+      
       setLoading(true);
       try {
-        const response = await tourService.search({ provinceId: province.id });
-        let fetchedTours = response.data;
+        const response = await tourService.search({
+          provinceId: String(province.id),
+          minPrice: filters.minPrice || undefined,
+          maxPrice: filters.maxPrice || undefined,
+          sort: filters.sortBy || undefined,
+          tripDays: filters.tripDays || undefined,
+        });
 
-        // กรองราคาเพิ่มเติม (ฝั่ง Frontend)
-        if (filters.minPrice) {
-          fetchedTours = fetchedTours.filter((t: any) => Number(t.price) >= Number(filters.minPrice));
+        if (response?.data) {
+          console.log("🔍 Tours Data from API:", response.data); // เช็ค Console ดูค่านี้นะครับ
+          setTours(response.data as unknown as Tour[]);
         }
-        if (filters.maxPrice) {
-          fetchedTours = fetchedTours.filter((t: any) => Number(t.price) <= Number(filters.maxPrice));
-        }
-
-        // เรียงลำดับ
-        if (filters.sortBy === 'price_asc') {
-          fetchedTours.sort((a: any, b: any) => Number(a.price) - Number(b.price));
-        } else if (filters.sortBy === 'price_desc') {
-          fetchedTours.sort((a: any, b: any) => Number(b.price) - Number(a.price));
-        } else {
-          fetchedTours.sort((a: any, b: any) => Number(b.rating || 0) - Number(a.rating || 0));
-        }
-
-        setTours(fetchedTours);
       } catch (error) {
         console.error("Failed to fetch tours", error);
+        setTours([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchTours();
-  }, [province.id, filters]);
+  }, [province.id, filters.minPrice, filters.maxPrice, filters.sortBy, filters.tripDays]); 
 
   const toggleFilter = (name: string) => {
     setActiveFilter(activeFilter === name ? null : name);
@@ -79,6 +90,11 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
     setFilters(prev => ({ ...prev, minPrice: min, maxPrice: max }));
     setActiveFilter(null);
   };
+
+  // 🟢 คำนวณคะแนนเฉลี่ยของจังหวัดจากทัวร์ทั้งหมด (แทนที่ 4.8 เดิม)
+  const avgProvinceRating = tours.length > 0 
+    ? (tours.reduce((sum, tour) => sum + Number(tour.rating || 5), 0) / tours.length).toFixed(1)
+    : "5.0";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -119,7 +135,7 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
               </span>
               <span className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl flex items-center gap-2">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                4.8{" "}
+                {avgProvinceRating}{" "}
                 {language === "th" ? "คะแนนเฉลี่ย" : "Average Rating"}
               </span>
             </div>
@@ -135,13 +151,56 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
               <Filter className="w-4 h-4" />
               {language === "th" ? "ตัวกรอง:" : "Filters:"}
             </div>
+            <div className="relative">
+              <button
+                onClick={() => toggleFilter('duration')}
+                className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition flex items-center gap-2 border ${filters.tripDays
+                  ? "bg-[#00A699]/10 text-[#00A699] border-[#00A699]"
+                  : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+                  }`}
+              >
+                <Clock className="w-4 h-4" />
+                {filters.tripDays
+                  ? (filters.tripDays === '5+'
+                    ? (language === 'th' ? 'มากกว่า 4 วัน' : 'More than 4 Days')
+                    : `${filters.tripDays} ${language === 'th' ? 'วัน' : 'Days'}`)
+                  : (language === "th" ? "ระยะเวลา" : "Duration")}
+              </button>
 
+              {activeFilter === 'duration' && (
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-40 animate-in fade-in zoom-in-95 duration-200">
+                  {[
+                    { val: "", labelTh: "จำนวนวันทั้งหมด", labelEn: "All Durations" },
+                    { val: "1", labelTh: "1 วัน (ไปเช้าเย็นกลับ)", labelEn: "1 Day" },
+                    { val: "2", labelTh: "2 วัน", labelEn: "2 Days" },
+                    { val: "3", labelTh: "3 วัน", labelEn: "3 Days" },
+                    { val: "4", labelTh: "4 วัน", labelEn: "4 Days" },
+                    { val: "5+", labelTh: "มากกว่า 4 วัน", labelEn: "More than 4 Days" },
+                  ].map(opt => (
+                    <button
+                      key={opt.val}
+                      onClick={() => {
+                        setFilters(prev => ({ ...prev, tripDays: opt.val }));
+                        setActiveFilter(null);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[#00A699]/5 transition ${
+                        filters.tripDays === opt.val 
+                          ? 'text-[#00A699] font-bold bg-[#00A699]/5' 
+                          : 'text-gray-700'
+                      }`}
+                    >
+                      {language === 'th' ? opt.labelTh : opt.labelEn}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="relative">
               <button
                 onClick={() => toggleFilter('price')}
                 className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition flex items-center gap-2 border ${activeFilter === 'price' || filters.minPrice || filters.maxPrice
-                    ? "bg-[#00A699]/10 text-[#00A699] border-[#00A699]"
-                    : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
+                  ? "bg-[#00A699]/10 text-[#00A699] border-[#00A699]"
+                  : "bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
                   }`}
               >
                 <DollarSign className="w-4 h-4" />
@@ -247,7 +306,7 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {tours.map((tour) => (
+            {tours.filter(tour => !tour.isHidden).map((tour) => (
               <button
                 key={tour.id}
                 onClick={() => onNavigate("tour-detail", tour)}
@@ -274,7 +333,6 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                         <MapPin className="w-4 h-4" />
-                        {/* 🟢 ใช้ชื่อ province จาก Props ได้เลย ป้องกัน Object Error */}
                         <span>{getLang(province, "name", language)}</span>
                       </div>
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
@@ -284,18 +342,18 @@ export function ProvincePage({ province, onNavigate, language }: ProvincePagePro
 
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                       <div className="flex items-center gap-3">
+                        {/* 🟢 บังคับแปลงเป็น Number เพื่อป้องกันการอ่านค่า String เป็น 0 */}
                         <div className="flex items-center gap-1">
                           <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                          <span className="font-semibold text-gray-900">{tour.rating || 0}</span>
+                          <span className="font-semibold text-gray-900">{Number(tour.rating || 0).toFixed(1)}</span>
                         </div>
                         <span className="text-sm text-gray-500">
-                          ({tour.reviewCount || 0} {language === "th" ? "รีวิว" : "reviews"})
+                          ({Number(tour.reviewCount || 0)} {language === "th" ? "รีวิว" : "reviews"})
                         </span>
                       </div>
                       <div className="text-right">
                         <div className="text-sm text-gray-500">{t.startingFrom}</div>
                         <div className="text-2xl font-bold text-[#00A699]">
-                          {/* 🟢 ใช้ Number() ป้องกัน Error จาก String */}
                           ฿{Number(tour.price || 0).toLocaleString()}
                         </div>
                       </div>

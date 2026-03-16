@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  ManyToOne, 
+  OneToMany, 
+  CreateDateColumn, 
+  UpdateDateColumn, 
+  JoinColumn 
+} from 'typeorm';
 import { Province } from './province.entity';
 import { Review } from './review.entity'; 
 
@@ -28,6 +37,21 @@ export class Tour {
   @Column({ nullable: true })
   duration_th: string;
 
+  @Column({ nullable: true })
+  vehicleType: string;
+
+  @Column('int', { default: 10 })
+  maxCapacity: number;
+
+  @Column({ nullable: true })
+  tripType: string;
+
+  @Column('int', { default: 1 })
+  tripDays: number;
+
+  @Column('json', { nullable: true })
+  availableDates: string[];
+
   @Column()
   image: string;
 
@@ -40,7 +64,6 @@ export class Tour {
   @Column({ default: 0 })
   reviewCount: number;
 
-  // ข้อมูลที่เป็นรายการ (Array) เก็บเป็น JSON
   @Column('json')
   highlights: string[];
 
@@ -62,8 +85,9 @@ export class Tour {
   @Column('json', { nullable: true })
   notIncluded_th: string[];
 
-  // --- Relations ---
-  
+  @Column({ type: 'date', nullable: true })
+  startDate: Date; 
+
   @Column()
   provinceId: string; 
 
@@ -79,4 +103,20 @@ export class Tour {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({ type: 'varchar', length: 50, default: 'oneday' })
+  tourType: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  accommodation: string;
+
+  @Column({ type: 'int', default: 0 })
+  bookedSeats: number;
+
+  @Column({ default: false })
+  isHidden: boolean;
+
+  // 🟢 เพิ่มตัวแปรใหม่: เอาไว้จัดอันดับความฮิต ลบบิลแล้วไม่หาย
+  @Column({ type: 'int', default: 0 })
+  historicalBooked: number;
 }

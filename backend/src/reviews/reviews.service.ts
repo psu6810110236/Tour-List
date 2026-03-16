@@ -1,33 +1,45 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Review } from 'src/entities/review.entity';
+import { Tour } from 'src/entities/tour.entity'; // 🟢 1. Import Tour Entity เข้ามาด้วย
 import { Repository } from 'typeorm';
-import { CreateReviewDto } from './dto/create-review.dto';
-import { Review } from '../entities/review.entity'; 
 
 @Injectable()
-export class ReviewsService {
+export class ReviewService {
   constructor(
     @InjectRepository(Review)
     private reviewRepository: Repository<Review>,
+
+    @InjectRepository(Tour)
+    private tourRepository: Repository<Tour>,
   ) {}
 
-  async create(createReviewDto: CreateReviewDto) {
-    const { tourId, userId, ...reviewData } = createReviewDto;
-
-    const review = this.reviewRepository.create({
-      ...reviewData,    
-      tour: { id: tourId } as any,
-      user: { id: userId } as any,
-    });
-    return await this.reviewRepository.save(review);
-  }
-  async findByTourId(tourId: number) {
-    return await this.reviewRepository.find({
-      where: {
-        tour: { id: tourId } 
-      },
-      relations: ['user'],    
+  async findByTourId(tourId: string) {
+    return this.reviewRepository.find({
+      where: { tourId },
       order: { createdAt: 'DESC' },
+      relations: ['user'], 
     });
+  }
+
+ async create(tourId: string, userId: string, data: { rating: number; comment: string }) {
+    const newReview = await this.reviewRepository.save(
+      this.reviewRepository.create({
+        tourId: tourId, 
+        userId,
+        rating: data.rating,
+        comment: data.comment,
+      }),
+    );
+    const allReviews = await this.reviewRepository.find({ where: { tourId } });
+    const count = allReviews.length;
+    const average = allReviews.reduce((sum, r) => sum + r.rating, 0) / count;
+
+    await this.tourRepository.update(Number(tourId), {
+      rating: Number(average.toFixed(1)), 
+      reviewCount: count,
+    });
+
+    return newReview;
   }
 }

@@ -29,7 +29,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data # เก็บข้อมูลไว้ถาวร (ปิดคอมข้อมูลไม่หาย)
+      - pgdata:/var/lib/postgresql/data
     networks:
       - app-network
 
