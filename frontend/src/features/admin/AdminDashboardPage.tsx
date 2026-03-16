@@ -37,10 +37,12 @@ import { tourService, bookingService } from '../../services/api';
 interface AdminDashboardProps {
   onNavigate: (page: string, data?: any) => void;
   language: Language;
+  etLanguage: (lang: Language) => void;
+  setLanguage: (lang: Language) => void;
 }
 
 
-export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
+export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'payments' | 'tours'>('overview');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [selectedTourIds, setSelectedTourIds] = useState<string[]>([]);
@@ -530,14 +532,23 @@ export function AdminDashboard({ onNavigate, language }: AdminDashboardProps) {
                 <p className="text-gray-500 text-sm">{t.subtitle}</p>
               </div>
             </div>
+            <div className="flex items-center gap-3">
+              {/* 🟢 ปุ่มเปลี่ยนภาษา EN / TH */}
+              <button
+                onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
+                className="flex items-center justify-center min-w-[60px] h-10 font-bold rounded-xl border-2 border-gray-200 bg-white hover:border-[#00A699] text-gray-600 hover:text-[#00A699] transition shadow-sm"
+              >
+                {language === 'th' ? '🇹🇭 TH' : '🇬🇧 EN'}
+              </button>
 
-            <button
-              onClick={() => onNavigate('home')}
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>{t.exit}</span>
-            </button>
+              <button
+                onClick={() => onNavigate('home')}
+                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 h-10 px-4 rounded-xl transition font-medium"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>{t.exit}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

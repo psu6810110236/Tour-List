@@ -247,10 +247,10 @@ function AppContent() {
 
           {/* Admin Only */}
           <Route element={<AdminRoute />}>
-            <Route path="/admin/dashboard" element={<AdminDashboardPage onNavigate={handleNavigate} language={language} />} />
+            <Route path="/admin/dashboard" element={<AdminDashboardPage onNavigate={handleNavigate} language={language} setLanguage={setLanguage} />} />
             <Route path="/admin/chat" element={<AdminChatPage />} />
           </Route>
-
+          
           {/* 404 Page */}
           <Route path="*" element={
             <WorkInProgressTemplate
