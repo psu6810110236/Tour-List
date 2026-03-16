@@ -82,10 +82,11 @@ export const userService = {
   getProfile: () => api.get('/users/me'),
 
   // PATCH /users/me — แก้ชื่อ + เบอร์
-  updateProfile: (data: { fullName?: string; phone?: string }) =>
+  updateProfile: (data: { fullName?: string; phone?: string; profileImage?: string }) =>
     api.patch('/users/me', data),
 
   // PATCH /users/me/password — เปลี่ยนรหัสผ่าน
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
     api.patch('/users/me/password', data),
 };
+

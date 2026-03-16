@@ -27,6 +27,7 @@ import { AuthModule } from './auth/auth.module';
 import { ReviewModule } from './reviews/reviews.module';
 import { ToursModule } from './tours/tours.module';
 import { BookingsModule } from './booking/bookings.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -43,7 +44,10 @@ import { BookingsModule } from './booking/bookings.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true,
+        // แก้ #3: ปิด synchronize ใน production เพื่อกันข้อมูลหาย
+        // ตอน dev ให้ตั้ง TYPEORM_SYNC=true ใน .env ถ้าต้องการ auto-sync
+        synchronize: configService.get<string>('NODE_ENV') !== 'production'
+          && configService.get<string>('TYPEORM_SYNC') === 'true',
       }),
     }),
     ThrottlerModule.forRoot([{
@@ -68,7 +72,6 @@ import { BookingsModule } from './booking/bookings.module';
         },
       }),
     }),
-    // ✅ Single consolidated forFeature call
     TypeOrmModule.forFeature([Role, Province, Tour, User, Review, CartItem]),
     UsersModule,
     AuthModule,
@@ -77,6 +80,7 @@ import { BookingsModule } from './booking/bookings.module';
     ToursModule,
     BookingsModule,
     CartModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

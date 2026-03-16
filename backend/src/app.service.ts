@@ -34,7 +34,29 @@ export class AppService implements OnApplicationBootstrap {
 
   // ดึงจังหวัดทั้งหมด
   async getAllProvinces() {
-    return await this.provinceRepository.find();
+    // 1. ดึงข้อมูลจังหวัดทั้งหมดมาปกติ
+    const provinces = await this.provinceRepository.find();
+
+    // 2. ให้นับจำนวนทัวร์ที่มีอยู่ "จริงๆ" ในตาราง Tour โดยแยกตาม provinceId
+    const tourCounts = await this.tourRepository
+      .createQueryBuilder('tour')
+      .select('tour.provinceId', 'provinceId')
+      .addSelect('COUNT(tour.id)', 'count')
+      .where('tour.isHidden = false') // 🟢 (เสริม) ไม่นับรวมทัวร์ที่ถูกซ่อน (isHidden: true)
+      .groupBy('tour.provinceId')
+      .getRawMany();
+
+    // 3. นำจำนวนทัวร์จริงๆ ที่นับได้ ไปแทนที่ค่า tourCount เดิม
+    return provinces.map(province => {
+      // หาดูว่าจังหวัดนี้มีทัวร์กี่อันจากที่ Query มา
+      const match = tourCounts.find(t => t.provinceId === province.id);
+
+      return {
+        ...province,
+        // ถ้าเจอให้นำค่ามาแปลงเป็นตัวเลข ถ้าไม่เจอแปลว่าไม่มีทัวร์ให้เป็น 0
+        tourCount: match ? parseInt(match.count, 10) : 0
+      };
+    });
   }
 
   // ดึงทัวร์ทั้งหมด
@@ -50,18 +72,23 @@ export class AppService implements OnApplicationBootstrap {
 
   // ดึงรายละเอียดทัวร์รายตัว
   async getTourById(id: number) {
-    return await this.tourRepository.findOne({ where: { id } });
+    return await this.tourRepository.findOne({ 
+      where: { id },
+      relations: ['province'] // 🟢 เติมบรรทัดนี้
+    });
   }
 
   // ระบบ Search & Filter ทัวร์ (รองรับ Price, Province)
   async searchTours(query: { provinceId?: string; maxPrice?: number; minPrice?: number }) {
     const where: any = {};
-
     if (query.provinceId) where.provinceId = query.provinceId;
     if (query.maxPrice) where.price = LessThanOrEqual(query.maxPrice);
     if (query.minPrice) where.price = MoreThanOrEqual(query.minPrice);
 
-    return await this.tourRepository.find({ where });
+    return await this.tourRepository.find({ 
+      where,
+      relations: ['province'] // 🟢 เติมบรรทัดนี้
+    });
   }
 
   // ======================================================
@@ -188,7 +215,8 @@ export class AppService implements OnApplicationBootstrap {
           region: "central"
         };
         return {
-          id: `province-${index + 1}`,
+          id: detail.name_en.toLowerCase().replace(/\s+/g, '-'), 
+          
           name: detail.name_en,
           name_th: name,
           description: detail.desc_en,
@@ -244,48 +272,53 @@ export class AppService implements OnApplicationBootstrap {
   }
 
   private async seedUsers() {
-    const adminEmail = 'admin@test.com';
-    const userEmail = 'user@test.com';
-    const password = 'password123';
+    // แก้ #4: อ่าน credential จาก env แทน hardcode
+    // ใน .env ตั้ง SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, SEED_USER_EMAIL, SEED_USER_PASSWORD
+    const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@test.com';
+    const userEmail = process.env.SEED_USER_EMAIL || 'user@test.com';
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+    const userPassword = process.env.SEED_USER_PASSWORD;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // ถ้าไม่มี env → ใน production ให้ skip การ seed (ไม่สร้าง account เริ่มต้น)
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction && (!adminPassword || !userPassword)) {
+      console.log('⚠️  Skipping seedUsers in production: SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD not set');
+      return;
+    }
+
+    const password = adminPassword || 'password123-change-me';
+    const hashedAdminPassword = await bcrypt.hash(password, 10);
+    const hashedUserPassword = await bcrypt.hash(userPassword || 'password123-change-me', 10);
 
     const adminRole = await this.roleRepository.findOne({ where: { name: 'ADMIN' } });
     const userRole = await this.roleRepository.findOne({ where: { name: 'USER' } });
 
     if (adminRole) {
       const existingAdmin = await this.userRepository.findOne({ where: { email: adminEmail } });
-      if (existingAdmin) {
-        existingAdmin.passwordHash = hashedPassword;
-        await this.userRepository.save(existingAdmin);
-        console.log('✅ Updated Admin password to hashed version');
-      } else {
+      if (!existingAdmin) {
         await this.userRepository.save({
           email: adminEmail,
-          passwordHash: hashedPassword,
-          fullName: 'Admin Tester',
+          passwordHash: hashedAdminPassword,
+          fullName: 'Admin',
           role: adminRole,
           provider: 'local',
         });
-        console.log('✅ Seeded Admin User');
+        console.log(`✅ Seeded Admin User: ${adminEmail}`);
       }
     }
 
     if (userRole) {
       const existingUser = await this.userRepository.findOne({ where: { email: userEmail } });
-      if (existingUser) {
-        existingUser.passwordHash = hashedPassword;
-        await this.userRepository.save(existingUser);
-        console.log('✅ Updated User password to hashed version');
-      } else {
+      if (!existingUser) {
         await this.userRepository.save({
           email: userEmail,
-          passwordHash: hashedPassword,
+          passwordHash: hashedUserPassword,
           fullName: 'Normal User',
           role: userRole,
           provider: 'local',
         });
-        console.log('✅ Seeded Normal User');
+        console.log(`✅ Seeded Normal User: ${userEmail}`);
       }
     }
   }
