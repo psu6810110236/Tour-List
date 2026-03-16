@@ -23,6 +23,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Globe,
   EyeOff
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
@@ -536,9 +537,12 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
               {/* 🟢 ปุ่มเปลี่ยนภาษา EN / TH */}
               <button
                 onClick={() => setLanguage(language === 'th' ? 'en' : 'th')}
-                className="flex items-center justify-center min-w-[60px] h-10 font-bold rounded-xl border-2 border-gray-200 bg-white hover:border-[#00A699] text-gray-600 hover:text-[#00A699] transition shadow-sm"
+                className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm hover:shadow-md px-4 py-2 h-10 rounded-full transition-all active:scale-95"
               >
-                {language === 'th' ? '🇹🇭 TH' : '🇬🇧 EN'}
+                <Globe className="w-5 h-5 text-[#00A699]" />
+                <span className="font-extrabold text-slate-700 text-sm tracking-wide">
+                  {language === 'th' ? 'TH' : 'EN'}
+                </span>
               </button>
 
               <button
