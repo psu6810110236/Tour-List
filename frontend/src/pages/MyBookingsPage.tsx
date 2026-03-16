@@ -92,44 +92,48 @@ export function MyBookingsPage({
         ? "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้"
         : "Are you sure you want to cancel this booking? This action cannot be undone.",
       async () => {
+        // ปิด confirm popup ก่อน
+        closePopup();
+
         try {
           const reason = safeLanguage === 'th' ? 'ยกเลิกโดยผู้ใช้ (Cancelled by user)' : 'Cancelled by user';
 
           await Promise.all([
-            bookingService.updateBookingStatus(bookingId, 'cancelled', reason),
-            bookingService.updatePaymentStatus(bookingId, 'failed', reason)
+            bookingService.updateBookingStatus(bookingId, 'CANCELLED', reason),
+            bookingService.updatePaymentStatus(bookingId, 'FAILED', reason)
           ]);
 
-          setBookings(prevBookings => prevBookings.map(b => {
-            if (b.id === bookingId) {
-              return {
-                ...b,
-                status: 'CANCELLED',
-                paymentStatus: 'FAILED',
-                rejectReason: reason
-              };
-            }
-            return b;
-          }));
+          // อัปเดต state ใน list ให้แสดง CANCELLED ทันที (ไม่ลบออก)
+          setBookings(prevBookings => prevBookings.map(b =>
+            b.id === bookingId
+              ? { ...b, status: 'CANCELLED', paymentStatus: 'FAILED', rejectReason: reason }
+              : b
+          ));
 
+          // อัปเดต selectedBooking ด้วยถ้ากำลังเปิด modal อยู่
           if (selectedBooking?.id === bookingId) {
-            setSelectedBooking(null);
+            setSelectedBooking((prev: any) => prev
+              ? { ...prev, status: 'CANCELLED', paymentStatus: 'FAILED', rejectReason: reason }
+              : null
+            );
           }
 
-          closePopup();
-          // แจ้งเตือนเมื่อยกเลิกสำเร็จ
-          showAlert(
-            safeLanguage === "th" ? "สำเร็จ" : "Success",
-            safeLanguage === "th" ? "ยกเลิกการจองเรียบร้อยแล้ว" : "Booking has been cancelled successfully."
-          );
+          // แจ้งเตือนสำเร็จ (ใช้ setTimeout เพื่อให้ popup ก่อนหน้าปิดสนิทก่อน)
+          setTimeout(() => {
+            showAlert(
+              safeLanguage === "th" ? "สำเร็จ" : "Success",
+              safeLanguage === "th" ? "ยกเลิกการจองเรียบร้อยแล้ว" : "Booking has been cancelled successfully."
+            );
+          }, 150);
 
         } catch (err) {
           console.error("Error cancelling booking:", err);
-          closePopup();
-          showAlert(
-            safeLanguage === "th" ? "ข้อผิดพลาด" : "Error",
-            safeLanguage === "th" ? "ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่อีกครั้ง" : "Could not cancel booking. Please try again."
-          );
+          setTimeout(() => {
+            showAlert(
+              safeLanguage === "th" ? "ข้อผิดพลาด" : "Error",
+              safeLanguage === "th" ? "ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่อีกครั้ง" : "Could not cancel booking. Please try again."
+            );
+          }, 150);
         }
       }
     );
