@@ -36,19 +36,32 @@ import { UploadModule } from './upload/upload.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME'),
-        autoLoadEntities: true,
-        // แก้ #3: ปิด synchronize ใน production เพื่อกันข้อมูลหาย
-        // ตอน dev ให้ตั้ง TYPEORM_SYNC=true ใน .env ถ้าต้องการ auto-sync
-        synchronize: configService.get<string>('NODE_ENV') !== 'production'
-          && configService.get<string>('TYPEORM_SYNC') === 'true',
-      }),
+      useFactory: (configService: ConfigService) => {
+        // 🟢 ดึงค่า DATABASE_URL (ลิงก์ยาวๆ จาก Render) มาใช้งาน
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        
+        return {
+          type: 'postgres',
+          // 🟢 ตรรกะใหม่: ถ้ามี DATABASE_URL ให้ใช้เลย และบังคับเปิด SSL (จำเป็นสำหรับ Cloud)
+          // แต่ถ้าไม่มี (แปลว่ารันบนเครื่องตัวเอง) ก็ให้ดึงค่า DB_HOST, DB_PORT จาก .env เหมือนเดิม
+          ...(databaseUrl
+            ? {
+                url: databaseUrl,
+                ssl: { rejectUnauthorized: false }, // 🟢 สำคัญมาก: Render บังคับใช้ SSL
+              }
+            : {
+                host: configService.get<string>('DB_HOST'),
+                port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
+                username: configService.get<string>('DB_USERNAME'),
+                password: configService.get<string>('DB_PASSWORD'),
+                database: configService.get<string>('DB_NAME'),
+              }),
+          autoLoadEntities: true,
+          
+          // 🟢 บังคับ true ไปก่อนครับ เพื่อให้ TypeORM สร้างตารางลงในฐานข้อมูล Render ให้อัตโนมัติ
+          synchronize: true, 
+        };
+      },
     }),
     ThrottlerModule.forRoot([{
       ttl: 60000,
