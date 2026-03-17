@@ -46,7 +46,8 @@ export class AuthController {
       maxAge: 24 * 60 * 60 * 1000, // 1 วัน
     });
 
-    // ส่งแค่ข้อมูล user ใน URL (ไม่ใช่ token) เพื่อให้ frontend ทราบว่า login สำเร็จ
-    res.redirect(`${frontendUrl}/login?user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
-  }
+    res.redirect(
+    `${frontendUrl}/login?token=${authResult.access_token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`
+  );
+}
 }

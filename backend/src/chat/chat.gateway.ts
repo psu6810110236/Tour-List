@@ -1,79 +1,86 @@
-import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from "@nestjs/websockets";
-import { ChatService } from "./chat.service";
-import { Server, Socket } from "socket.io";
+import {
+  ConnectedSocket,
+  MessageBody,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayConnection,
+} from '@nestjs/websockets';
+import { ChatService } from './chat.service';
+import { Server, Socket } from 'socket.io';
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+  },
+})
 export class ChatGateway implements OnGatewayConnection {
-    @WebSocketServer()
-    server: Server;
+  @WebSocketServer()
+  server: Server;
 
-    constructor(private readonly chatService: ChatService) { }
+  constructor(private readonly chatService: ChatService) {}
 
-    // ✅ แก้ไข: ให้ทุกคนเข้าห้องส่วนตัว (user_xxx) เสมอ ไม่ว่าจะเป็น Role อะไร
-    handleConnection(client: Socket) {
-        const userId = client.handshake.query.userId as string;
-        const role = client.handshake.query.role as string;
+  handleConnection(client: Socket) {
+    const userId = client.handshake.query.userId as string;
+    const role = client.handshake.query.role as string;
 
-        // 1. เข้าห้องส่วนตัวตาม ID (สำคัญมาก เพื่อให้รับข้อความ 1-1 ได้)
-        if (userId) {
-            client.join(`user_${userId}`);
-            console.log(`Client ${client.id} joined room: user_${userId}`);
-        }
-
-        // 2. ถ้าเป็น Admin ให้เข้าห้องกลาง admin_room ด้วย (เพื่อรับ Notification เวลามีลูกค้าใหม่ทักมา)
-        if (role === 'admin' || role === 'ADMIN') {
-            client.join('admin_room');
-            console.log(`Admin joined admin_room`);
-        }
+    // เข้าห้องส่วนตัวตาม ID
+    if (userId) {
+      client.join(`user_${userId}`);
+      console.log(`Client ${client.id} joined room: user_${userId}`);
     }
 
-    @SubscribeMessage('sendMessage')
-    async handleMessage(
-        @MessageBody() payload: { senderId: string; content: string; receiverId?: string },
-        @ConnectedSocket() client: Socket,
-    ) {
-        let { senderId, content, receiverId } = payload;
+    // Admin เข้าห้องกลางด้วย เพื่อรับ notification
+    if (role === 'admin' || role === 'ADMIN') {
+      client.join('admin_room');
+      console.log(`Admin joined admin_room`);
+    }
+  }
 
-        // 1. ถ้าไม่มีผู้รับ (User ทักมาลอยๆ) ให้ส่งหา Admin
-        if (!receiverId) {
-            const admin = await this.chatService.getAdminUser();
-            if (admin) {
-                receiverId = admin.id;
-            }
-        }
+  @SubscribeMessage('sendMessage')
+  async handleMessage(
+    @MessageBody() payload: { senderId: string; content: string; receiverId?: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    // ใช้ senderId จาก handshake แทน payload เพื่อกัน spoof ID
+    const senderId =
+      (client.handshake.query.userId as string) || payload.senderId;
+    let { content, receiverId } = payload;
 
-        // 2. บันทึกลง Database
-        const saved = await this.chatService.saveMessage(
-            content,
-            senderId,
-            receiverId
-        );
-
-        // 3. ส่งกลับหา "ผู้ส่ง" (เพื่อให้หน้าจอคนส่งอัปเดต)
-        this.server.to(`user_${senderId}`).emit('receiveMessage', saved);
-
-        // 4. ส่งหา "ผู้รับ" (User ปลายทาง หรือ Admin)
-        if (receiverId) {
-            this.server.to(`user_${receiverId}`).emit('receiveMessage', saved);
-        }
-
-        // 5. แจ้งเตือนห้อง Admin รวม (เผื่อ Admin คนอื่นที่ online อยู่แต่ไม่ได้เปิดห้องแชทนั้น)
-        // เช็คว่าถ้าคนส่งไม่ใช่ Admin (คือ User ทักมา) ให้แจ้งเตือนเข้าห้อง Admin
-        const isAdminSender = senderId === receiverId; // หรือเช็คจาก role ใน payload ถ้ามี
-        if (!isAdminSender) {
-            this.server.to('admin_room').emit('receiveMessage', saved);
-        }
+    // ถ้าไม่มีผู้รับ ให้ส่งหา Admin อัตโนมัติ
+    if (!receiverId) {
+      const admin = await this.chatService.getAdminUser();
+      if (admin) {
+        receiverId = admin.id;
+      }
     }
 
-    // ฟังก์ชันนี้อาจไม่จำเป็นแล้วถ้า handleConnection ทำงานถูกต้อง 
-    // แต่เก็บไว้สำหรับการ Join ห้องแบบ Manual ได้
-    @SubscribeMessage('joinRoom')
-    handleJoinRoom(
-        @MessageBody() data: { userId: string },
-        @ConnectedSocket() client: Socket,
-    ) {
-        if (data.userId) {
-            client.join(`user_${data.userId}`);
-        }
+    // บันทึกลง Database
+    const saved = await this.chatService.saveMessage(content, senderId, receiverId);
+
+    // ส่งกลับหาผู้ส่ง
+    this.server.to(`user_${senderId}`).emit('receiveMessage', saved);
+
+    // ส่งหาผู้รับ
+    if (receiverId) {
+      this.server.to(`user_${receiverId}`).emit('receiveMessage', saved);
     }
+
+    // แจ้งเตือนห้อง Admin รวม (ถ้าผู้ส่งไม่ใช่ Admin)
+    const isAdminSender = senderId === receiverId;
+    if (!isAdminSender) {
+      this.server.to('admin_room').emit('receiveMessage', saved);
+    }
+  }
+
+  @SubscribeMessage('joinRoom')
+  handleJoinRoom(
+    @MessageBody() data: { userId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    if (data.userId) {
+      client.join(`user_${data.userId}`);
+    }
+  }
 }

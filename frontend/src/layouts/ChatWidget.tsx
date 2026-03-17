@@ -3,6 +3,8 @@ import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, Image as ImageIcon, Minus, X } from 'lucide-react';
 import { useAuth } from '../features/auth/context/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 interface ChatMessage {
   id: string;
   senderType: 'user' | 'admin';
@@ -11,7 +13,6 @@ interface ChatMessage {
   isImage?: boolean;
 }
 
-// ฟังก์ชันสำหรับสร้างหรือดึง Guest ID ชั่วคราว
 const getGuestId = () => {
   let guestId = localStorage.getItem('guest_chat_id');
   if (!guestId) {
@@ -32,7 +33,7 @@ export default function ChatWidget() {
       text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
       timestamp: new Date(),
       isImage: false,
-    }
+    },
   ]);
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -44,57 +45,66 @@ export default function ChatWidget() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // กำหนด ID ที่จะใช้ (ถ้าล็อกอินใช้ user.id ถ้ายังให้ใช้ guest id)
   const activeUserId = user?.id || getGuestId();
 
   useEffect(() => {
-    const newSocket = io('http://localhost:3000', {
+    const newSocket = io(API_URL, {
       query: { role: 'user', userId: activeUserId },
     });
     setSocket(newSocket);
 
     newSocket.on('receiveMessage', (msg: any) => {
-      const isMe = msg.senderId === activeUserId || msg.sender?.id === activeUserId;
+      const isMe =
+        msg.senderId === activeUserId || msg.sender?.id === activeUserId;
       setMessages((prev) => {
-        if (prev.some(m => m.id === msg.id)) return prev;
+        if (prev.some((m) => m.id === msg.id)) return prev;
         const isImg = msg.content && msg.content.startsWith('data:image');
-        return [...prev, {
-          id: msg.id,
-          senderType: isMe ? 'user' : 'admin',
-          text: msg.content,
-          timestamp: new Date(msg.createdAt || Date.now()),
-          isImage: isImg
-        }];
+        return [
+          ...prev,
+          {
+            id: msg.id,
+            senderType: isMe ? 'user' : 'admin',
+            text: msg.content,
+            timestamp: new Date(msg.createdAt || Date.now()),
+            isImage: isImg,
+          },
+        ];
       });
     });
 
-    return () => { newSocket.disconnect(); };
+    return () => {
+      newSocket.disconnect();
+    };
   }, [activeUserId]);
 
   useEffect(() => {
-    fetch(`http://localhost:3000/chat/messages/${activeUserId}`)
-      .then(res => {
-        if (!res.ok) return []; // guest หรือ userId ไม่มีใน DB → คืน array เปล่า ไม่ throw
+    fetch(`${API_URL}/chat/messages/${activeUserId}`)
+      .then((res) => {
+        if (!res.ok) return [];
         return res.json();
       })
-      .then(data => {
+      .then((data) => {
         if (!Array.isArray(data) || data.length === 0) return;
         const mapped = data.map((msg: any) => ({
           id: msg.id,
-          senderType: (msg.senderId === activeUserId ? 'user' : 'admin') as 'user' | 'admin',
+          senderType: (msg.senderId === activeUserId
+            ? 'user'
+            : 'admin') as 'user' | 'admin',
           text: msg.content,
           timestamp: new Date(msg.createdAt),
-          isImage: msg.content?.startsWith('data:image') ?? false
+          isImage: msg.content?.startsWith('data:image') ?? false,
         }));
         setMessages(mapped);
       })
-      .catch(() => { /* โหลดประวัติล้มเหลว — แสดงเฉพาะ welcome message */ });
+      .catch(() => {
+        /* โหลดประวัติล้มเหลว — แสดงเฉพาะ welcome message */
+      });
   }, [activeUserId]);
 
   useEffect(() => {
     const handleOpenChat = () => setIsOpen(true);
-    window.addEventListener("openChatWidget", handleOpenChat);
-    return () => window.removeEventListener("openChatWidget", handleOpenChat);
+    window.addEventListener('openChatWidget', handleOpenChat);
+    return () => window.removeEventListener('openChatWidget', handleOpenChat);
   }, []);
 
   useEffect(() => {
@@ -103,14 +113,15 @@ export default function ChatWidget() {
     }
   }, [messages, isOpen, previewImage]);
 
-  // ล็อค body scroll เมื่อ chat เปิด
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   const handleSend = (e?: React.FormEvent) => {
@@ -118,11 +129,17 @@ export default function ChatWidget() {
     if ((!input.trim() && !previewImage) || !socket) return;
 
     if (previewImage) {
-      socket.emit('sendMessage', { content: previewImage, senderId: activeUserId });
+      socket.emit('sendMessage', {
+        content: previewImage,
+        senderId: activeUserId,
+      });
       setPreviewImage(null);
     }
     if (input.trim()) {
-      socket.emit('sendMessage', { content: input, senderId: activeUserId });
+      socket.emit('sendMessage', {
+        content: input,
+        senderId: activeUserId,
+      });
       setInput('');
     }
   };
@@ -148,8 +165,6 @@ export default function ChatWidget() {
     }
   };
 
-  // ลบ if (!user) return null; ออกไปแล้ว เพื่อให้ทุกคนเห็นปุ่มแชท
-
   if (!isOpen) {
     return (
       <button
@@ -161,16 +176,18 @@ export default function ChatWidget() {
     );
   }
 
-  // ส่วน UI ด้านล่าง (return <div>...) เหมือนเดิมทุกอย่างครับ
   return (
     <div className="fixed bottom-6 right-6 w-[360px] h-[550px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden border border-gray-100 z-50 font-sans animate-in slide-in-from-bottom-5 duration-300">
-
       {/* Header */}
       <div className="bg-[#00A699] p-5 flex justify-between items-center text-white shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center overflow-hidden">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=RoamHub" alt="Admin" className="w-full h-full object-cover" />
+              <img
+                src="https://api.dicebear.com/7.x/avataaars/svg?seed=RoamHub"
+                alt="Admin"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-[#00A699] rounded-full" />
           </div>
@@ -179,32 +196,59 @@ export default function ChatWidget() {
             <p className="text-white/80 text-[10px]">ออนไลน์พร้อมช่วยเหลือ</p>
           </div>
         </div>
-        <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-full transition">
+        <button
+          onClick={() => setIsOpen(false)}
+          className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-full transition"
+        >
           <Minus size={20} />
         </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 bg-[#F9FAFB] p-4 overflow-y-auto flex flex-col gap-3" ref={scrollRef}>
+      <div
+        className="flex-1 bg-[#F9FAFB] p-4 overflow-y-auto flex flex-col gap-3"
+        ref={scrollRef}
+      >
         {messages.map((msg, idx) => {
           const isUser = msg.senderType === 'user';
           return (
-            <div key={`${msg.id}-${idx}`} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <div
+              key={`${msg.id}-${idx}`}
+              className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+            >
               {!isUser && (
-                <div className="w-7 h-7 rounded-full bg-[#00A699]/10 flex items-center justify-center text-[10px] text-[#00A699] font-bold mr-2 mt-auto mb-1">RH</div>
+                <div className="w-7 h-7 rounded-full bg-[#00A699]/10 flex items-center justify-center text-[10px] text-[#00A699] font-bold mr-2 mt-auto mb-1">
+                  RH
+                </div>
               )}
-              <div className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${
-                isUser
-                  ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
-                  : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
-              }`}>
+              <div
+                className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${
+                  isUser
+                    ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
+                    : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
+                }`}
+              >
                 {msg.isImage ? (
-                  <img src={msg.text} alt="sent image" className="rounded-lg max-w-full cursor-zoom-in hover:opacity-90 transition" onClick={() => setEnlargedImage(msg.text)} />
+                  <img
+                    src={msg.text}
+                    alt="sent image"
+                    className="rounded-lg max-w-full cursor-zoom-in hover:opacity-90 transition"
+                    onClick={() => setEnlargedImage(msg.text)}
+                  />
                 ) : (
-                  <p className="break-words whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                  <p className="break-words whitespace-pre-wrap leading-relaxed">
+                    {msg.text}
+                  </p>
                 )}
-                <div className={`text-[9px] mt-1 text-right opacity-60 ${isUser ? 'text-white' : 'text-gray-400'}`}>
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <div
+                  className={`text-[9px] mt-1 text-right opacity-60 ${
+                    isUser ? 'text-white' : 'text-gray-400'
+                  }`}
+                >
+                  {msg.timestamp.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </div>
               </div>
             </div>
@@ -217,7 +261,11 @@ export default function ChatWidget() {
         {previewImage && (
           <div className="px-4 pt-3 pb-1">
             <div className="relative inline-block">
-              <img src={previewImage} alt="Preview" className="h-20 rounded-lg shadow-sm border border-gray-200 object-cover" />
+              <img
+                src={previewImage}
+                alt="Preview"
+                className="h-20 rounded-lg shadow-sm border border-gray-200 object-cover"
+              />
               <button
                 type="button"
                 onClick={() => setPreviewImage(null)}
@@ -231,7 +279,13 @@ export default function ChatWidget() {
 
         <div className="p-4 pt-3">
           <form onSubmit={handleSend} className="flex items-center gap-2">
-            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -245,19 +299,31 @@ export default function ChatWidget() {
                 ref={textareaRef}
                 value={input}
                 maxLength={500}
-                onChange={(e) => { setInput(e.target.value); adjustHeight(); }}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  adjustHeight();
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSend();
-                    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+                    if (textareaRef.current)
+                      textareaRef.current.style.height = 'auto';
                   }
                 }}
                 rows={1}
-                placeholder={previewImage ? "พิมพ์ข้อความแนบไปกับรูป..." : "สอบถามข้อมูลเพิ่มเติม..."}
+                placeholder={
+                  previewImage
+                    ? 'พิมพ์ข้อความแนบไปกับรูป...'
+                    : 'สอบถามข้อมูลเพิ่มเติม...'
+                }
                 className="bg-transparent flex-1 text-xs focus:outline-none text-gray-700 placeholder-gray-400 resize-none min-h-[24px] max-h-[120px] overflow-y-auto py-1 scrollbar-hide"
               />
-              <span className={`text-[9px] font-mono ml-2 shrink-0 self-end mb-1 ${input.length >= 500 ? 'text-red-500' : 'text-gray-400'}`}>
+              <span
+                className={`text-[9px] font-mono ml-2 shrink-0 self-end mb-1 ${
+                  input.length >= 500 ? 'text-red-500' : 'text-gray-400'
+                }`}
+              >
                 {input.length}/500
               </span>
             </div>
@@ -266,10 +332,15 @@ export default function ChatWidget() {
               type="submit"
               disabled={!input.trim() && !previewImage}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-                input.trim() || previewImage ? 'bg-[#00A699] text-white shadow-lg' : 'bg-gray-200 text-gray-400'
+                input.trim() || previewImage
+                  ? 'bg-[#00A699] text-white shadow-lg'
+                  : 'bg-gray-200 text-gray-400'
               }`}
             >
-              <Send size={18} className={input.trim() || previewImage ? 'translate-x-0.5' : ''} />
+              <Send
+                size={18}
+                className={input.trim() || previewImage ? 'translate-x-0.5' : ''}
+              />
             </button>
           </form>
         </div>
@@ -297,7 +368,6 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* File size error popup */}
       {fileErrorPopup && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 rounded-[24px]">
           <div className="bg-white rounded-2xl p-6 mx-4 shadow-2xl text-center">
@@ -307,7 +377,9 @@ export default function ChatWidget() {
               </svg>
             </div>
             <p className="font-semibold text-gray-900 mb-1">ไฟล์มีขนาดใหญ่เกินไป</p>
-            <p className="text-sm text-gray-500 mb-4">กรุณาเลือกรูปที่มีขนาดไม่เกิน 2MB</p>
+            <p className="text-sm text-gray-500 mb-4">
+              กรุณาเลือกรูปที่มีขนาดไม่เกิน 2MB
+            </p>
             <button
               onClick={() => setFileErrorPopup(false)}
               className="w-full bg-[#00A699] hover:bg-[#008c81] text-white py-2 rounded-xl font-semibold text-sm transition"

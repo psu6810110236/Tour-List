@@ -1,5 +1,7 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../auth/roles.guard';
 import { Message } from '../entities/message.entity';
 import { User } from '../entities/user.entity';
 
@@ -7,20 +9,20 @@ import { User } from '../entities/user.entity';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Controller('chat')
+@UseGuards(AuthGuard('jwt')) // ต้อง Login ก่อนทุก endpoint
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  // เฉพาะ Admin ดูรายชื่อลูกค้าทั้งหมดที่ทักมาได้
+  @UseGuards(RolesGuard)
   @Get('contacts')
   async getContacts(): Promise<User[]> {
     return await this.chatService.getChatContacts();
   }
 
   @Get('messages/:userId')
-  async getUserMessages(
-    @Param('userId') userId: string,
-  ): Promise<Message[]> {
-    // guest ID ไม่ใช่ uuid → PostgreSQL จะ error ถ้าส่งเข้า DB
-    // คืน array เปล่าแทนทันที ไม่ต้อง query
+  async getUserMessages(@Param('userId') userId: string): Promise<Message[]> {
+    // guest ID ไม่ใช่ uuid → คืน array เปล่าทันที ไม่ query DB
     if (!UUID_REGEX.test(userId)) {
       return [];
     }
