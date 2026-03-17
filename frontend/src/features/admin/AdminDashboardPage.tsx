@@ -256,8 +256,12 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
         setSelectedTourIds([]); fetchAdminData();
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
       } catch (error) {
-        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้ทั้งหมด
-        showAlert(language === 'th' ? "ลบได้แค่บางส่วน" : "Partial Success", language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่ครับ" : "Some tours could not be deleted because they have active bookings.");
+        // ✨ ใส่ 'error' เป็นตัวแปรที่ 3
+        showAlert(
+          language === 'th' ? "ไม่สามารถลบได้ทั้งหมด" : "Cannot Delete All",
+          language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่ครับ" : "Some tours could not be deleted because they have active bookings.",
+          'error'
+        );
       }
     });
   };
@@ -359,8 +363,12 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
         await tourService.deleteTour(id); fetchAdminData();
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully.");
       } catch (error) {
-        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้
-        showAlert(language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Cannot Delete", language === 'th' ? "ทัวร์นี้มีการจองของลูกค้าค้างอยู่ กรุณาไปลบการจองในแท็บ 'การจอง' ให้หมดก่อนครับ" : "Please delete all bookings associated with this tour first.");
+        // ✨ ใส่ 'error' เป็นตัวแปรที่ 3 
+        showAlert(
+          language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Cannot Delete",
+          language === 'th' ? "ทัวร์นี้มีการจองของลูกค้าค้างอยู่ กรุณาไปลบการจองในแท็บ 'การจอง' ให้หมดก่อนครับ" : "Please delete all bookings associated with this tour first.",
+          'error'
+        );
       }
     });
   };
@@ -1631,8 +1639,8 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
             <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' :
-                popup.alertType === 'error' ? 'bg-red-50 border-red-100 text-red-500' : // 🔴 ถ้าเป็น error ให้ใช้สีแดง
-                  'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]' // 🟢 นอกนั้นใช้สีเขียว
+              popup.alertType === 'error' ? 'bg-red-50 border-red-100 text-red-500' : // 🔴 ถ้าเป็น error ให้ใช้สีแดง
+                'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]' // 🟢 นอกนั้นใช้สีเขียว
               }`}>
               {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> :
                 popup.alertType === 'error' ? <XCircle className="w-10 h-10" /> : // 🔴 ถ้าเป็น error ให้โชว์กากบาท
