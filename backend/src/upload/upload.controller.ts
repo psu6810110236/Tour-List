@@ -1,10 +1,19 @@
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  UseGuards,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { randomUUID } from 'crypto'; // 🟢 1. ดึง randomUUID จากระบบของ Node.js โดยตรง
+import { randomUUID } from 'crypto';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('upload')
+@UseGuards(AuthGuard('jwt')) // ต้อง Login ก่อนถึงจะ upload ได้
 export class UploadController {
   @Post('slip')
   @UseInterceptors(
@@ -12,17 +21,13 @@ export class UploadController {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, cb) => {
-          // Generate unique filename
-          const uniqueSuffix = randomUUID(); // 🟢 2. เรียกใช้งานแทน uuidv4()
+          const uniqueSuffix = randomUUID();
           const ext = extname(file.originalname);
-          // ✅ แก้ 1: ใส่ Backtick ( ` ) ครอบ Template String
           const filename = `${uniqueSuffix}${ext}`;
           cb(null, filename);
         },
       }),
       fileFilter: (req, file, cb) => {
-        // Accept only image files
-        // ✅ แก้ 2: แก้ Regex ไม่ให้กลายเป็นคอมเมนต์ (เปลี่ยนจาก // เป็น /\/ )
         if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
           return cb(new BadRequestException('Only image files are allowed!'), false);
         }
@@ -33,14 +38,11 @@ export class UploadController {
       },
     }),
   )
-  // ✅ แก้ 3: เปลี่ยนจาก Multer.File เป็น Express.Multer.File
-  async uploadSlip(@UploadedFile() file: Express.Multer.File) {
+  async uploadSlip(@UploadedFile() file: any) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
-    // Return the file URL that can be stored in database
-    // ✅ แก้ 4: ใส่ Backtick ( ` ) ครอบ Template String
     const fileUrl = `/uploads/${file.filename}`;
 
     return {

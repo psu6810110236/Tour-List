@@ -1,14 +1,28 @@
 import { Controller, Get, Patch, Body, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
-import { IsNotEmpty, IsString, MinLength, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  MinLength,
+  MaxLength,
+  Matches,
+} from 'class-validator';
 
 class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100, { message: 'ชื่อยาวเกินไป' })
   fullName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9+\-\s()]*$/, { message: 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง' })
+  @MaxLength(20, { message: 'เบอร์โทรยาวเกินไป' })
   phone?: string;
 }
 
-// แก้ #5: เพิ่ม validation ให้ ChangePasswordDto
 class ChangePasswordDto {
   @IsNotEmpty({ message: 'กรุณากรอกรหัสผ่านเดิม' })
   @IsString()
@@ -38,7 +52,11 @@ export class UsersController {
 
   @Patch('me/password')
   async changePassword(@Req() req: any, @Body() dto: ChangePasswordDto) {
-    await this.usersService.changePassword(req.user.userId, dto.oldPassword, dto.newPassword);
+    await this.usersService.changePassword(
+      req.user.userId,
+      dto.oldPassword,
+      dto.newPassword,
+    );
     return { message: 'เปลี่ยนรหัสผ่านสำเร็จ' };
   }
 }

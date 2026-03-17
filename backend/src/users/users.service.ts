@@ -104,7 +104,7 @@ export class UsersService {
 
       user = this.usersRepository.create({
         email: profile.email,
-        fullName: `${profile.firstName} ${profile.lastName}`,
+        fullName: [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.email,
         provider: 'google',
         role: userRole,
       });

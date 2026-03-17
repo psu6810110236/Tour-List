@@ -17,8 +17,6 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '5mb' }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
-
   await app.listen(3000);
   console.log('🚀 Application is running on: http://localhost:3000');
 }

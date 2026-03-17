@@ -1,14 +1,13 @@
 // src/features/public/pages/home-page.tsx
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import {
   Search,
   Map,
   MapPin,
-  ArrowRight, // มีอันนี้อยู่แล้ว
-  // 🟢 เพิ่มอันนี้เข้าไป
+  ArrowRight,
+  ArrowLeft,
   Star,
   TrendingUp,
   Flame
@@ -18,15 +17,15 @@ import { tourService } from "../../../services/api";
 
 // Map provinceId → ชื่อจังหวัดภาษาไทย (fallback กรณี API ไม่ส่ง province object มา)
 const PROVINCE_ID_TO_NAME: Record<string, { th: string; en: string }> = {
-  "province-1": { th: "กรุงเทพมหานคร", en: "Bangkok" },
-  "province-2": { th: "เชียงใหม่", en: "Chiang Mai" },
-  "province-3": { th: "ภูเก็ต", en: "Phuket" },
-  "province-4": { th: "กระบี่", en: "Krabi" },
-  "province-5": { th: "สุราษฎร์ธานี", en: "Surat Thani" },
-  "province-6": { th: "เชียงราย", en: "Chiang Rai" },
-  "province-7": { th: "กาญจนบุรี", en: "Kanchanaburi" },
-  "province-8": { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
-  "province-9": { th: "ขอนแก่น", en: "Khon Kaen" },
+  "province-1":  { th: "กรุงเทพมหานคร", en: "Bangkok" },
+  "province-2":  { th: "เชียงใหม่", en: "Chiang Mai" },
+  "province-3":  { th: "ภูเก็ต", en: "Phuket" },
+  "province-4":  { th: "กระบี่", en: "Krabi" },
+  "province-5":  { th: "สุราษฎร์ธานี", en: "Surat Thani" },
+  "province-6":  { th: "เชียงราย", en: "Chiang Rai" },
+  "province-7":  { th: "กาญจนบุรี", en: "Kanchanaburi" },
+  "province-8":  { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
+  "province-9":  { th: "ขอนแก่น", en: "Khon Kaen" },
   "province-10": { th: "อยุธยา", en: "Ayutthaya" },
   "province-11": { th: "สมุย", en: "Koh Samui" },
   "province-12": { th: "พัทยา", en: "Pattaya" },
@@ -60,8 +59,6 @@ interface Tour {
   description?: string;
   isHidden?: boolean;
   historicalBooked: number;
-  rating?: number; 
-  reviewCount?: number; // 🟢 เพิ่มบรรทัดนี้เข้าไปเพื่อให้ TypeScript รู้จัก
 }
 
 interface HomePageProps {
@@ -80,22 +77,21 @@ export default function HomePage({ language }: HomePageProps) {
   const [loadingTours, setLoadingTours] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
-  // 🟢 รูป Hero Section (สถานที่ท่องเที่ยวในไทย)
   const [heroSlide, setHeroSlide] = useState(0);
   const heroImages = [
-    "https://bktemple.wordpress.com/wp-content/uploads/2018/09/cropped-1-zvqo976jklnpve9gyg6sfw.jpeg", // วัดอรุณ (กรุงเทพฯ)
-    "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a", // เกาะพีพี (กระบี่)
-    "https://s359.kapook.com/pagebuilder/9626fbfd-602a-4c30-bb9d-68eeafb07b69.jpg", // ดอยอินทนนท์ (เชียงใหม่)
-    "https://s359.kapook.com/pagebuilder/d56acd15-99d1-4dae-9087-91fdd69d9f05.jpg"  // ตลาดน้ำ/วิถีไทย
+    "https://bktemple.wordpress.com/wp-content/uploads/2018/09/cropped-1-zvqo976jklnpve9gyg6sfw.jpeg",
+    "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a",
+    "https://s359.kapook.com/pagebuilder/9626fbfd-602a-4c30-bb9d-68eeafb07b69.jpg",
+    "https://s359.kapook.com/pagebuilder/d56acd15-99d1-4dae-9087-91fdd69d9f05.jpg"
   ];
 
-  // สลับรูปอัตโนมัติ
   useEffect(() => {
     const timer = setInterval(() => {
       setHeroSlide((prev) => (prev + 1) % heroImages.length);
-    }, 7000); // 7 วินาทีเปลี่ยนทีเพื่อให้คนมีเวลาดู
+    }, 7000);
     return () => clearInterval(timer);
   }, [heroImages.length]);
+
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
@@ -110,7 +106,8 @@ export default function HomePage({ language }: HomePageProps) {
 
     const fetchTours = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/tours/search');
+        // แก้ไข: ใช้ tourService.search แทน axios.get hardcode
+        const response = await tourService.search({});
         const toursData = response.data;
 
         setAllTours(toursData);
@@ -171,29 +168,12 @@ export default function HomePage({ language }: HomePageProps) {
   const t = translations[language].hero;
   const h = translations[language].home;
 
-  const averageRating = useMemo(() => {
-    // กรองเอาเฉพาะทัวร์ที่มีคะแนน rating
-    const toursWithRating = allTours.filter(tour => typeof tour.rating === 'number' && (tour.reviewCount || 0) > 0);
-
-    // ถ้ายังไม่มีข้อมูลรีวิวเลย ให้แสดงค่าเริ่มต้นเป็น 0.0 หรือค่าอื่นตามต้องการ
-    if (toursWithRating.length === 0) return "4.8";
-
-    const totalRating = toursWithRating.reduce((sum, tour) => sum + (tour.rating || 0), 0);
-    const avg = totalRating / toursWithRating.length;
-
-    // ปัดทศนิยมให้เหลือ 1 ตำแหน่ง
-    return avg.toFixed(1);
-  }, [allTours]);
-
-  const HERO_BG = "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?q=80&w=2639&auto=format&fit=crop";
-
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden relative">
 
       {/* ===== HERO SECTION ===== */}
       <div className="relative min-h-[550px] md:h-[700px] flex items-center justify-center text-white overflow-hidden py-12 md:py-0 group">
 
-        {/* 🟢 ส่วนของภาพพื้นหลังแบบสไลด์ */}
         <div className="absolute inset-0 z-0">
           {heroImages.map((img, index) => (
             <div
@@ -206,43 +186,46 @@ export default function HomePage({ language }: HomePageProps) {
                 alt="Amazing Thailand"
                 className="w-full h-full object-cover"
               />
-              {/* Overlay และ Gradient ตามดีไซน์เดิมของคุณ */}
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
             </div>
           ))}
         </div>
 
-        {/* 🟢 ปุ่มลูกศร เปลี่ยนรูปซ้าย-ขวา (แสดงตอน Hover) */}
+        {/* ปุ่มเปลี่ยนรูปซ้าย-ขวา */}
+        <button
+          onClick={() => setHeroSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length)}
+          className="absolute left-4 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <button
+          onClick={() => setHeroSlide((prev) => (prev + 1) % heroImages.length)}
+          className="absolute right-4 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
+        >
+          <ArrowRight className="w-5 h-5" />
+        </button>
 
-
-
-        {/* ⚪ ส่วนเนื้อหา (Content) - คงดีไซน์เดิมของคุณไว้เป๊ะๆ */}
-        <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center">
-          {/* 🟢 พร้อมสำหรับการเดินทางหรือยัง? - ปรับให้คลีนและหรูขึ้น */}
+        <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center relative z-10 px-4">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-xs md:text-sm font-medium mb-10 text-white/90 tracking-wide shadow-inner">
             <span>✈️</span>
             <span>{language === 'th' ? 'เตรียมพบกับประสบการณ์พิเศษ...' : 'Discover your next extraordinary journey...'}</span>
           </div>
 
-          {/* 🟢 H1 - ดีไซน์ใหม่แบบ "Elegant & Minimal" */}
           <h1 className="text-4xl md:text-7xl lg:text-8xl font-thin mb-8 tracking-tighter leading-[1.1] text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
             {language === 'th' ? (
               <>
                 <span className="font-light opacity-80">ค้นพบความมหัศจรรย์</span><br />
-                {/* 🟢 เปลี่ยน Gradient ให้ทึบทั้งหมด และเพิ่ม Drop Shadow สีแบรนด์ */}
                 <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#7ffffe] via-[#00e5d3] to-[#00bfb0] drop-shadow-xl">ประเทศไทย</span>
               </>
             ) : (
               <>
                 <span className="font-light opacity-80">Discover Amazing</span><br />
-                {/* เน้น "Thailand" ด้วยตัวหนาและไล่สีแบบ Smooth (ทึบทั้งหมด) */}
                 <span className="font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-[#ffffff] via-[#00e5d3] to-[#00bfb0] drop-shadow-xl">Thailand</span>
               </>
             )}
           </h1>
 
-          {/* 🟢 sub-title - จัดกลุ่มคำใหม่ให้อ่านง่ายและดูแพง */}
           <p className="text-base md:text-xl text-white/90 mb-14 leading-relaxed drop-shadow-sm max-w-xl mx-auto font-light tracking-wide opacity-90 px-4">
             {language === 'th' ? (
               <>สัมผัสความงามของวัฒนธรรม ธรรมชาติ <br />และการผจญภัยที่น่าตื่นเต้นในมุมที่ต่างออกไป</>
@@ -251,7 +234,6 @@ export default function HomePage({ language }: HomePageProps) {
             )}
           </p>
 
-          {/* Search Bar (อันเดิมของคุณ - ผมปรับ padding และ shadow นิดหน่อยให้เข้ากัน) */}
           <form
             onSubmit={handleSearch}
             className="search-bar w-[92%] max-w-2xl mx-auto bg-white/95 backdrop-blur-xl rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] p-1.5 md:p-2.5 flex flex-row items-center gap-1 md:gap-3 transform transition-all hover:scale-[1.01]"
@@ -302,7 +284,7 @@ export default function HomePage({ language }: HomePageProps) {
               <Star className="w-8 h-8 fill-yellow-500" />
             </div>
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl lg:text-5xl font-black text-gray-900">{averageRating}</span>
+              <span className="text-4xl lg:text-5xl font-black text-gray-900">4.8</span>
               <span className="text-xl font-bold text-gray-400">/5</span>
             </div>
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</h3>
@@ -351,7 +333,6 @@ export default function HomePage({ language }: HomePageProps) {
                   key={tour.id}
                   className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
                 >
-                  {/* ภาพทัวร์ และ Badge ยอดจอง */}
                   <div className="relative h-56 overflow-hidden bg-[#00A699]">
                     <img
                       src={tour.image || FALLBACK_IMAGE_URL}
@@ -364,8 +345,6 @@ export default function HomePage({ language }: HomePageProps) {
                         target.className = "w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500";
                       }}
                     />
-
-                    {/* Badge ยอดคนจอง */}
                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm text-[#FF6B4A] text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
                       <Flame className="w-3.5 h-3.5" />
                       {language === 'th' ? `จองแล้ว ${tour.historicalBooked || 0} ที่` : `${tour.historicalBooked || 0} Booked`}
@@ -449,7 +428,6 @@ export default function HomePage({ language }: HomePageProps) {
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                   <div className="absolute bottom-6 left-6 right-6">
                     <div className="flex items-center gap-2 text-white mb-2">
                       <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
@@ -471,7 +449,6 @@ export default function HomePage({ language }: HomePageProps) {
                     </div>
                   </div>
                 </div>
-
               </button>
             ))}
           </div>
