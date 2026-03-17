@@ -199,7 +199,7 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
 
         {/* ปุ่มเปลี่ยนรูปซ้าย-ขวา */}
-        
+
 
         <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center relative z-10 px-4">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-xs md:text-sm font-medium mb-10 text-white/90 tracking-wide shadow-inner">
@@ -327,7 +327,8 @@ export default function HomePage({ language }: HomePageProps) {
               return (
                 <div
                   key={tour.id}
-                  className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
+                  onClick={() => onNavigate("tour", tour.id as any)}
+                  className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden cursor-pointer"
                 >
                   <div className="relative h-56 overflow-hidden bg-[#00A699]">
                     <img
