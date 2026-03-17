@@ -48,7 +48,7 @@ test.describe('TC-REV | Reviews', () => {
   });
 
   test('TC-REV-03 | ไม่ Login ส่ง POST review → 401', async ({ page, request }) => {
-    const resp = await request.post('http://wd04.pupasoft.com:3000/reviews/tour/1', {
+    const resp = await request.post('https://wd04.pupasoft.com:3000/reviews/tour/1', {
       data: { rating: 5, comment: 'test' },
     });
     await page.screenshot({ path: 'screenshots/TC-REV-03_no-auth.png' });

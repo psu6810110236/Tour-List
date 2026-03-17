@@ -3,9 +3,12 @@ version: '3.8'
 services:
   # 1. Frontend
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=https://wd04.pupasoft.com/api
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
     networks:

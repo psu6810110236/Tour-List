@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, Image as ImageIcon, Minus, X } from 'lucide-react';
 import { useAuth } from '../features/auth/context/AuthContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://wd04.pupasoft.com:3000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface ChatMessage {
   id: string;

@@ -4,7 +4,7 @@ import { MessageSquare, Send, ArrowLeft, Paperclip, X } from 'lucide-react';
 import { useAuth } from '../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://wd04.pupasoft.com:3000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface Contact {
   id: string;

@@ -6,7 +6,7 @@ import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 import { api } from "../../services/api";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://wd04.pupasoft.com:3000";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Login() {
   const [email, setEmail] = useState("");

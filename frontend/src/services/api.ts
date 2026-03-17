@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Tour, Province, Booking } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://wd04.pupasoft.com:3000';
+const API_URL = import.meta.env.VITE_API_URL ;
 
 export const api = axios.create({
   baseURL: API_URL,

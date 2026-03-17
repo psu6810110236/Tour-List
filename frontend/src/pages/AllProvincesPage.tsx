@@ -13,7 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://wd04.pupasoft.com:3000";
+const API_URL = import.meta.env.VITE_API_URL ;
 
 interface Province {
   id: string;
