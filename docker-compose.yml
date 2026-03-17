@@ -9,8 +9,8 @@ services:
     environment:
       - DB_HOST=db       # บอกให้วิ่งไปหา Database ชื่อ db
       - DB_PORT=5432
-      - DB_USERNAME=admin
-      - DB_NAME=tour_db
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_NAME=${DB_NAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
