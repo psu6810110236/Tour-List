@@ -1,13 +1,23 @@
 version: '3.8'
 
 services:
-  # 1. ส่วนของ Backend (App ของเรา)
-  backend:
-    build: ./backend     # สร้างจาก Dockerfile ที่คุณมีอยู่
+  # 1. Frontend
+  frontend:
+    build: ./frontend
     ports:
-      - "3000:3000"      # เปิด Port 3000 ให้หน้าเว็บคุยได้
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # 2. Backend
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
     environment:
-      - DB_HOST=db       # บอกให้วิ่งไปหา Database ชื่อ db
+      - DB_HOST=db
       - DB_PORT=5432
       - DB_USERNAME=${DB_USERNAME}
       - DB_NAME=${DB_NAME}
@@ -21,11 +31,11 @@ services:
       - SEED_USER_EMAIL=${SEED_USER_EMAIL}
       - SEED_USER_PASSWORD=${SEED_USER_PASSWORD}
     depends_on:
-      - db               # รอให้ Database รันเสร็จก่อนค่อยรัน App
+      - db
     networks:
       - app-network
 
-  # 2. ส่วนของ Database (PostgreSQL)
+  # 3. Database
   db:
     image: postgres:15-alpine
     restart: always
