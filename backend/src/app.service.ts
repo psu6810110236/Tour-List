@@ -22,11 +22,19 @@ export class AppService implements OnApplicationBootstrap {
 
   //ทำงานอัตโนมัติเมื่อ Start Server
   async onApplicationBootstrap() {
+  // เพิ่มการรอสัก 5 วินาทีเพื่อให้ TypeORM ทำการ Sync ตารางให้เสร็จก่อน
+  await new Promise(resolve => setTimeout(resolve, 5000)); 
+  
+  try {
     await this.seedRoles();
     await this.seedUsers();
     const provinces = await this.seedProvinces();
     await this.seedTours(provinces);
+    console.log('🚀 All data seeded successfully');
+  } catch (error) {
+    console.error('❌ Seeding failed:', error.message);
   }
+}
 
   // ======================================================
   // 🟢 ส่วนที่ 1: DATA RETRIEVAL (สำหรับ API เรียกใช้)
