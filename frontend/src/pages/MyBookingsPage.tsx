@@ -139,6 +139,268 @@ export function MyBookingsPage({
     );
   };
 
+  // 🟢 ฟังก์ชันสร้างและปริ้นท์/เซฟ E-Ticket
+  // 🟢 ฟังก์ชันสร้างและปริ้นท์/เซฟ E-Ticket (เวอร์ชันสวยงาม + มีรูปทัวร์)
+  const handleDownloadTicket = (booking: any) => {
+    // 1. เตรียมข้อมูลที่จะแสดงบนตั๋ว
+    const tourName = safeLanguage === "th" && booking.tourNameSnapshot_th ? booking.tourNameSnapshot_th : booking.tourNameSnapshot || "Tour Package";
+    const travelDate = formatDateSafe(booking.travelDate, { day: "numeric", month: "long", year: "numeric" });
+    const customerName = booking.contactName || booking.user?.fullName || '-';
+    const phone = booking.phone || '-';
+
+    // ดึงรูปภาพทัวร์ (ถ้าไม่มีให้ใช้ภาพ Default)
+    const tourImage = booking.tour?.image || 'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?auto=format&fit=crop&q=80&w=800';
+
+    // 2. เปิดหน้าต่างใหม่
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showAlert(safeLanguage === "th" ? "บล็อกป็อปอัป" : "Popup Blocked", safeLanguage === "th" ? "กรุณาอนุญาตให้เบราว์เซอร์เปิดป็อปอัปเพื่อดาวน์โหลดตั๋ว" : "Please allow popups to download the ticket.");
+      return;
+    }
+
+    // 3. เขียน HTML ลงไป (ตกแต่งเป็น E-Ticket Boarding Pass)
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>E-Ticket - ${booking.id}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+            body { 
+              font-family: 'Sarabun', sans-serif; 
+              background-color: #f0f2f5; 
+              margin: 0; 
+              padding: 40px; 
+              display: flex;
+              justify-content: center;
+              -webkit-print-color-adjust: exact; /* บังคับให้เบราว์เซอร์ปริ้นท์สีพื้นหลัง/รูปภาพ */
+              print-color-adjust: exact;
+            }
+            .ticket-container {
+              width: 100%;
+              max-width: 800px;
+              background: #fff;
+              border-radius: 24px;
+              box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+            }
+            /* ส่วนหัวตั๋ว (รูปภาพ) */
+            .ticket-hero {
+              height: 250px;
+              position: relative;
+              background-image: url('${tourImage}');
+              background-size: cover;
+              background-position: center;
+            }
+            .ticket-hero::after {
+              content: '';
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.7));
+            }
+            .hero-content {
+              position: absolute;
+              bottom: 25px;
+              left: 30px;
+              right: 30px;
+              z-index: 2;
+              color: white;
+            }
+            .provider {
+              background: #00A699;
+              color: white;
+              padding: 4px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: bold;
+              letter-spacing: 1px;
+              display: inline-block;
+              margin-bottom: 10px;
+              text-transform: uppercase;
+            }
+            .hero-content h1 {
+              margin: 0;
+              font-size: 28px;
+              font-weight: 700;
+              text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            }
+            
+            /* ส่วนรายละเอียด (แบ่งครึ่ง) */
+            .ticket-body {
+              padding: 40px 30px;
+              background: #fff;
+              display: flex;
+              gap: 30px;
+              position: relative;
+            }
+            .main-details {
+              flex: 2;
+              border-right: 2px dashed #e2e8f0;
+              padding-right: 30px;
+              position: relative;
+            }
+            /* ทำรอยบากตั๋ว */
+            .main-details::before, .main-details::after {
+              content: '';
+              position: absolute;
+              right: -16px;
+              width: 30px;
+              height: 30px;
+              background-color: #f0f2f5;
+              border-radius: 50%;
+            }
+            .main-details::before { top: -55px; }
+            .main-details::after { bottom: -55px; }
+            
+            .side-details {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 25px;
+              margin-bottom: 10px;
+            }
+            .info-item .label {
+              font-size: 12px;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              margin-bottom: 5px;
+              font-weight: 600;
+            }
+            .info-item .value {
+              font-size: 16px;
+              color: #0f172a;
+              font-weight: 700;
+            }
+            .status-badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              background: #ecfdf5;
+              color: #059669;
+              padding: 6px 14px;
+              border-radius: 12px;
+              font-weight: 700;
+              font-size: 14px;
+              border: 1px solid #a7f3d0;
+              margin-top: 5px;
+            }
+            .qr-code {
+              width: 120px;
+              height: 120px;
+              background: #fff;
+              border: 2px solid #e2e8f0;
+              border-radius: 12px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 10px;
+              margin-bottom: 15px;
+            }
+            .qr-code img {
+              width: 100%;
+              height: 100%;
+            }
+            .ticket-id {
+              font-family: monospace;
+              font-size: 14px;
+              color: #64748b;
+              letter-spacing: 1px;
+              font-weight: 600;
+            }
+            .footer {
+              background: #f8fafc;
+              padding: 15px 30px;
+              text-align: center;
+              color: #64748b;
+              font-size: 12px;
+              border-top: 1px solid #e2e8f0;
+            }
+            
+            /* ตอนกด Print ให้หน้าตาปกติ */
+            @media print {
+              body { background: white; padding: 0; }
+              .ticket-container { box-shadow: none; max-width: 100%; border: 1px solid #e2e8f0; }
+              .main-details::before, .main-details::after { background-color: white; border: 1px solid #e2e8f0; border-left: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="ticket-container">
+            <div class="ticket-hero">
+              <div class="hero-content">
+                <div class="provider">RoamHub E-Ticket</div>
+                <h1>${tourName}</h1>
+              </div>
+            </div>
+            
+            <div class="ticket-body">
+              <div class="main-details">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <div class="label">Customer Name</div>
+                    <div class="value">${customerName}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="label">Travel Date</div>
+                    <div class="value">${travelDate}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="label">Phone Number</div>
+                    <div class="value">${phone}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="label">Travelers</div>
+                    <div class="value">${booking.travelers} Pax</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="label">Total Paid</div>
+                    <div class="value" style="color: #00A699;">THB ${Number(booking.totalPrice || 0).toLocaleString()}</div>
+                  </div>
+                  <div class="info-item">
+                    <div class="label">Status</div>
+                    <div class="status-badge">✓ CONFIRMED</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="side-details">
+                <div class="qr-code">
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${booking.id}&color=00A699" alt="QR Code">
+                </div>
+                <div class="ticket-id">REF: ${booking.id}</div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 5px; font-weight: 600;">SCAN FOR ENTRY</div>
+              </div>
+            </div>
+            
+            <div class="footer">
+              Please present this e-ticket (digital or printed) to the tour guide on the travel date. Generated on: ${new Date().toLocaleString()}
+            </div>
+          </div>
+          
+          <script>
+            // รอโหลดรูปภาพและ QR Code เสร็จ แล้วค่อยเด้งหน้า Print
+            window.onload = function() { 
+              setTimeout(function() { 
+                window.print(); 
+              }, 800); 
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
   const getStatusBadge = (booking: any) => {
     const statusLower = booking.status?.toLowerCase() || '';
     const paymentLower = booking.paymentStatus?.toLowerCase() || '';
@@ -428,7 +690,10 @@ export function MyBookingsPage({
 
                     {/* ปุ่มดาวน์โหลดตั๋ว จะขึ้นก็ต่อเมื่อเสร็จสมบูรณ์ */}
                     {isFullyApproved && (
-                      <button className="flex-1 lg:w-44 bg-white hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl font-semibold transition border border-gray-200 text-sm flex items-center justify-center gap-2 shadow-sm">
+                      <button
+                        onClick={() => handleDownloadTicket(booking)}
+                        className="flex-1 lg:w-44 bg-white hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl font-semibold transition border border-gray-200 text-sm flex items-center justify-center gap-2 shadow-sm"
+                      >
                         <FileText className="w-4 h-4" />
                         {safeLanguage === "th" ? "ดาวน์โหลดตั๋ว" : "Download Ticket"}
                       </button>
@@ -737,7 +1002,10 @@ export function MyBookingsPage({
                 )}
 
               {selectedBooking.status?.toLowerCase() === "approved" && selectedBooking.paymentStatus?.toLowerCase() === "completed" && (
-                <button className="flex-1 bg-[#00A699] hover:bg-[#008c81] text-white py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg">
+                <button
+                  onClick={() => handleDownloadTicket(selectedBooking)}
+                  className="flex-1 bg-[#00A699] hover:bg-[#008c81] text-white py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg"
+                >
                   <FileText className="w-5 h-5" />
                   {safeLanguage === "th" ? "ดาวน์โหลดตั๋ว" : "Download Ticket"}
                 </button>
