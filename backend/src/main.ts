@@ -18,6 +18,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   await app.listen(3000);
-  console.log('🚀 Application is running on: http://localhost:3000');
+  console.log('🚀 Application is running on: http://wd04.pupasoft.com:3000');
 }
 bootstrap();

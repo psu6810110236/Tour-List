@@ -123,7 +123,7 @@
         let profileData = { fullName: "", email: "", phone: "" };
 
         if (token) {
-          const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/users/me`, {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || "http://wd04.pupasoft.com:3000"}/users/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {

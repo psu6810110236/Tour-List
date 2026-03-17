@@ -17,5 +17,5 @@ export const USER = {
 export const newUserEmail = () =>
   `testuser_${Date.now()}@test.com`;
 
-export const API = 'http://localhost:3000';
-export const BASE = 'http://localhost:5173';
+export const API = 'http://wd04.pupasoft.com:3000';
+export const BASE = 'http://wd04.pupasoft.com:5173';

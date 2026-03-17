@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { translations } from "../../data/translations";
 import type { Language } from "../../data/translations";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL || "http://wd04.pupasoft.com:3000";
 
 export default function Register() {
   const [name, setName] = useState("");

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Tour, Province, Booking } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://wd04.pupasoft.com:3000';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -61,7 +61,7 @@ export const bookingService = {
   updatePaymentStatus: (id: string, paymentStatus: string, reason?: string) =>
     api.patch(`/bookings/${id}/payment-status`, { paymentStatus, reason }),
   deleteBooking: (id: string) => api.delete(`/bookings/${id}`),
-  // ✅ แก้เป็น api.delete และลบ http://localhost:3000 ออก
+
   deleteProvince: (id: string) => api.delete(`/tours/provinces/${id}`),
 };
 

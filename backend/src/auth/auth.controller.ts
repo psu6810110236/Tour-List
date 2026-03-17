@@ -34,8 +34,7 @@ export class AuthController {
   async googleAuthRedirect(@Request() req, @Res() res: Response) {
     const authResult = await this.authService.googleLogin(req);
 
-    // ใช้ env var แทน hardcode localhost — ถ้าไม่มีค่าจะ fallback เป็น dev
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://wd04.pupasoft.com:5173';
 
     // แก้ #6: ส่ง token ผ่าน httpOnly cookie แทน URL query string
     // เพื่อไม่ให้ token ติดอยู่ใน browser history / server logs

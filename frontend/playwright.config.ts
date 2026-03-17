@@ -12,7 +12,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://wd04.pupasoft.com:5173',
     locale: 'th-TH',        
   timezoneId: 'Asia/Bangkok', 
     trace: 'retain-on-failure',

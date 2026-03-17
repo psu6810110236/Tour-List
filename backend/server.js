@@ -12,7 +12,6 @@ const app = express();
 // --- 1. Middleware ---
 app.use(cors());
 app.use(express.json()); // ให้อ่าน JSON ได้
-// สำคัญ: เปิดให้เข้าถึงโฟลเดอร์ uploads ผ่าน URL ได้ (เช่น http://localhost:5000/uploads/รูป.jpg)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- 2. Database Connection ---
