@@ -2,7 +2,7 @@ import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto'; // 🟢 1. ดึง randomUUID จากระบบของ Node.js โดยตรง
 
 @Controller('upload')
 export class UploadController {
@@ -13,7 +13,7 @@ export class UploadController {
         destination: './uploads',
         filename: (req, file, cb) => {
           // Generate unique filename
-          const uniqueSuffix = uuidv4();
+          const uniqueSuffix = randomUUID(); // 🟢 2. เรียกใช้งานแทน uuidv4()
           const ext = extname(file.originalname);
           // ✅ แก้ 1: ใส่ Backtick ( ` ) ครอบ Template String
           const filename = `${uniqueSuffix}${ext}`;

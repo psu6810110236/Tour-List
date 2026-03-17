@@ -13,8 +13,8 @@ async function bootstrap() {
   });
 
   // เปิดใช้งาน Validation สำหรับตรวจสอบข้อมูลที่ส่งเข้ามา
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
+  app.use(json({ limit: '5mb' }));
+  app.use(urlencoded({ extended: true, limit: '5mb' }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
