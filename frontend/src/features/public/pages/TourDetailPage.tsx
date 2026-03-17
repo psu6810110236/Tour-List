@@ -55,9 +55,9 @@ const ExpandableReviewText = ({ text, language }: { text: string, language: Lang
 
   return (
     <div>
-      <p className={`text-gray-700 text-sm mt-2 ${!isExpanded && isLongText ? 'line-clamp-3' : ''}`}>
-        {text}
-      </p>
+      <p className={`text-gray-700 text-sm mt-2 break-words ${!isExpanded && isLongText ? 'line-clamp-3' : ''}`}>
+  {text}
+</p>
       {isLongText && (
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
