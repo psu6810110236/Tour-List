@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar, MessageSquare } from 'lucide-react';
 
 // 🟢 อย่าลืม import reviewService เข้ามาด้วยนะครับ
-import { tourService, reviewService } from '../../../services/api'; 
+import { tourService, reviewService } from '../../../services/api';
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
 import { translations } from "../../../data/translations";
@@ -26,7 +26,7 @@ interface TourDetail {
   id: string | number;
   name?: string;
   name_th?: string;
-  province?: string | { name?: string; name_th?: string; [key: string]: unknown };
+  province?: string | { name?: string; name_th?: string;[key: string]: unknown };
   duration?: string;
   rating?: number;
   reviewCount?: number;
@@ -79,8 +79,8 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
     const fetchTourDetail = async () => {
       setLoading(true);
       setError(null);
-      
-      try { 
+
+      try {
         // 1. ดึงข้อมูลทัวร์
         const response = await tourService.getById(id);
         setTour(response.data as unknown as TourDetail);
@@ -101,7 +101,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
         setLoading(false);
       }
     };
-    
+
     fetchTourDetail();
   }, [id]);
 
@@ -116,12 +116,12 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
       if (id) {
         // ยิง API บันทึกรีวิวไปที่ Backend
         await reviewService.createReview(id, { rating: newRating, comment: newComment });
-        
+
         // ดึงข้อมูลรีวิวใหม่มาอัปเดตหน้าจอทันที
         const reviewsRes = await reviewService.getReviewsByTourId(id);
         setReviews(reviewsRes.data || []);
       }
-      
+
       // ล้างค่าฟอร์ม
       setNewComment('');
       setNewRating(5);
@@ -179,7 +179,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
             </div>
           </button>
         </div>
-      
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
 
         <button
@@ -200,18 +200,18 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">{getLang(tour, 'name', language)}</h1>
             <div className="flex items-center gap-4">
-               <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 pointer-events-auto">
-                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                 <span className="text-white font-semibold">
-                   {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : (tour.rating || '5.0')}
-                 </span>
-                 <span className="text-white/80">({reviews.length > 0 ? reviews.length : (tour.reviewCount || 0)} {language === 'th' ? 'รีวิว' : 'reviews'})</span>
-               </div>
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 pointer-events-auto">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <span className="text-white font-semibold">
+                  {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : (tour.rating || '0.0')}
+                </span>
+                <span className="text-white/80">({reviews.length > 0 ? reviews.length : (tour.reviewCount || 0)} {language === 'th' ? 'รีวิว' : 'reviews'})</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
 
@@ -323,9 +323,11 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">{language === 'th' ? 'รีวิวจากผู้เดินทาง' : 'Guest Reviews'}</h2>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span className="font-bold text-gray-900">{reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '5.0'}</span> 
-                    <span className="text-yellow-400">★</span> 
-                    <span>จาก {reviews.length} รีวิว</span>
+                    <span className="font-bold text-gray-900">
+                      {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : (tour.rating ? Number(tour.rating).toFixed(1) : '0.0')}
+                    </span>
+                    <span className="text-yellow-400">★</span>
+                    <span>จาก {reviews.length > 0 ? reviews.length : (tour.reviewCount || 0)} รีวิว</span>
                   </div>
                 </div>
               </div>

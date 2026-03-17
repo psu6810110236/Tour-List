@@ -1,6 +1,6 @@
 // src/features/public/pages/home-page.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -8,7 +8,7 @@ import {
   Map,
   MapPin,
   ArrowRight, // มีอันนี้อยู่แล้ว
-  ArrowLeft,  // 🟢 เพิ่มอันนี้เข้าไป
+  // 🟢 เพิ่มอันนี้เข้าไป
   Star,
   TrendingUp,
   Flame
@@ -18,15 +18,15 @@ import { tourService } from "../../../services/api";
 
 // Map provinceId → ชื่อจังหวัดภาษาไทย (fallback กรณี API ไม่ส่ง province object มา)
 const PROVINCE_ID_TO_NAME: Record<string, { th: string; en: string }> = {
-  "province-1":  { th: "กรุงเทพมหานคร", en: "Bangkok" },
-  "province-2":  { th: "เชียงใหม่", en: "Chiang Mai" },
-  "province-3":  { th: "ภูเก็ต", en: "Phuket" },
-  "province-4":  { th: "กระบี่", en: "Krabi" },
-  "province-5":  { th: "สุราษฎร์ธานี", en: "Surat Thani" },
-  "province-6":  { th: "เชียงราย", en: "Chiang Rai" },
-  "province-7":  { th: "กาญจนบุรี", en: "Kanchanaburi" },
-  "province-8":  { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
-  "province-9":  { th: "ขอนแก่น", en: "Khon Kaen" },
+  "province-1": { th: "กรุงเทพมหานคร", en: "Bangkok" },
+  "province-2": { th: "เชียงใหม่", en: "Chiang Mai" },
+  "province-3": { th: "ภูเก็ต", en: "Phuket" },
+  "province-4": { th: "กระบี่", en: "Krabi" },
+  "province-5": { th: "สุราษฎร์ธานี", en: "Surat Thani" },
+  "province-6": { th: "เชียงราย", en: "Chiang Rai" },
+  "province-7": { th: "กาญจนบุรี", en: "Kanchanaburi" },
+  "province-8": { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
+  "province-9": { th: "ขอนแก่น", en: "Khon Kaen" },
   "province-10": { th: "อยุธยา", en: "Ayutthaya" },
   "province-11": { th: "สมุย", en: "Koh Samui" },
   "province-12": { th: "พัทยา", en: "Pattaya" },
@@ -60,6 +60,8 @@ interface Tour {
   description?: string;
   isHidden?: boolean;
   historicalBooked: number;
+  rating?: number; 
+  reviewCount?: number; // 🟢 เพิ่มบรรทัดนี้เข้าไปเพื่อให้ TypeScript รู้จัก
 }
 
 interface HomePageProps {
@@ -168,6 +170,20 @@ export default function HomePage({ language }: HomePageProps) {
 
   const t = translations[language].hero;
   const h = translations[language].home;
+
+  const averageRating = useMemo(() => {
+    // กรองเอาเฉพาะทัวร์ที่มีคะแนน rating
+    const toursWithRating = allTours.filter(tour => typeof tour.rating === 'number' && (tour.reviewCount || 0) > 0);
+
+    // ถ้ายังไม่มีข้อมูลรีวิวเลย ให้แสดงค่าเริ่มต้นเป็น 0.0 หรือค่าอื่นตามต้องการ
+    if (toursWithRating.length === 0) return "4.8";
+
+    const totalRating = toursWithRating.reduce((sum, tour) => sum + (tour.rating || 0), 0);
+    const avg = totalRating / toursWithRating.length;
+
+    // ปัดทศนิยมให้เหลือ 1 ตำแหน่ง
+    return avg.toFixed(1);
+  }, [allTours]);
 
   const HERO_BG = "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?q=80&w=2639&auto=format&fit=crop";
 
@@ -286,7 +302,7 @@ export default function HomePage({ language }: HomePageProps) {
               <Star className="w-8 h-8 fill-yellow-500" />
             </div>
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl lg:text-5xl font-black text-gray-900">4.8</span>
+              <span className="text-4xl lg:text-5xl font-black text-gray-900">{averageRating}</span>
               <span className="text-xl font-bold text-gray-400">/5</span>
             </div>
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</h3>
