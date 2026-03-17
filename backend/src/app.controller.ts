@@ -1,11 +1,8 @@
-import { Controller, Get, Post, Body, Res, HttpStatus, UseGuards, Request, Param, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Res, HttpStatus, UseGuards, Request, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from './auth/roles.guard';
-// ✅ Import exec เพิ่มเข้ามาเพื่อใช้สั่งรันคำสั่ง Terminal
-
-
-import { exec } from 'child_process'; 
+import { exec } from 'child_process';
 
 @Controller()
 export class AppController {
@@ -54,16 +51,6 @@ export class AppController {
       minPrice: minPrice ? +minPrice : undefined,
     });
   }
-
-  // 4. ดึงรายละเอียดทัวร์ตาม ID (ใช้ในหน้า TourDetailPage)
-  @Get('tours/:id')
-async getTourDetail(@Param('id') id: string) {
-  const tourId = parseInt(id, 10);
-  if (isNaN(tourId)) {
-    throw new BadRequestException('Invalid Tour ID');
-  }
-  return this.appService.getTourById(tourId);
-}
 
   // ==========================================
   // 🛠 API สำหรับรีเซ็ตฐานข้อมูล (Mock / Clean Data)

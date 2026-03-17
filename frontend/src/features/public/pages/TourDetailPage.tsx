@@ -96,6 +96,12 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
 
   useEffect(() => {
     if (!id) return;
+    // ป้องกัน NaN: ถ้า id ไม่ใช่ตัวเลขให้แสดง error ทันที
+    if (isNaN(Number(id))) {
+      setError('รหัสทัวร์ไม่ถูกต้อง');
+      setLoading(false);
+      return;
+    }
 
     const fetchTourDetail = async () => {
       setLoading(true);

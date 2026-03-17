@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tour } from '../entities/tour.entity';
@@ -69,7 +69,11 @@ export class ToursService {
   }
 
   async findOne(id: string) {
-    const tour = await this.tourRepository.findOne({ where: { id: Number(id) }, relations: ['province'] });
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      throw new BadRequestException(`รหัสทัวร์ไม่ถูกต้อง: "${id}"`);
+    }
+    const tour = await this.tourRepository.findOne({ where: { id: numericId }, relations: ['province'] });
     if (!tour) throw new NotFoundException(`ไม่พบทัวร์รหัส ${id}`);
     return tour;
   }
@@ -124,14 +128,18 @@ export class ToursService {
 
   // 🟢 1. เพิ่มฟังก์ชันสำหรับอัปเดตข้อมูลทัวร์
   async updateTour(id: string, tourData: Partial<Tour>) {
-    const result = await this.tourRepository.update(Number(id), tourData);
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) throw new BadRequestException(`รหัสทัวร์ไม่ถูกต้อง: "${id}"`);
+    const result = await this.tourRepository.update(numericId, tourData);
     if (result.affected === 0) throw new NotFoundException(`ไม่พบทัวร์รหัส ${id} ที่ต้องการแก้ไข`);
-    return this.tourRepository.findOne({ where: { id: Number(id) } });
+    return this.tourRepository.findOne({ where: { id: numericId } });
   }
 
   // 🔴 ฟังก์ชันลบทัวร์
   async deleteTour(id: string) {
-    const result = await this.tourRepository.delete(Number(id));
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) throw new BadRequestException(`รหัสทัวร์ไม่ถูกต้อง: "${id}"`);
+    const result = await this.tourRepository.delete(numericId);
     if (result.affected === 0) {
       throw new NotFoundException(`ไม่พบทัวร์รหัส ${id} ที่ต้องการลบ`);
     }

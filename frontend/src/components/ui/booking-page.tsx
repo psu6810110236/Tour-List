@@ -1,4 +1,4 @@
-  import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
   import { useParams } from "react-router-dom";
   import { ArrowLeft, Calendar, Users, Plus, Minus, ShoppingBag, ArrowRight, AlertCircle, ChevronLeft, ChevronRight, Clock, CheckCircle, XCircle, X, Sparkles } from "lucide-react";
   import type { Tour } from "../../types/index";
@@ -177,6 +177,12 @@
 
     useEffect(() => {
       if (!localTour && params?.id) {
+        // ป้องกัน NaN: ถ้า id ไม่ใช่ตัวเลขให้หยุดทันที
+        if (isNaN(Number(params.id))) {
+          console.error('Invalid tour ID:', params.id);
+          setLoading(false);
+          return;
+        }
         setLoading(true);
         (async () => {
           try {
