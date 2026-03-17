@@ -5,7 +5,6 @@ if (!global.crypto) {
     configurable: true,
   });
 }
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -28,7 +27,6 @@ import { ReviewModule } from './reviews/reviews.module';
 import { ToursModule } from './tours/tours.module';
 import { BookingsModule } from './booking/bookings.module';
 import { UploadModule } from './upload/upload.module';
-
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -44,8 +42,6 @@ import { UploadModule } from './upload/upload.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        // แก้ #3: ปิด synchronize ใน production เพื่อกันข้อมูลหาย
-        // ตอน dev ให้ตั้ง TYPEORM_SYNC=true ใน .env ถ้าต้องการ auto-sync
         synchronize: configService.get<string>('NODE_ENV') !== 'production'
           && configService.get<string>('TYPEORM_SYNC') === 'true',
       }),

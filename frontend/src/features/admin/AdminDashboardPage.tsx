@@ -24,7 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
-  EyeOff
+  EyeOff,
+  AlertTriangle
 } from 'lucide-react';
 import { getLang } from '../../data/mockData';
 import type { Province } from '../../data/mockData';
@@ -89,7 +90,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
   const [popup, setPopup] = useState<{
     isOpen: boolean;
     type: 'alert' | 'confirm';
-    alertType?: 'success' | 'error';
+    alertType?: 'success' | 'error'| 'warning';
     title: string;
     message: string;
     onConfirm?: () => void;
@@ -131,7 +132,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
     fetchAdminData();
   }, []);
 
-  const showAlert = (title: string, message: string, alertType: 'success' | 'error' = 'success') => {
+  const showAlert = (title: string, message: string, alertType: 'success' | 'error' | 'warning' = 'success') => {
     setPopup({ isOpen: true, type: 'alert', alertType, title, message });
   };
   const showConfirm = (title: string, message: string, onConfirm: () => void) => { setPopup({ isOpen: true, type: 'confirm', title, message, onConfirm }); };
@@ -257,7 +258,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
       } catch (error) {
         // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้ทั้งหมด
-        showAlert(language === 'th' ? "ลบได้แค่บางส่วน" : "Partial Success", language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่ครับ" : "Some tours could not be deleted because they have active bookings.");
+        showAlert(language === 'th' ? "ลบได้แค่บางส่วน" : "Partial Success", language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่" : "Some tours could not be deleted because they have active bookings.");
       }
     });
   };
