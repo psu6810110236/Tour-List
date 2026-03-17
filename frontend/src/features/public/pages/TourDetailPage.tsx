@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, Users, Star, Play, Check, X, ChevronDown, ChevronUp, Calendar, MessageSquare } from 'lucide-react';
 
-// 🟢 อย่าลืม import reviewService เข้ามาด้วยนะครับ
 import { tourService, reviewService } from '../../../services/api';
 import { getLang } from '../../../data/mockData';
 import type { Language } from "../../../data/translations";
@@ -12,7 +11,7 @@ import { translations } from "../../../data/translations";
 import { useScrollLock } from '../../../hooks/useScrollLock';
 import { useAuth } from '../../../features/auth/context/AuthContext';
 
-// ✅ Interface สำหรับแผนการเดินทาง (Itinerary)
+// ✅ Interface สำหรับแผนการเดินทาง
 interface ItineraryDay {
   day: number;
   title?: string;
@@ -49,6 +48,28 @@ interface TourDetailPageProps {
   language?: Language;
 }
 
+// 🟢 Component สำหรับซ่อน/แสดงข้อความรีวิวที่ยาวเกินไป
+const ExpandableReviewText = ({ text, language }: { text: string, language: Language }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLongText = text && text.length > 150;
+
+  return (
+    <div>
+      <p className={`text-gray-700 text-sm mt-2 ${!isExpanded && isLongText ? 'line-clamp-3' : ''}`}>
+        {text}
+      </p>
+      {isLongText && (
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-[#00A699] text-xs font-bold mt-1 hover:underline focus:outline-none"
+        >
+          {isExpanded ? (language === 'th' ? 'ย่อข้อความ' : 'Show less') : (language === 'th' ? 'อ่านเพิ่มเติม' : 'Read more')}
+        </button>
+      )}
+    </div>
+  );
+};
+
 export default function TourDetailPage({ language = 'th' }: TourDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -66,13 +87,13 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const [hoverRating, setHoverRating] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [successMsg, setSuccessMsg] = useState(''); // 🟢 State สำหรับโชว์แจ้งเตือนสีเขียว
 
   const t = translations[language].tourDetail;
   const tBook = translations[language].booking;
 
   useScrollLock(showVideo);
 
-  // 🟢 ฟังก์ชันดึงข้อมูลทัวร์จาก Database และดึงรีวิวของจริง
   useEffect(() => {
     if (!id) return;
 
@@ -81,19 +102,16 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
       setError(null);
 
       try {
-        // 1. ดึงข้อมูลทัวร์
         const response = await tourService.getById(id);
         setTour(response.data as unknown as TourDetail);
 
-        // 2. ดึงข้อมูลรีวิวของจริงจาก Backend
         try {
           const reviewsRes = await reviewService.getReviewsByTourId(id);
           setReviews(reviewsRes.data || []);
         } catch (reviewErr) {
           console.error("Error fetching reviews:", reviewErr);
-          setReviews([]); // ถ้าดึงไม่ได้ ให้ตั้งค่าเป็นอาร์เรย์ว่างไว้ก่อน
+          setReviews([]);
         }
-
       } catch (err: unknown) {
         console.error("Error fetching tour details:", err);
         setError("ไม่สามารถโหลดข้อมูลทัวร์ได้");
@@ -105,27 +123,33 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
     fetchTourDetail();
   }, [id]);
 
-  // 🟢 ฟังก์ชันยิง API ส่งรีวิวของจริง
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return alert(language === 'th' ? "กรุณาล็อกอินก่อนรีวิวครับ" : "Please login to review.");
-    if (!newComment.trim()) return alert(language === 'th' ? "กรุณาพิมพ์ความคิดเห็นด้วยครับ" : "Please write a comment.");
+    // 🟢 เปลี่ยนแจ้งเตือนตอนไม่ได้ล็อกอิน หรือ พิมพ์ข้อความว่าง ให้ดูเนียนขึ้น (สามารถใช้ Toast ได้ถ้ามี)
+    if (!user) {
+      alert(language === 'th' ? "กรุณาล็อกอินก่อนรีวิวครับ" : "Please login to review.");
+      return;
+    }
+    if (!newComment.trim()) {
+      alert(language === 'th' ? "กรุณาพิมพ์ความคิดเห็นด้วยครับ" : "Please write a comment.");
+      return;
+    }
 
     setIsSubmittingReview(true);
     try {
       if (id) {
-        // ยิง API บันทึกรีวิวไปที่ Backend
         await reviewService.createReview(id, { rating: newRating, comment: newComment });
-
-        // ดึงข้อมูลรีวิวใหม่มาอัปเดตหน้าจอทันที
         const reviewsRes = await reviewService.getReviewsByTourId(id);
         setReviews(reviewsRes.data || []);
       }
 
-      // ล้างค่าฟอร์ม
       setNewComment('');
       setNewRating(5);
-      alert(language === 'th' ? "ขอบคุณสำหรับรีวิว" : "Thank you for your review");
+      
+      // 🟢 แสดงข้อความสำเร็จแบบ In-page Alert แล้วค่อยปิดไปเอง
+      setSuccessMsg(language === 'th' ? "ขอบคุณสำหรับรีวิวของคุณ!" : "Thank you for your review!");
+      setTimeout(() => setSuccessMsg(''), 4000); 
+
     } catch (error) {
       console.error("Submit review error:", error);
       alert(language === 'th' ? "ส่งรีวิวไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" : "Failed to submit review.");
@@ -332,82 +356,117 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
                 </div>
               </div>
 
-              {/* รายการคอมเมนต์ */}
-              <div className="space-y-4 mb-8">
+              {/* 🟢 1. ย้ายฟอร์มเขียนรีวิวมาไว้ตรงนี้ (ก่อนรายการคอมเมนต์) */}
+              <div className="mb-8">
+                {user ? (
+                  <div className="bg-[#00A699]/5 p-6 rounded-2xl border border-[#00A699]/20 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#00A699]/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                    
+                    <h3 className="font-bold text-[#00A699] mb-4 text-lg">{language === 'th' ? 'แชร์ประสบการณ์ของคุณ' : 'Write a Review'}</h3>
+                    
+                    {/* 🟢 แจ้งเตือนเมื่อส่งรีวิวสำเร็จ */}
+                    {successMsg && (
+                      <div className="bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-xl mb-4 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                        <Check className="w-5 h-5 text-green-600" />
+                        <span className="font-medium">{successMsg}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSubmitReview} className="relative z-10">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="text-sm font-semibold text-gray-700">{language === 'th' ? 'ให้คะแนนความพึงพอใจ:' : 'Rating:'}</span>
+                        <div className="flex gap-1 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
+                          {Array.from({ length: 5 }).map((_, i) => {
+                            const starValue = i + 1;
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setNewRating(starValue)}
+                                onMouseEnter={() => setHoverRating(starValue)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                className="focus:outline-none transition-transform hover:scale-110"
+                              >
+                                <Star className={`w-6 h-6 transition-colors ${starValue <= (hoverRating || newRating) ? 'text-yellow-400 fill-current drop-shadow-sm' : 'text-gray-200'}`} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder={language === 'th' ? "ทัวร์นี้ประทับใจอะไรบ้าง? ไกด์น่ารักไหม? แชร์ให้เพื่อนๆ รู้เลย..." : "Share your experience with others..."}
+                        className="w-full p-4 bg-white border border-gray-200 rounded-xl mb-4 outline-none focus:border-[#00A699] focus:ring-2 focus:ring-[#00A699]/20 transition-all resize-none text-sm placeholder-gray-400 shadow-inner"
+                        rows={3}
+                        required
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSubmittingReview || !newComment.trim()}
+                        className="bg-[#00A699] hover:bg-[#008c81] text-white px-8 py-3 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-[#00A699]/20 flex items-center gap-2"
+                      >
+                        {isSubmittingReview ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            {language === 'th' ? 'กำลังส่ง...' : 'Submitting...'}
+                          </>
+                        ) : (
+                          <>
+                            {language === 'th' ? 'ส่งรีวิวเลย' : 'Submit Review'}
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="text-center p-8 bg-gray-50 border border-gray-100 rounded-2xl flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400">
+                      <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <p className="text-gray-500 text-sm font-medium">
+                      {language === 'th' ? 'อยากแชร์ประสบการณ์ใช่ไหม? เข้าสู่ระบบเพื่อเขียนรีวิวเลย' : 'Want to share your experience? Please log in.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 🟢 2. รายการคอมเมนต์ (อยู่ข้างล่างฟอร์มแล้ว) */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-800 border-b pb-2 mb-4">{language === 'th' ? 'รีวิวล่าสุด' : 'Recent Reviews'}</h3>
                 {reviews.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-2xl border border-dashed">
-                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <div className="text-center py-10 text-gray-400 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                    <Star className="w-8 h-8 mx-auto mb-3 opacity-20" />
                     <p>{language === 'th' ? 'ยังไม่มีรีวิวสำหรับทัวร์นี้ เป็นคนแรกที่รีวิวสิ!' : 'No reviews yet. Be the first!'}</p>
                   </div>
                 ) : (
                   reviews.map((review) => (
-                    <div key={review.id} className="p-5 bg-gray-50 rounded-2xl border border-gray-100 transition hover:shadow-md hover:bg-white">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <div className="font-bold text-gray-900">{review.user?.fullName || 'ไม่ระบุตัวตน'}</div>
-                          <div className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString('th-TH')}</div>
+                    <div key={review.id} className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm transition hover:shadow-md">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-[#00A699]/20 to-[#00A699]/5 rounded-full flex items-center justify-center text-[#00A699] font-bold text-lg">
+                            {(review.user?.fullName || 'G')[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900">{review.user?.fullName || 'ไม่ระบุตัวตน'}</div>
+                            <div className="text-xs text-gray-500 font-medium">{new Date(review.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                          </div>
                         </div>
-                        <div className="flex text-yellow-400">
+                        <div className="flex bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+                            <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                           ))}
                         </div>
                       </div>
-                      <p className="text-gray-700 text-sm mt-2">{review.comment}</p>
+                      
+                      {/* 🟢 3. เรียกใช้ตัวช่วยซ่อนข้อความยาวๆ แทนแท็ก p แบบเดิม */}
+                      <ExpandableReviewText text={review.comment} language={language} />
+                      
                     </div>
                   ))
                 )}
               </div>
-
-              {/* ฟอร์มเขียนรีวิว (โชว์เมื่อล็อกอินแล้วเท่านั้น) */}
-              {user ? (
-                <div className="bg-[#00A699]/5 p-6 rounded-2xl border border-[#00A699]/20">
-                  <h3 className="font-bold text-[#00A699] mb-4">{language === 'th' ? 'เขียนรีวิวของคุณ' : 'Write a Review'}</h3>
-                  <form onSubmit={handleSubmitReview}>
-                    {/* เลือกดาว */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-sm font-semibold text-gray-600">{language === 'th' ? 'ให้คะแนน:' : 'Rating:'}</span>
-                      <div className="flex gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => {
-                          const starValue = i + 1;
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => setNewRating(starValue)}
-                              onMouseEnter={() => setHoverRating(starValue)}
-                              onMouseLeave={() => setHoverRating(0)}
-                              className="focus:outline-none transition-transform hover:scale-110"
-                            >
-                              <Star className={`w-6 h-6 transition-colors ${starValue <= (hoverRating || newRating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {/* ช่องพิมพ์คอมเมนต์ */}
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder={language === 'th' ? "ประทับใจอะไรบ้าง? แชร์ประสบการณ์ของคุณเลย..." : "Share your experience..."}
-                      className="w-full p-4 bg-white border border-gray-200 rounded-xl mb-4 outline-none focus:border-[#00A699] focus:ring-2 focus:ring-[#00A699]/20 transition-all resize-none text-sm"
-                      rows={3}
-                      required
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSubmittingReview || !newComment.trim()}
-                      className="bg-[#00A699] hover:bg-[#008c81] text-white px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-50 shadow-sm"
-                    >
-                      {isSubmittingReview ? (language === 'th' ? 'กำลังส่ง...' : 'Submitting...') : (language === 'th' ? 'ส่งรีวิว' : 'Submit Review')}
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <div className="text-center p-6 bg-gray-50 border rounded-2xl text-gray-500 text-sm">
-                  {language === 'th' ? 'กรุณาเข้าสู่ระบบเพื่อเขียนรีวิว' : 'Please log in to write a review.'}
-                </div>
-              )}
             </div>
             {/* ================= จบส่วนรีวิว ================= */}
 
