@@ -17,15 +17,15 @@ import { tourService } from "../../../services/api";
 
 // Map provinceId → ชื่อจังหวัดภาษาไทย (fallback กรณี API ไม่ส่ง province object มา)
 const PROVINCE_ID_TO_NAME: Record<string, { th: string; en: string }> = {
-  "province-1":  { th: "กรุงเทพมหานคร", en: "Bangkok" },
-  "province-2":  { th: "เชียงใหม่", en: "Chiang Mai" },
-  "province-3":  { th: "ภูเก็ต", en: "Phuket" },
-  "province-4":  { th: "กระบี่", en: "Krabi" },
-  "province-5":  { th: "สุราษฎร์ธานี", en: "Surat Thani" },
-  "province-6":  { th: "เชียงราย", en: "Chiang Rai" },
-  "province-7":  { th: "กาญจนบุรี", en: "Kanchanaburi" },
-  "province-8":  { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
-  "province-9":  { th: "ขอนแก่น", en: "Khon Kaen" },
+  "province-1": { th: "กรุงเทพมหานคร", en: "Bangkok" },
+  "province-2": { th: "เชียงใหม่", en: "Chiang Mai" },
+  "province-3": { th: "ภูเก็ต", en: "Phuket" },
+  "province-4": { th: "กระบี่", en: "Krabi" },
+  "province-5": { th: "สุราษฎร์ธานี", en: "Surat Thani" },
+  "province-6": { th: "เชียงราย", en: "Chiang Rai" },
+  "province-7": { th: "กาญจนบุรี", en: "Kanchanaburi" },
+  "province-8": { th: "นครราชสีมา", en: "Nakhon Ratchasima" },
+  "province-9": { th: "ขอนแก่น", en: "Khon Kaen" },
   "province-10": { th: "อยุธยา", en: "Ayutthaya" },
   "province-11": { th: "สมุย", en: "Koh Samui" },
   "province-12": { th: "พัทยา", en: "Pattaya" },
@@ -59,6 +59,7 @@ interface Tour {
   description?: string;
   isHidden?: boolean;
   historicalBooked: number;
+  rating?: number; // ✨ เพิ่มบรรทัดนี้
 }
 
 interface HomePageProps {
@@ -167,7 +168,12 @@ export default function HomePage({ language }: HomePageProps) {
 
   const t = translations[language].hero;
   const h = translations[language].home;
+  const ratedTours = allTours.filter(tour => tour.rating && Number(tour.rating) > 0);
 
+  // คำนวณจากจำนวนทัวร์ที่มีคะแนนเท่านั้น
+  const averageRating = ratedTours.length > 0
+    ? (ratedTours.reduce((sum, tour) => sum + Number(tour.rating), 0) / ratedTours.length).toFixed(1)
+    : "0.0"; // ถ้าไม่มีทัวร์ไหนมีรีวิวเลย ให้แสดงเป็น 0.0 (หรือจะเปลี่ยนเป็น "5.0" / "-" ก็ได้ครับ)
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden relative">
 
@@ -193,18 +199,7 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
 
         {/* ปุ่มเปลี่ยนรูปซ้าย-ขวา */}
-        <button
-          onClick={() => setHeroSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length)}
-          className="absolute left-4 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setHeroSlide((prev) => (prev + 1) % heroImages.length)}
-          className="absolute right-4 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
-        >
-          <ArrowRight className="w-5 h-5" />
-        </button>
+
 
         <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center relative z-10 px-4">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-xs md:text-sm font-medium mb-10 text-white/90 tracking-wide shadow-inner">
@@ -284,7 +279,8 @@ export default function HomePage({ language }: HomePageProps) {
               <Star className="w-8 h-8 fill-yellow-500" />
             </div>
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-4xl lg:text-5xl font-black text-gray-900">4.8</span>
+              {/* ✨ เปลี่ยนจาก 4.8 เป็น {averageRating} */}
+              <span className="text-4xl lg:text-5xl font-black text-gray-900">{averageRating}</span>
               <span className="text-xl font-bold text-gray-400">/5</span>
             </div>
             <h3 className="text-lg font-bold text-gray-800">{language === 'th' ? 'คะแนนรีวิวเฉลี่ย' : 'Average Rating'}</h3>
@@ -331,7 +327,8 @@ export default function HomePage({ language }: HomePageProps) {
               return (
                 <div
                   key={tour.id}
-                  className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden"
+                  onClick={() => onNavigate("tour", tour.id as any)}
+                  className="bg-white rounded-[1.5rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col group overflow-hidden cursor-pointer"
                 >
                   <div className="relative h-56 overflow-hidden bg-[#00A699]">
                     <img

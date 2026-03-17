@@ -96,15 +96,6 @@ function AppContent() {
   const [language, setLanguage] = useState<'th' | 'en'>('th');
   const [bookingData, setBookingData] = useState<any>(null);
 
-  // ✅ 1. ดึงค่าจาก localStorage ถ้าไม่มีค่า (เข้าเว็บครั้งแรก) จะเซ็ตเป็น true ให้เด้งทันที
-  const [showTutorial, setShowTutorial] = useState(() => {
-    return !localStorage.getItem("roamhub_tutorial_seen_v1");
-  });
-  
-  const [showLanguageFirst, setShowLanguageFirst] = useState(() => {
-    return !localStorage.getItem("roamhub_tutorial_seen_v1");
-  });
-
   const { cartItems, toggleDrawer, clearCart, addToCart } = useCart();
   const totalItems = cartItems.length;
 
@@ -118,17 +109,30 @@ function AppContent() {
   }, []);
 
   // ✅ 2. ทันทีที่ Modal ถูกสั่งให้แสดง จะบันทึกข้อมูลไว้ในเครื่องทันทีว่า "เคยเห็นแล้วนะ"
-  useEffect(() => {
-    if (showTutorial) {
-      localStorage.setItem("roamhub_tutorial_seen_v1", "true");
-    }
-  }, [showTutorial]);
 
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
   const isAdminRoute = location.pathname.startsWith('/admin');
   const showNavbar = !isAuthPage && !isAdminRoute;
   const showChatWidget = !isAuthPage && !isAdminRoute && user?.role?.toUpperCase() !== 'ADMIN';
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showLanguageFirst, setShowLanguageFirst] = useState(true);
+  useEffect(() => {
+    // 1. สร้าง Key โดยใช้ ID ของ User (ถ้าไม่ได้ล็อกอิน ให้ใช้คำว่า guest)
+    const storageKey = `roamhub_tutorial_seen_${user?.id || 'guest'}`;
+    const hasSeenTutorial = localStorage.getItem(storageKey);
+    
+    // 2. ถ้าไม่เคยดู + ไม่ใช่หน้า Login/Register + ไม่ใช่หน้า Admin
+    if (!hasSeenTutorial && !isAuthPage && !isAdminRoute) {
+      // 3. หน่วงเวลา 500ms (ครึ่งวินาที) เพื่อรอให้หน้าเว็บเปลี่ยนเสร็จก่อน ค่อยให้ Modal เด้งขึ้นมาสวยๆ
+      const timer = setTimeout(() => {
+        setShowTutorial(true);
+        setShowLanguageFirst(true);
+        localStorage.setItem(storageKey, "true");
+      }, 500);
 
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthPage, isAdminRoute, user?.id, location.pathname]);
   const getCurrentPage = () => {
     const path = location.pathname;
     if (path === '/' || path.startsWith('/tour')) return 'home';
@@ -183,7 +187,7 @@ function AppContent() {
 
   // ✅ ฟังก์ชันเปิด Tutorial (กรณีผู้ใช้กดปุ่มเองที่ Navigation)
   const handleShowTutorial = () => {
-    setShowLanguageFirst(false);
+    setShowLanguageFirst(true); 
     setShowTutorial(true);
   };
 

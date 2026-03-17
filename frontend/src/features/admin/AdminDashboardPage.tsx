@@ -85,7 +85,14 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
   // State สำหรับระบบค้นหาจังหวัด
   const [isProvinceOpen, setIsProvinceOpen] = useState(false);
   const [provinceSearch, setProvinceSearch] = useState('');
-
+  // State สำหรับ Prompt รับเหตุผล (แทน window.prompt)
+  const [promptState, setPromptState] = useState<{
+    isOpen: boolean;
+    title: string;
+    placeholder: string;
+    value: string;
+    onSubmit?: (val: string) => void;
+  }>({ isOpen: false, title: '', placeholder: '', value: '' });
   // State สำหรับ Popup
   const [popup, setPopup] = useState<{
     isOpen: boolean;
@@ -95,7 +102,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
     message: string;
     onConfirm?: () => void;
   }>({ isOpen: false, type: 'alert', title: '', message: '' });
-
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   // 🌟 เพิ่มฟิลด์ใหม่: vehicleType, maxCapacity, tripType, tripDays, availableDates
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
@@ -157,20 +164,35 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
   };
 
   const handleRejectBooking = (bookingId: string) => {
-    const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธการจอง (เช่น ทัวร์เต็ม):" : "Please enter rejection reason (e.g., Tour is full):");
-    if (reason === null) return;
+    setPromptState({
+      isOpen: true,
+      title: language === 'th' ? 'เหตุผลที่ปฏิเสธการจอง' : 'Rejection Reason',
+      placeholder: language === 'th' ? 'เช่น ทัวร์เต็ม, ลูกค้ากรอกข้อมูลผิด...' : 'e.g., Tour is full, wrong info...',
+      value: '',
+      onSubmit: (reason) => {
+        showConfirm(
+          language === 'th' ? "ยืนยันการปฏิเสธการจอง" : "Confirm Rejection",
+          language === 'th' ? `คุณต้องการปฏิเสธการจอง ${bookingId} ใช่หรือไม่?` : `Reject booking ${bookingId}?`,
+          async () => {
+            // อัปเดต UI ให้เปลี่ยนสถานะทันที (Optimistic Update)
+            setBookingsList((prev) => prev.map((booking) =>
+              booking.id === bookingId ? { ...booking, status: 'REJECTED', paymentStatus: 'failed' } as any : booking
+            ));
 
-    showConfirm(language === 'th' ? "ยืนยันการปฏิเสธการจอง" : "Confirm Rejection", language === 'th' ? `คุณต้องการปฏิเสธการจอง ${bookingId} ใช่หรือไม่?` : `Reject booking ${bookingId}?`, async () => {
-      try {
-        await Promise.all([
-          bookingService.updateBookingStatus(bookingId, 'rejected', reason),
-          bookingService.updatePaymentStatus(bookingId, 'failed', reason)
-        ]);
-        fetchAdminData();
-        setSelectedBooking(null);
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธการจองเรียบร้อยแล้ว" : "Booking rejected.");
-      } catch (error) {
-        closePopup();
+            try {
+              await Promise.all([
+                bookingService.updateBookingStatus(bookingId, 'REJECTED', reason),
+                bookingService.updatePaymentStatus(bookingId, 'FAILED', reason)
+              ]);
+              fetchAdminData();
+              setSelectedBooking(null);
+              showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธการจองเรียบร้อยแล้ว" : "Booking rejected.");
+            } catch (error) {
+              await fetchAdminData();
+              closePopup();
+            }
+          }
+        );
       }
     });
   };
@@ -201,29 +223,28 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
     });
   };
   const handleRejectPayment = (bookingId: string) => {
-    const reason = window.prompt(language === 'th' ? "กรุณากรอกเหตุผลที่ปฏิเสธสลิป (เช่น ยอดเงินไม่ตรง):" : "Please enter rejection reason (e.g., Invalid amount):");
-    if (reason === null) return;
-
-    showConfirm(language === 'th' ? "ปฏิเสธสลิปและยกเลิก" : "Reject Payment & Booking", language === 'th' ? `สลิปไม่ถูกต้อง ปฏิเสธยอดเงินและยกเลิกการจองใช่หรือไม่?` : `Slip invalid, reject payment and cancel booking?`, async () => {
-
-      // เปลี่ยนเป็น REJECTED
-      setBookingsList((prev) => prev.map((booking) =>
-        booking.id === bookingId
-          ? { ...booking, status: 'REJECTED', paymentStatus: 'failed' } as any
-          : booking
-      ));
-
-      try {
-        await Promise.all([
-          bookingService.updatePaymentStatus(bookingId, 'FAILED', reason),
-          bookingService.updateBookingStatus(bookingId, 'REJECTED', reason) // 🟢 จุดที่แก้! ส่งคำว่า REJECTED ไป
-        ]);
-
-        setSelectedBooking(null);
-        showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธสลิปและยกเลิกการจองแล้ว" : "Payment rejected and booking cancelled.");
-      } catch (error) {
-        await fetchAdminData();
-        closePopup();
+    setPromptState({
+      isOpen: true,
+      title: language === 'th' ? 'เหตุผลที่ปฏิเสธสลิป' : 'Rejection Reason',
+      placeholder: language === 'th' ? 'เช่น ยอดเงินไม่ตรง, สลิปไม่ชัดเจน...' : 'e.g., Invalid amount, fake slip...',
+      value: '',
+      onSubmit: (reason) => {
+        showConfirm(language === 'th' ? "ปฏิเสธสลิปและยกเลิก" : "Reject Payment & Booking", language === 'th' ? `สลิปไม่ถูกต้อง ปฏิเสธยอดเงินและยกเลิกการจองใช่หรือไม่?` : `Slip invalid, reject payment and cancel booking?`, async () => {
+          setBookingsList((prev) => prev.map((booking) =>
+            booking.id === bookingId ? { ...booking, status: 'REJECTED', paymentStatus: 'failed' } as any : booking
+          ));
+          try {
+            await Promise.all([
+              bookingService.updatePaymentStatus(bookingId, 'FAILED', reason),
+              bookingService.updateBookingStatus(bookingId, 'REJECTED', reason)
+            ]);
+            setSelectedBooking(null);
+            showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ปฏิเสธสลิปและยกเลิกการจองแล้ว" : "Payment rejected and booking cancelled.");
+          } catch (error) {
+            await fetchAdminData();
+            closePopup();
+          }
+        });
       }
     });
   };
@@ -257,8 +278,12 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
         setSelectedTourIds([]); fetchAdminData();
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบรายการที่เลือกเรียบร้อยแล้ว" : "Selected items deleted.");
       } catch (error) {
-        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้ทั้งหมด
-        showAlert(language === 'th' ? "ลบได้แค่บางส่วน" : "Partial Success", language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่" : "Some tours could not be deleted because they have active bookings.");
+        // ✨ ใส่ 'error' เป็นตัวแปรที่ 3
+        showAlert(
+          language === 'th' ? "ไม่สามารถลบได้ทั้งหมด" : "Cannot Delete All",
+          language === 'th' ? "บางทัวร์ไม่สามารถลบได้ เนื่องจากมีประวัติการจองของลูกค้าค้างอยู่ครับ" : "Some tours could not be deleted because they have active bookings.",
+          'error'
+        );
       }
     });
   };
@@ -360,8 +385,12 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
         await tourService.deleteTour(id); fetchAdminData();
         showAlert(language === 'th' ? "สำเร็จ" : "Success", language === 'th' ? "ลบทัวร์เรียบร้อยแล้ว" : "Tour deleted successfully.");
       } catch (error) {
-        // 🟢 เปลี่ยนข้อความให้แอดมินรู้ว่าทำไมถึงลบไม่ได้
-        showAlert(language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Cannot Delete", language === 'th' ? "ทัวร์นี้มีการจองของลูกค้าค้างอยู่ กรุณาไปลบการจองในแท็บ 'การจอง' ให้หมดก่อนครับ" : "Please delete all bookings associated with this tour first.");
+        // ✨ ใส่ 'error' เป็นตัวแปรที่ 3 
+        showAlert(
+          language === 'th' ? "ไม่สามารถลบทัวร์ได้" : "Cannot Delete",
+          language === 'th' ? "ทัวร์นี้มีการจองของลูกค้าค้างอยู่ กรุณาไปลบการจองในแท็บ 'การจอง' ให้หมดก่อนครับ" : "Please delete all bookings associated with this tour first.",
+          'error'
+        );
       }
     });
   };
@@ -927,7 +956,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                       })()}
                     </div>
 
-                    <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => window.open(booking.paymentSlip, '_blank')}>
+                    <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => { if (booking.paymentSlip) setPreviewImage(booking.paymentSlip); }}>
                       {booking.paymentSlip ? (
                         <>
                           <img src={booking.paymentSlip} alt="slip" className="w-full h-full object-cover" />
@@ -1582,6 +1611,32 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
               <div><span className="text-gray-500 block mb-1">จำนวนผู้เดินทาง:</span> <div className="font-medium text-gray-900">{selectedBooking.travelers} ท่าน</div></div>
               <div><span className="text-gray-500 block mb-1">ยอดรวมสุทธิ:</span> <div className="font-black text-[#00A699] text-lg">฿{selectedBooking.totalPrice?.toLocaleString()}</div></div>
             </div>
+            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 mb-8">
+              <h3 className="font-bold text-gray-900 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#00A699]" />
+                {language === 'th' ? 'ข้อมูลผู้ติดต่อ (Contact Info)' : 'Contact Info'}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block mb-1">{language === 'th' ? 'ชื่อ-สกุล:' : 'Name:'}</span>
+                  <div className="font-semibold text-gray-900">{selectedBooking.contactName || selectedBooking.user?.fullName || '-'}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500 block mb-1">{language === 'th' ? 'เบอร์โทรศัพท์:' : 'Phone:'}</span>
+                  <div className="font-semibold text-gray-900">{selectedBooking.phone || selectedBooking.user?.phone || '-'}</div>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500 block mb-1">{language === 'th' ? 'อีเมล:' : 'Email:'}</span>
+                  <div className="font-semibold text-gray-900">{selectedBooking.email || selectedBooking.user?.email || '-'}</div>
+                </div>
+                {selectedBooking.specialRequests && (
+                  <div className="md:col-span-2 bg-white p-3 rounded-xl border border-gray-200 mt-2">
+                    <span className="text-gray-500 block mb-1">{language === 'th' ? 'คำขอพิเศษ:' : 'Special Requests:'}</span>
+                    <div className="font-medium text-gray-900">{selectedBooking.specialRequests}</div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="space-y-4">
               {selectedBooking.status?.toLowerCase() === 'pending' && (
@@ -1600,7 +1655,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                   <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5" /> 2. ตรวจสอบสลิปเงิน (Payment Verification)</h4>
                   {selectedBooking.paymentSlip ? (
                     <div className="mb-4">
-                      <img src={selectedBooking.paymentSlip} alt="slip" className="w-full max-h-48 object-contain bg-white border rounded-xl cursor-pointer hover:border-blue-400" onClick={() => window.open(selectedBooking.paymentSlip, '_blank')} />
+                      <img src={selectedBooking.paymentSlip} alt="slip" className="w-full max-h-48 object-contain bg-white border rounded-xl cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.02]" onClick={() => setPreviewImage(selectedBooking.paymentSlip)} />
                       <p className="text-xs text-center text-blue-600 mt-2">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
                     </div>
                   ) : (
@@ -1632,8 +1687,8 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200 border border-gray-100">
             <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 ${popup.type === 'confirm' ? 'bg-orange-50 border-orange-100 text-[#FF6B4A]' :
-                popup.alertType === 'error' ? 'bg-red-50 border-red-100 text-red-500' : // 🔴 ถ้าเป็น error ให้ใช้สีแดง
-                  'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]' // 🟢 นอกนั้นใช้สีเขียว
+              popup.alertType === 'error' ? 'bg-red-50 border-red-100 text-red-500' : // 🔴 ถ้าเป็น error ให้ใช้สีแดง
+                'bg-[#00A699]/10 border-[#00A699]/20 text-[#00A699]' // 🟢 นอกนั้นใช้สีเขียว
               }`}>
               {popup.type === 'confirm' ? <AlertCircle className="w-10 h-10" /> :
                 popup.alertType === 'error' ? <XCircle className="w-10 h-10" /> : // 🔴 ถ้าเป็น error ให้โชว์กากบาท
@@ -1652,6 +1707,57 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                 className={`flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg ${popup.type === 'confirm' ? 'bg-[#FF6B4A] hover:bg-[#ff5232] shadow-orange-200' : 'bg-[#00A699] hover:bg-[#008c81] shadow-[#00A699]/30'}`}
               >
                 {popup.type === 'confirm' ? (language === 'th' ? 'ยืนยัน' : 'Confirm') : (language === 'th' ? 'ตกลง' : 'OK')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 4. Custom Prompt Modal (แทนที่ window.prompt) */}
+      {promptState.isOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 animate-in zoom-in-95 duration-200 border border-gray-100 relative">
+            <button
+              onClick={() => setPromptState(prev => ({ ...prev, isOpen: false }))}
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 transition bg-gray-100 hover:bg-gray-200 rounded-full p-2"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+
+            <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-6 shadow-sm border-4 bg-red-50 border-red-100 text-red-500">
+              <MessageSquare className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-2xl font-extrabold text-gray-900 mb-2 text-center">{promptState.title}</h3>
+            <p className="text-gray-500 mb-6 text-center text-sm">
+              {language === 'th' ? 'กรุณาระบุเหตุผลเพื่อให้ลูกค้าทราบถึงข้อผิดพลาด' : 'Please provide a reason for the customer.'}
+            </p>
+
+            <textarea
+              className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none resize-none transition text-sm bg-gray-50 mb-6 h-32"
+              placeholder={promptState.placeholder}
+              value={promptState.value}
+              onChange={(e) => setPromptState(prev => ({ ...prev, value: e.target.value }))}
+              autoFocus
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPromptState(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl font-bold active:scale-95 transition"
+              >
+                {language === 'th' ? 'ยกเลิก' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => {
+                  if (promptState.value.trim() && promptState.onSubmit) {
+                    promptState.onSubmit(promptState.value.trim());
+                    setPromptState(prev => ({ ...prev, isOpen: false, value: '' }));
+                  }
+                }}
+                disabled={!promptState.value.trim()}
+                className="flex-1 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition shadow-lg bg-red-500 hover:bg-red-600 shadow-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {language === 'th' ? 'ยืนยัน' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -1714,6 +1820,25 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-4xl w-full flex flex-col items-center">
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-12 right-0 md:-right-12 text-white hover:text-gray-300 transition p-2"
+            >
+              <XCircle className="w-8 h-8" />
+            </button>
+            <img
+              src={previewImage}
+              alt="Payment Slip Preview"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}

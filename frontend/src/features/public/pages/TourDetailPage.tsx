@@ -184,7 +184,7 @@ export default function TourDetailPage({ language = 'th' }: TourDetailPageProps)
   const currentItinerary = tour.itinerary || [];
   const currentIncluded = language === 'th' && tour.included_th && tour.included_th.length > 0 ? tour.included_th : (tour.included || []);
   const currentNotIncluded = language === 'th' && tour.notIncluded_th && tour.notIncluded_th.length > 0 ? tour.notIncluded_th : (tour.notIncluded || []);
-
+  
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       {/* --- Hero Section --- */}
