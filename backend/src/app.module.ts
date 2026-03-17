@@ -37,29 +37,32 @@ import { UploadModule } from './upload/upload.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        // 🟢 ดึงค่า DATABASE_URL (ลิงก์ยาวๆ จาก Render) มาใช้งาน
-        const databaseUrl = configService.get<string>('DATABASE_URL');
+        // 🟢 สั่งดึงค่าแบบดุดัน ชัวร์ 100% ว่าทะลุมาแน่นอน
+        const databaseUrl = process.env.DATABASE_URL || configService.get<string>('DATABASE_URL');
         
+        // 🟢 ปริ้นท์เช็คใน Log ไปเลยว่ามันเจอไหม (ถ้าเจอจะขึ้น FOUND)
+        console.log('📌 CHECKING DATABASE URL:', databaseUrl ? '✅ FOUND' : '❌ MISSING');
+
+        if (databaseUrl) {
+          return {
+            type: 'postgres',
+            url: databaseUrl,
+            ssl: { rejectUnauthorized: false }, // บังคับ SSL บน Cloud
+            autoLoadEntities: true,
+            synchronize: true, 
+          };
+        }
+
+        // ถ้าไม่เจอจริงๆ ค่อยกลับไปใช้ Localhost
         return {
           type: 'postgres',
-          // 🟢 ตรรกะใหม่: ถ้ามี DATABASE_URL ให้ใช้เลย และบังคับเปิด SSL (จำเป็นสำหรับ Cloud)
-          // แต่ถ้าไม่มี (แปลว่ารันบนเครื่องตัวเอง) ก็ให้ดึงค่า DB_HOST, DB_PORT จาก .env เหมือนเดิม
-          ...(databaseUrl
-            ? {
-                url: databaseUrl,
-                ssl: { rejectUnauthorized: false }, // 🟢 สำคัญมาก: Render บังคับใช้ SSL
-              }
-            : {
-                host: configService.get<string>('DB_HOST'),
-                port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
-                username: configService.get<string>('DB_USERNAME'),
-                password: configService.get<string>('DB_PASSWORD'),
-                database: configService.get<string>('DB_NAME'),
-              }),
+          host: configService.get<string>('DB_HOST'),
+          port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
+          username: configService.get<string>('DB_USERNAME'),
+          password: configService.get<string>('DB_PASSWORD'),
+          database: configService.get<string>('DB_NAME'),
           autoLoadEntities: true,
-          
-          // 🟢 บังคับ true ไปก่อนครับ เพื่อให้ TypeORM สร้างตารางลงในฐานข้อมูล Render ให้อัตโนมัติ
-          synchronize: true, 
+          synchronize: true,
         };
       },
     }),
