@@ -199,18 +199,7 @@ export default function HomePage({ language }: HomePageProps) {
         </div>
 
         {/* ปุ่มเปลี่ยนรูปซ้าย-ขวา */}
-        <button
-          onClick={() => setHeroSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length)}
-          className="absolute left-4 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setHeroSlide((prev) => (prev + 1) % heroImages.length)}
-          className="absolute right-4 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
-        >
-          <ArrowRight className="w-5 h-5" />
-        </button>
+        
 
         <div className="max-w-4xl mx-auto animate-in fade-in zoom-in duration-1000 slide-in-from-bottom-6 text-center relative z-10 px-4">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-xs md:text-sm font-medium mb-10 text-white/90 tracking-wide shadow-inner">
