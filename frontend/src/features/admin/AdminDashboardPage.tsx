@@ -94,7 +94,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
     message: string;
     onConfirm?: () => void;
   }>({ isOpen: false, type: 'alert', title: '', message: '' });
-
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   // 🌟 เพิ่มฟิลด์ใหม่: vehicleType, maxCapacity, tripType, tripDays, availableDates
   const initialTourForm: Partial<Tour> = {
     id: '', name: '', name_th: '', description: '', description_th: '',
@@ -934,7 +934,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                       })()}
                     </div>
 
-                    <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => window.open(booking.paymentSlip, '_blank')}>
+                    <div className="bg-gray-100 rounded-xl mb-4 overflow-hidden h-40 flex items-center justify-center cursor-pointer border hover:border-gray-300 transition relative group" onClick={() => { if (booking.paymentSlip) setPreviewImage(booking.paymentSlip); }}>
                       {booking.paymentSlip ? (
                         <>
                           <img src={booking.paymentSlip} alt="slip" className="w-full h-full object-cover" />
@@ -1589,6 +1589,32 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
               <div><span className="text-gray-500 block mb-1">จำนวนผู้เดินทาง:</span> <div className="font-medium text-gray-900">{selectedBooking.travelers} ท่าน</div></div>
               <div><span className="text-gray-500 block mb-1">ยอดรวมสุทธิ:</span> <div className="font-black text-[#00A699] text-lg">฿{selectedBooking.totalPrice?.toLocaleString()}</div></div>
             </div>
+            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 mb-8">
+              <h3 className="font-bold text-gray-900 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#00A699]" />
+                {language === 'th' ? 'ข้อมูลผู้ติดต่อ (Contact Info)' : 'Contact Info'}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500 block mb-1">{language === 'th' ? 'ชื่อ-สกุล:' : 'Name:'}</span>
+                  <div className="font-semibold text-gray-900">{selectedBooking.contactName || selectedBooking.user?.fullName || '-'}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500 block mb-1">{language === 'th' ? 'เบอร์โทรศัพท์:' : 'Phone:'}</span>
+                  <div className="font-semibold text-gray-900">{selectedBooking.phone || selectedBooking.user?.phone || '-'}</div>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="text-gray-500 block mb-1">{language === 'th' ? 'อีเมล:' : 'Email:'}</span>
+                  <div className="font-semibold text-gray-900">{selectedBooking.email || selectedBooking.user?.email || '-'}</div>
+                </div>
+                {selectedBooking.specialRequests && (
+                  <div className="md:col-span-2 bg-white p-3 rounded-xl border border-gray-200 mt-2">
+                    <span className="text-gray-500 block mb-1">{language === 'th' ? 'คำขอพิเศษ:' : 'Special Requests:'}</span>
+                    <div className="font-medium text-gray-900">{selectedBooking.specialRequests}</div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="space-y-4">
               {selectedBooking.status?.toLowerCase() === 'pending' && (
@@ -1607,7 +1633,7 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                   <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2"><DollarSign className="w-5 h-5" /> 2. ตรวจสอบสลิปเงิน (Payment Verification)</h4>
                   {selectedBooking.paymentSlip ? (
                     <div className="mb-4">
-                      <img src={selectedBooking.paymentSlip} alt="slip" className="w-full max-h-48 object-contain bg-white border rounded-xl cursor-pointer hover:border-blue-400" onClick={() => window.open(selectedBooking.paymentSlip, '_blank')} />
+                      <img src={selectedBooking.paymentSlip} alt="slip" className="w-full max-h-48 object-contain bg-white border rounded-xl cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.02]" onClick={() => setPreviewImage(selectedBooking.paymentSlip)} />
                       <p className="text-xs text-center text-blue-600 mt-2">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
                     </div>
                   ) : (
@@ -1721,6 +1747,25 @@ export function AdminDashboard({ onNavigate, language, setLanguage }: AdminDashb
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-4xl w-full flex flex-col items-center">
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-12 right-0 md:-right-12 text-white hover:text-gray-300 transition p-2"
+            >
+              <XCircle className="w-8 h-8" />
+            </button>
+            <img
+              src={previewImage}
+              alt="Payment Slip Preview"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}
