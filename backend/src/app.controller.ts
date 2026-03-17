@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Res, HttpStatus, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Res, HttpStatus, UseGuards, Request } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from './auth/roles.guard';
@@ -38,19 +38,8 @@ export class AppController {
     return await this.appService.getAllTours();
   }
 
-  // 3. ระบบค้นหาและตัวกรอง (ใช้ในหน้า ProvincePage)
-  @Get('api/tours/search')
-  async searchTours(
-    @Query('provinceId') provinceId?: string,
-    @Query('maxPrice') maxPrice?: string,
-    @Query('minPrice') minPrice?: string,
-  ) {
-    return await this.appService.searchTours({
-      provinceId,
-      maxPrice: maxPrice ? +maxPrice : undefined,
-      minPrice: minPrice ? +minPrice : undefined,
-    });
-  }
+  // 3. ระบบค้นหาและตัวกรอง — ลบออกแล้ว ใช้ ToursController แทน
+  // @Get('api/tours/search') ← route นี้ซ้ำกับ ToursController และ prefix ผิด
 
   // ==========================================
   // 🛠 API สำหรับรีเซ็ตฐานข้อมูล (Mock / Clean Data)
