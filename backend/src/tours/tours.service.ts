@@ -75,7 +75,20 @@ export class ToursService {
   }
 
   async findAllProvinces() {
-    return this.provinceRepository.find();
+    // 1. ดึงรายชื่อจังหวัดมาทั้งหมดตามปกติ
+    const provinces = await this.provinceRepository.find();
+
+    // 2. วนลูปเพื่อนับจำนวนทัวร์ "ที่มีอยู่จริงในระบบ" ของแต่ละจังหวัด
+    for (const province of provinces) {
+      const actualCount = await this.tourRepository.createQueryBuilder('tour')
+        .where('tour.provinceId = :provinceId', { provinceId: province.id })
+        .getCount();
+
+      // เอาจำนวนที่นับได้จากตาราง Tour จริงๆ ไปทับค่าที่อาจจะเพี้ยนอยู่
+      province.tourCount = actualCount;
+    }
+
+    return provinces;
   }
 
   // 🟢 ฟังก์ชันที่แก้ไขแล้ว
@@ -101,7 +114,7 @@ export class ToursService {
     if (!province) {
       throw new NotFoundException(`ไม่พบจังหวัดรหัส ${id}`);
     }
-    
+
     // เอาข้อมูลใหม่มาทับข้อมูลเดิม
     Object.assign(province, updateData);
     return this.provinceRepository.save(province);
