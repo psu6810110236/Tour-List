@@ -45,12 +45,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+<<<<<<< HEAD
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
+=======
+>>>>>>> 133b11192830a2b2a09f1e2f02892c5f5ce3372d
     networks:
       - app-network
 

@@ -1,17 +1,29 @@
 # frontend/Dockerfile
-FROM node:20-alpine
+
+# ── Stage 1: Build React app ──────────────────────────────────────────
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# ลง Package
+# รับ build arg แล้วตั้งเป็น env ให้ Vite อ่านตอน build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 COPY package*.json ./
 RUN npm install
 
-# ก๊อปปี้โค้ด
 COPY . .
+RUN npm run build
 
-# เปิด Port ของ Vite
-EXPOSE 5173
+# ── Stage 2: Serve with Nginx ─────────────────────────────────────────
+FROM nginx:1.25-alpine
 
-# สั่งรัน Dev Mode พร้อมเปิด --host เพื่อให้ Docker คุยกับเครื่องเราได้
-CMD ["npm", "run", "dev", "--", "--host"]
+# คัดลอก static files จาก stage 1
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# คัดลอก nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
