@@ -4,6 +4,8 @@ import { MessageCircle, Send, Image as ImageIcon, Minus, X } from 'lucide-react'
 import { useAuth } from '../features/auth/context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
+// Socket.io ต้องเชื่อมที่ base URL (ไม่มี /api) เช่น https://wd04.pupasoft.com
+const SOCKET_URL = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
 
 interface ChatMessage {
   id: string;
@@ -48,8 +50,9 @@ export default function ChatWidget() {
   const activeUserId = user?.id || getGuestId();
 
   useEffect(() => {
-    const newSocket = io(API_URL, {
+    const newSocket = io(SOCKET_URL, {
       query: { role: 'user', userId: activeUserId },
+      transports: ['websocket', 'polling'],
     });
     setSocket(newSocket);
 
@@ -78,7 +81,15 @@ export default function ChatWidget() {
   }, [activeUserId]);
 
   useEffect(() => {
-    fetch(`${API_URL}/chat/messages/${activeUserId}`)
+    // guest ID ไม่มีประวัติใน DB และต้อง JWT → ข้าม fetch ทันที ป้องกัน 404
+    if (!activeUserId || activeUserId.startsWith('guest_')) return;
+
+    // VITE_API_URL มี /api suffix แต่ backend register route ที่ /chat (ไม่มี /api)
+    const CHAT_BASE = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
+
+    fetch(`${CHAT_BASE}/chat/messages/${activeUserId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+    })
       .then((res) => {
         if (!res.ok) return [];
         return res.json();
