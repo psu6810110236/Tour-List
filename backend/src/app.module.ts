@@ -46,8 +46,7 @@ import { UploadModule } from './upload/upload.module';
         autoLoadEntities: true,
         // แก้ #3: ปิด synchronize ใน production เพื่อกันข้อมูลหาย
         // ตอน dev ให้ตั้ง TYPEORM_SYNC=true ใน .env ถ้าต้องการ auto-sync
-        synchronize: configService.get<string>('NODE_ENV') !== 'production'
-          && configService.get<string>('TYPEORM_SYNC') === 'true',
+        synchronize: configService.get<string>('TYPEORM_SYNC') === 'true',
       }),
     }),
     ThrottlerModule.forRoot([{
