@@ -5,7 +5,7 @@ import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
 import { Cart } from './cart.entity';
 import { CartItem } from './cart-item.entity';
-import { Tour } from 'src/entities/tour.entity';
+import { Tour } from '../entities/tour.entity';
 
 
 
@@ -13,9 +13,9 @@ import { Tour } from 'src/entities/tour.entity';
 @Module({
   imports: [
     // 🟢 2. เติมคำว่า Tour เข้าไปใน Array นี้ครับ!
-    TypeOrmModule.forFeature([Cart, CartItem, Tour]), 
+    TypeOrmModule.forFeature([Cart, CartItem, Tour]),
   ],
   controllers: [CartController],
   providers: [CartService],
 })
-export class CartModule {}
+export class CartModule { }

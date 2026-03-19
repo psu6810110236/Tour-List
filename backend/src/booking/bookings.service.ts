@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Booking } from 'src/entities/booking.entity';
-import { Tour } from 'src/entities/tour.entity';
+import { Booking } from '../entities/booking.entity';
+import { Tour } from '../entities/tour.entity';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 

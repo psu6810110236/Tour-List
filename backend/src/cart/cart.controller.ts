@@ -7,20 +7,20 @@ import { AddToCartDto } from './add-to-cart.dto';
 @Controller('cart')
 @UseGuards(AuthGuard('jwt'))
 export class CartController {
-  constructor(private readonly cartService: CartService) {}
+  constructor(private readonly cartService: CartService) { }
 
   @Get()
   getCart(@Req() req) {
-    return this.cartService.getCartItemsByUserId(req.user.id);
+    return this.cartService.getCartItemsByUserId(req.user.userId);
   }
 
   @Post('add')
   addToCart(@Req() req, @Body() dto: AddToCartDto) {
-    return this.cartService.addToCart(req.user.id, dto);
+    return this.cartService.addToCart(req.user.userId, dto);
   }
 
   @Delete(':id')
   removeFromCart(@Req() req, @Param('id') cartItemId: string) {
-    return this.cartService.removeFromCart(req.user.id, cartItemId);
+    return this.cartService.removeFromCart(req.user.userId, cartItemId);
   }
 }

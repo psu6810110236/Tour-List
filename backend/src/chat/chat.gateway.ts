@@ -11,8 +11,8 @@ import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
-    credentials: false,
+    origin: true,
+    credentials: true,
   },
 })
 export class ChatGateway implements OnGatewayConnection {

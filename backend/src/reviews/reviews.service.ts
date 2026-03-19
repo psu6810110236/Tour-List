@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Review } from 'src/entities/review.entity';
-import { Tour } from 'src/entities/tour.entity'; // 🟢 1. Import Tour Entity เข้ามาด้วย
+import { Review } from '../entities/review.entity';
+import { Tour } from '../entities/tour.entity'; // 🟢 1. Import Tour Entity เข้ามาด้วย
 import { Repository } from 'typeorm';
 
 @Injectable()

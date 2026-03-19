@@ -19,7 +19,7 @@ import { Province } from './entities/province.entity';
 import { Tour } from './entities/tour.entity';
 import { User } from './entities/user.entity';
 import { Review } from './entities/review.entity';
-import { CartItem } from './cart/entities/cart-item.entity';
+import { CartItem } from './entities/cart-item.entity';
 import { CartModule } from './cart/cart.module';
 import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
@@ -85,4 +85,4 @@ import { UploadModule } from './upload/upload.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
