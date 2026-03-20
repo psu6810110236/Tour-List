@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Booking } from '../entities/booking.entity';
-import { Tour } from '../entities/tour.entity';
+import { Booking } from 'src/entities/booking.entity';
+import { Tour } from 'src/entities/tour.entity';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 
@@ -89,8 +89,26 @@ export class BookingsService {
 
     // 🌟 แปลงค่าเป็น Number ป้องกันบั๊ก String Concatenation
     const travelersCount = Number(booking.travelers) || 1;
-    const currentBooked = Number(tour.bookedSeats) || 0;
     const maxCap = Number(tour.maxCapacity) || 10;
+
+    // นับที่นั่งเฉพาะวันเดียวกัน (travelDate) ไม่รวมทุกวัน
+    const sameDay = booking.travelDate
+      ? new Date(booking.travelDate).toISOString().slice(0, 10)
+      : null;
+
+    const bookedSameDay = sameDay
+      ? await this.bookingRepository
+          .createQueryBuilder('b')
+          .select('SUM(b.travelers)', 'total')
+          .where('b.tourId = :tourId', { tourId: booking.tourId })
+          .andWhere('b.status = :status', { status: 'APPROVED' })
+          .andWhere('CAST(b.travelDate AS DATE) = :date', { date: sameDay })
+          .andWhere('b.id != :id', { id: booking.id })
+          .getRawOne()
+          .then((r) => Number(r?.total) || 0)
+      : Number(tour.bookedSeats) || 0;
+
+    const currentBooked = bookedSameDay;
 
     // ระบบตัดยอด / คืนยอด
     if (newStatus === 'APPROVED' && oldStatus !== 'APPROVED') {
