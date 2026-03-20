@@ -15,12 +15,13 @@ export class Message {
   @Column({ nullable: true })
   receiverId: string;
 
-  // nullable + onDelete NO ACTION เพื่อรองรับ guest ID ที่ไม่มีใน users table
-  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  // createForeignKeyConstraints: false เพื่อรองรับ guest ID ที่ไม่มีใน users table
+  // ถ้าไม่ปิด FK constraint → Postgres จะ error ทุกครั้งที่ guest พิมแชท
+  @ManyToOne(() => User, { nullable: true, eager: false, createForeignKeyConstraints: false })
   @JoinColumn({ name: 'senderId' })
   sender: User;
 
-  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL', eager: false })
+  @ManyToOne(() => User, { nullable: true, eager: false, createForeignKeyConstraints: false })
   @JoinColumn({ name: 'receiverId' })
   receiver: User;
 
