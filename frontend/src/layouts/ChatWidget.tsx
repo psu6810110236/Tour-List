@@ -28,24 +28,21 @@ export default function ChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  const STORAGE_KEY = `chat_history_${user?.id || localStorage.getItem('guest_chat_id') || 'guest'}`;
+  // STORAGE_KEY แยกตาม user ID หรือ guest ID — ใช้ function เพื่อให้ได้ค่าล่าสุดเสมอ
+  const getStorageKey = () => {
+    const uid = user?.id || localStorage.getItem('guest_chat_id') || 'guest';
+    return `chat_history_${uid}`;
+  };
 
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
-      }
-    } catch {}
-    return [{
-      id: 'welcome',
-      senderType: 'admin' as const,
-      text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
-      timestamp: new Date(),
-      isImage: false,
-    }];
-  });
+  const WELCOME_MSG: ChatMessage = {
+    id: 'welcome',
+    senderType: 'admin' as const,
+    text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
+    timestamp: new Date(),
+    isImage: false,
+  };
+
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MSG]);
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -92,13 +89,26 @@ export default function ChatWidget() {
   // บันทึกประวัติแชทลง localStorage ทุกครั้งที่มีข้อความใหม่
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      localStorage.setItem(getStorageKey(), JSON.stringify(messages));
     } catch {}
-  }, [messages, STORAGE_KEY]);
+  }, [messages, user?.id]);
 
   useEffect(() => {
     if (!activeUserId) return;
 
+    const storageKey = getStorageKey();
+
+    // โหลดจาก localStorage ก่อนเลย — แสดงทันทีก่อน fetch DB
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const restored = parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        if (restored.length > 0) setMessages(restored);
+      }
+    } catch {}
+
+    // จากนั้น fetch จาก DB เพื่อ sync ประวัติจริง (รองรับเปลี่ยนเครื่อง)
     const CHAT_BASE = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
     const token = localStorage.getItem('token');
     const headers: Record<string, string> = {};
@@ -106,7 +116,7 @@ export default function ChatWidget() {
 
     fetch(`${CHAT_BASE}/chat/messages/${activeUserId}`, { headers })
       .then((res) => {
-        if (!res.ok) return [];
+        if (!res.ok) throw new Error('fetch failed');
         return res.json();
       })
       .then((data) => {
@@ -120,10 +130,12 @@ export default function ChatWidget() {
           timestamp: new Date(msg.createdAt),
           isImage: msg.content?.startsWith('data:image') ?? false,
         }));
-        setMessages(mapped);
+        // DB เป็น source of truth — ใช้ทับ localStorage
+        setMessages([WELCOME_MSG, ...mapped]);
+        localStorage.setItem(storageKey, JSON.stringify([WELCOME_MSG, ...mapped]));
       })
       .catch(() => {
-        /* โหลดประวัติล้มเหลว — แสดงเฉพาะ welcome message */
+        // fetch ล้มเหลว — ใช้ localStorage ที่โหลดไปแล้วต่อ
       });
   }, [activeUserId]);
 
