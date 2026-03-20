@@ -28,15 +28,24 @@ export default function ChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
+  const STORAGE_KEY = `chat_history_${user?.id || localStorage.getItem('guest_chat_id') || 'guest'}`;
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+      }
+    } catch {}
+    return [{
       id: 'welcome',
-      senderType: 'admin',
+      senderType: 'admin' as const,
       text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
       timestamp: new Date(),
       isImage: false,
-    },
-  ]);
+    }];
+  });
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -79,6 +88,13 @@ export default function ChatWidget() {
       newSocket.disconnect();
     };
   }, [activeUserId]);
+
+  // บันทึกประวัติแชทลง localStorage ทุกครั้งที่มีข้อความใหม่
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {}
+  }, [messages, STORAGE_KEY]);
 
   useEffect(() => {
     if (!activeUserId) return;
