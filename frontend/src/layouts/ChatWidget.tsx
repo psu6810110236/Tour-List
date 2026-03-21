@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, Image as ImageIcon, Minus, X } from 'lucide-react';
 import { useAuth } from '../features/auth/context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
-// Socket.io ต้องเชื่อมที่ base URL (ไม่มี /api) เช่น https://wd04.pupasoft.com
 const SOCKET_URL = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
 
 interface ChatMessage {
@@ -24,64 +23,33 @@ const getGuestId = () => {
   return guestId;
 };
 
+const WELCOME_MSG: ChatMessage = {
+  id: 'welcome',
+  senderType: 'admin',
+  text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
+  timestamp: new Date(),
+  isImage: false,
+};
+
 export default function ChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-
-  // STORAGE_KEY แยกตาม user ID หรือ guest ID — ใช้ function เพื่อให้ได้ค่าล่าสุดเสมอ
-  const getStorageKey = () => {
-    const uid = user?.id || localStorage.getItem('guest_chat_id') || 'guest';
-    return `chat_history_${uid}`;
-  };
-
-  const WELCOME_MSG: ChatMessage = {
-    id: 'welcome',
-    senderType: 'admin' as const,
-    text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
-    timestamp: new Date(),
-    isImage: false,
-  };
-
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const uid = user?.id || localStorage.getItem('guest_chat_id') || 'guest';
-    const storageKey = `chat_history_${uid}`;
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const restored = parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
-        if (restored.length > 0) return restored;
-      }
-    } catch { }
-    return [WELCOME_MSG];
-  });
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MSG]);
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [fileErrorPopup, setFileErrorPopup] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
+  // ใช้ ref เก็บ socket เพื่อให้ handleSend ได้ instance ล่าสุดเสมอ (ไม่ติด closure เก่า)
+  const socketRef = useRef<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeUserId = user?.id || getGuestId();
 
-
-
-  // บันทึกประวัติแชทลง localStorage ทุกครั้งที่มีข้อความใหม่
-  useEffect(() => {
-    try {
-      localStorage.setItem(getStorageKey(), JSON.stringify(messages));
-    } catch { }
-  }, [messages, user?.id]);
-
-  useEffect(() => {
-    if (!activeUserId) return;
-
-    const storageKey = getStorageKey();
-
-    // ดึงจาก DB เพื่อ sync ประวัติจริง (ใช้ API_URL ตรงๆ เพราะ REST API ต้องการ /api)
+  // ดึงประวัติจาก DB
+  const fetchHistory = useCallback(() => {
     const token = localStorage.getItem('token');
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -91,89 +59,79 @@ export default function ChatWidget() {
         if (!res.ok) throw new Error('fetch failed');
         return res.json();
       })
-      .then((data) => {
+      .then((data: any[]) => {
         if (!Array.isArray(data) || data.length === 0) return;
-        const mapped = data.map((msg: any) => ({
+        const mapped: ChatMessage[] = data.map((msg) => ({
           id: msg.id,
-          senderType: (msg.senderId === activeUserId
-            ? 'user'
-            : 'admin') as 'user' | 'admin',
+          senderType: msg.senderId === activeUserId ? 'user' : 'admin',
           text: msg.content,
           timestamp: new Date(msg.createdAt),
           isImage: msg.content?.startsWith('data:image') ?? false,
         }));
-        // อัปเดต State และ LocalStorage เมื่อได้ข้อมูลจาก DB
         setMessages([WELCOME_MSG, ...mapped]);
-        localStorage.setItem(storageKey, JSON.stringify([WELCOME_MSG, ...mapped]));
       })
-      .catch(() => {
-        // fetch ล้มเหลว ก็ยังคงใช้ข้อมูลจาก localStorage ที่โหลดมาตอนแรกสุดได้
-      });
+      .catch(() => {});
   }, [activeUserId]);
 
+  // สร้าง socket ครั้งเดียวต่อ activeUserId และดึงประวัติด้วยในคราวเดียว
+  useEffect(() => {
+    fetchHistory();
+
+    const newSocket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      query: { userId: activeUserId },
+    });
+    socketRef.current = newSocket;
+
+    newSocket.on('receiveMessage', (incomingMsg: any) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: incomingMsg.id,
+            senderType: incomingMsg.senderId === activeUserId ? 'user' : 'admin',
+            text: incomingMsg.content,
+            timestamp: new Date(incomingMsg.createdAt || Date.now()),
+            isImage: incomingMsg.content?.startsWith('data:image') ?? false,
+          },
+        ];
+      });
+    });
+
+    return () => {
+      newSocket.disconnect();
+      socketRef.current = null;
+    };
+  }, [activeUserId, fetchHistory]);
+
+  // เปิด widget จาก event ภายนอก
   useEffect(() => {
     const handleOpenChat = () => setIsOpen(true);
     window.addEventListener('openChatWidget', handleOpenChat);
     return () => window.removeEventListener('openChatWidget', handleOpenChat);
   }, []);
 
+  // scroll ลงล่างสุดเมื่อมีข้อความใหม่
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isOpen, previewImage]);
 
-
-
-  useEffect(() => {
-    if (!activeUserId) return;
-
-    // สร้างการเชื่อมต่อไปยัง Backend
-    const newSocket = io(SOCKET_URL, {
-      query: {
-        userId: activeUserId,
-      },
-    });
-
-    setSocket(newSocket);
-
-    // ดักฟังเหตุการณ์ 'receiveMessage' เมื่อมีข้อความใหม่เข้ามา
-    newSocket.on('receiveMessage', (incomingMsg: any) => {
-      setMessages((prev) => {
-        // เช็คว่ามีข้อความนี้ใน State หรือยัง (ป้องกันข้อความซ้ำ)
-        if (prev.some((m) => m.id === incomingMsg.id)) return prev;
-
-        const formattedMsg: ChatMessage = {
-          id: incomingMsg.id,
-          senderType: incomingMsg.senderId === activeUserId ? 'user' : 'admin',
-          text: incomingMsg.content,
-          timestamp: new Date(incomingMsg.createdAt),
-          isImage: incomingMsg.content?.startsWith('data:image') ?? false,
-        };
-
-        return [...prev, formattedMsg];
-      });
-    });
-
-    // คืนค่าฟังก์ชัน cleanup เพื่อตัดการเชื่อมต่อเมื่อปิดแชทหรือเปลี่ยนหน้า
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [activeUserId]);
-
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((!input.trim() && !previewImage) || !socket) return;
+    if ((!input.trim() && !previewImage) || !socketRef.current) return;
 
     if (previewImage) {
-      socket.emit('sendMessage', {
+      socketRef.current.emit('sendMessage', {
         content: previewImage,
         senderId: activeUserId,
       });
       setPreviewImage(null);
     }
     if (input.trim()) {
-      socket.emit('sendMessage', {
+      socketRef.current.emit('sendMessage', {
         content: input,
         senderId: activeUserId,
       });
@@ -259,10 +217,11 @@ export default function ChatWidget() {
                 </div>
               )}
               <div
-                className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${isUser
-                  ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
-                  : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
-                  }`}
+                className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${
+                  isUser
+                    ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
+                    : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
+                }`}
               >
                 {msg.isImage ? (
                   <img
@@ -277,8 +236,9 @@ export default function ChatWidget() {
                   </p>
                 )}
                 <div
-                  className={`text-[9px] mt-1 text-right opacity-60 ${isUser ? 'text-white' : 'text-gray-400'
-                    }`}
+                  className={`text-[9px] mt-1 text-right opacity-60 ${
+                    isUser ? 'text-white' : 'text-gray-400'
+                  }`}
                 >
                   {msg.timestamp.toLocaleTimeString([], {
                     hour: '2-digit',
@@ -355,8 +315,9 @@ export default function ChatWidget() {
                 className="bg-transparent flex-1 text-xs focus:outline-none text-gray-700 placeholder-gray-400 resize-none min-h-[24px] max-h-[120px] overflow-y-auto py-1 scrollbar-hide"
               />
               <span
-                className={`text-[9px] font-mono ml-2 shrink-0 self-end mb-1 ${input.length >= 500 ? 'text-red-500' : 'text-gray-400'
-                  }`}
+                className={`text-[9px] font-mono ml-2 shrink-0 self-end mb-1 ${
+                  input.length >= 500 ? 'text-red-500' : 'text-gray-400'
+                }`}
               >
                 {input.length}/500
               </span>
@@ -365,10 +326,11 @@ export default function ChatWidget() {
             <button
               type="submit"
               disabled={!input.trim() && !previewImage}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${input.trim() || previewImage
-                ? 'bg-[#00A699] text-white shadow-lg'
-                : 'bg-gray-200 text-gray-400'
-                }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                input.trim() || previewImage
+                  ? 'bg-[#00A699] text-white shadow-lg'
+                  : 'bg-gray-200 text-gray-400'
+              }`}
             >
               <Send
                 size={18}

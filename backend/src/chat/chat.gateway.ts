@@ -46,7 +46,10 @@ export class ChatGateway implements OnGatewayConnection {
     // ใช้ senderId จาก handshake แทน payload เพื่อกัน spoof ID
     const senderId =
       (client.handshake.query.userId as string) || payload.senderId;
+    const role = client.handshake.query.role as string;
     let { content, receiverId } = payload;
+
+    const isAdminSender = role === 'admin' || role === 'ADMIN';
 
     // ถ้าไม่มีผู้รับ ให้ส่งหา Admin อัตโนมัติ
     if (!receiverId) {
@@ -59,17 +62,17 @@ export class ChatGateway implements OnGatewayConnection {
     // บันทึกลง Database
     const saved = await this.chatService.saveMessage(content, senderId, receiverId);
 
-    // ส่งกลับหาผู้ส่ง
-    this.server.to(`user_${senderId}`).emit('receiveMessage', saved);
-
-    // ส่งหาผู้รับ
-    if (receiverId) {
-      this.server.to(`user_${receiverId}`).emit('receiveMessage', saved);
-    }
-
-    // แจ้งเตือนห้อง Admin รวม (ถ้าผู้ส่งไม่ใช่ Admin)
-    const isAdminSender = senderId === receiverId;
-    if (!isAdminSender) {
+    if (isAdminSender) {
+      // Admin ส่ง → emit หาห้อง admin_room (ตัวเอง) และห้อง user ที่รับ
+      // ไม่ emit user_${senderId} เพราะ admin อยู่ใน admin_room อยู่แล้ว
+      this.server.to('admin_room').emit('receiveMessage', saved);
+      if (receiverId) {
+        this.server.to(`user_${receiverId}`).emit('receiveMessage', saved);
+      }
+    } else {
+      // User ส่ง → emit หาห้อง user ตัวเอง และ admin_room
+      // ไม่ emit user_${receiverId} (adminId) ซ้ำ เพราะ admin รับผ่าน admin_room แล้ว
+      this.server.to(`user_${senderId}`).emit('receiveMessage', saved);
       this.server.to('admin_room').emit('receiveMessage', saved);
     }
   }
