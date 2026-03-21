@@ -117,9 +117,11 @@ export default function AdminChatPage() {
 
   useEffect(() => {
     if (!selectedUserId) return;
+    let cancelled = false; // flag ยกเลิก fetch เก่าเมื่อสลับ user เร็วๆ
+
+    setMessages([]);
     setUnreadCounts((prev) => ({ ...prev, [selectedUserId]: 0 }));
     setPreviewImage(null);
-    // ไม่ setMessages([]) ก่อน fetch เพื่อป้องกันประวัติกระพริบหาย
 
     fetch(`${API_URL}/chat/messages/${selectedUserId}`, {
       headers: { Authorization: `Bearer ${tokenRef.current}` },
@@ -129,9 +131,11 @@ export default function AdminChatPage() {
         return res.json();
       })
       .then((data) => {
-        if (Array.isArray(data)) setMessages(data);
+        if (!cancelled && Array.isArray(data)) setMessages(data);
       })
-      .catch((err) => console.error('Error fetching messages:', err));
+      .catch((err) => { if (!cancelled) console.error('Error fetching messages:', err); });
+
+    return () => { cancelled = true; }; // cleanup: ยกเลิก fetch เมื่อ user เปลี่ยน
   }, [selectedUserId]);
 
   // scroll ลงล่างสุด
