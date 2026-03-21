@@ -58,16 +58,19 @@ export default function AdminChatPage() {
 
     fetchContacts();
 
+    // 🟢 1. สร้างการเชื่อมต่อ Socket (ไม่ต้องเติม /api)
     const newSocket = io(API_URL, {
       query: { role: 'admin', userId: user.id },
     });
 
     newSocket.on('receiveMessage', (msg: any) => {
       setSelectedUser((currentSelected) => {
+        // 🟢 2. ตรวจสอบว่าข้อความนี้เกี่ยวข้องกับคนที่กำลังคุยอยู่หรือไม่
         const isCurrentChat =
           currentSelected &&
           (msg.senderId === currentSelected.id ||
-            msg.receiverId === currentSelected.id);
+            msg.receiverId === currentSelected.id ||
+            msg.senderId === user.id); // เพิ่มเงื่อนไขว่าถ้า Admin เป็นคนส่งเอง ก็ให้อัปเดตแชทด้วย
 
         if (isCurrentChat) {
           setMessages((prev) => {
@@ -75,14 +78,17 @@ export default function AdminChatPage() {
             return [...prev, msg];
           });
         } else {
+          // ถ้าเป็นคนอื่นทักมา ให้เพิ่มเลขแจ้งเตือน
           if (msg.senderId !== user.id) {
             setUnreadCounts((prev) => ({
               ...prev,
               [msg.senderId]: (prev[msg.senderId] || 0) + 1,
             }));
           }
-          fetchContacts();
         }
+
+        // 🟢 อัปเดตรายชื่อ Contact เสมอเมื่อมีข้อความใหม่เข้ามา (เพื่อให้เรียงล่าสุด)
+        fetchContacts();
         return currentSelected;
       });
     });
@@ -98,11 +104,19 @@ export default function AdminChatPage() {
     setUnreadCounts((prev) => ({ ...prev, [selectedUser.id]: 0 }));
     setPreviewImage(null);
 
-    fetch(`${API_URL}/chat/messages/${selectedUser.id}`, {
+    // 🟢 3. แก้ไข URL ดึงประวัติแชท ให้เติม /api เข้าไป
+    fetch(`${API_URL}/api/chat/messages/${selectedUser.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
-      .then((data) => setMessages(data))
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch")
+        return res.json()
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setMessages(data)
+        }
+      })
       .catch((err) => console.error('Error fetching messages:', err));
   }, [selectedUser, token]);
 
@@ -187,26 +201,23 @@ export default function AdminChatPage() {
               <div
                 key={contact.id}
                 onClick={() => setSelectedUser(contact)}
-                className={`p-3 rounded-2xl cursor-pointer flex items-center gap-3.5 transition-all duration-200 group ${
-                  isSelected
-                    ? 'bg-white shadow-[0_4px_20px_rgba(0,166,153,0.12)] ring-1 ring-[#00A699]/20'
-                    : 'hover:bg-slate-50 border border-transparent'
-                }`}
+                className={`p-3 rounded-2xl cursor-pointer flex items-center gap-3.5 transition-all duration-200 group ${isSelected
+                  ? 'bg-white shadow-[0_4px_20px_rgba(0,166,153,0.12)] ring-1 ring-[#00A699]/20'
+                  : 'hover:bg-slate-50 border border-transparent'
+                  }`}
               >
                 <div className="relative">
                   <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-colors ${
-                      isSelected
-                        ? 'bg-[#00A699] text-white shadow-md'
-                        : 'bg-teal-50 text-[#00A699] group-hover:bg-teal-100'
-                    }`}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-colors ${isSelected
+                      ? 'bg-[#00A699] text-white shadow-md'
+                      : 'bg-teal-50 text-[#00A699] group-hover:bg-teal-100'
+                      }`}
                   >
                     {contact.fullName?.charAt(0).toUpperCase()}
                   </div>
                   <div
-                    className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white rounded-full ${
-                      isSelected ? 'bg-green-400' : 'bg-slate-300'
-                    }`}
+                    className={`absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white rounded-full ${isSelected ? 'bg-green-400' : 'bg-slate-300'
+                      }`}
                   ></div>
                   {unread > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[11px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white font-bold shadow-sm">
@@ -216,9 +227,8 @@ export default function AdminChatPage() {
                 </div>
                 <div className="overflow-hidden flex-1">
                   <p
-                    className={`font-semibold truncate text-[15px] ${
-                      isSelected ? 'text-[#00A699]' : 'text-slate-700'
-                    }`}
+                    className={`font-semibold truncate text-[15px] ${isSelected ? 'text-[#00A699]' : 'text-slate-700'
+                      }`}
                   >
                     {contact.fullName}
                   </p>
@@ -270,11 +280,10 @@ export default function AdminChatPage() {
                   >
                     <div className="flex flex-col max-w-[65%]">
                       <div
-                        className={`px-5 py-3.5 shadow-sm ${
-                          isAdmin
-                            ? 'bg-[#00A699] text-white rounded-[20px] rounded-br-sm shadow-teal-500/10'
-                            : 'bg-white text-slate-700 border border-slate-100 rounded-[20px] rounded-bl-sm shadow-slate-200/50'
-                        }`}
+                        className={`px-5 py-3.5 shadow-sm ${isAdmin
+                          ? 'bg-[#00A699] text-white rounded-[20px] rounded-br-sm shadow-teal-500/10'
+                          : 'bg-white text-slate-700 border border-slate-100 rounded-[20px] rounded-bl-sm shadow-slate-200/50'
+                          }`}
                       >
                         {isImage ? (
                           <img
@@ -290,9 +299,8 @@ export default function AdminChatPage() {
                         )}
                       </div>
                       <span
-                        className={`text-[11px] font-medium mt-1.5 text-slate-400 ${
-                          isAdmin ? 'text-right mr-1' : 'text-left ml-1'
-                        }`}
+                        className={`text-[11px] font-medium mt-1.5 text-slate-400 ${isAdmin ? 'text-right mr-1' : 'text-left ml-1'
+                          }`}
                       >
                         {new Date(msg.createdAt).toLocaleTimeString('th-TH', {
                           hour: '2-digit',
@@ -375,11 +383,10 @@ export default function AdminChatPage() {
                     <button
                       type="submit"
                       disabled={!input.trim() && !previewImage}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-1 transition-all ${
-                        input.trim() || previewImage
-                          ? 'bg-[#00A699] text-white shadow-md'
-                          : 'bg-slate-200 text-slate-400'
-                      }`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-1 transition-all ${input.trim() || previewImage
+                        ? 'bg-[#00A699] text-white shadow-md'
+                        : 'bg-slate-200 text-slate-400'
+                        }`}
                     >
                       <Send
                         size={18}
