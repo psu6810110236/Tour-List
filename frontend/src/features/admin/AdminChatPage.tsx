@@ -112,14 +112,17 @@ export default function AdminChatPage() {
   }, [user, fetchContacts]);
 
   // ดึงประวัติเมื่อเลือก user
-  useEffect(() => {
-    if (!selectedUser) return;
-    setUnreadCounts((prev) => ({ ...prev, [selectedUser.id]: 0 }));
-    setPreviewImage(null);
-    setMessages([]);
+  // ใช้ selectedUser.id แทน selectedUser object — ป้องกัน re-run เมื่อ contacts array สร้างใหม่
+  const selectedUserId = selectedUser?.id ?? null;
 
-    fetch(`${API_URL}/chat/messages/${selectedUser.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+  useEffect(() => {
+    if (!selectedUserId) return;
+    setUnreadCounts((prev) => ({ ...prev, [selectedUserId]: 0 }));
+    setPreviewImage(null);
+    // ไม่ setMessages([]) ก่อน fetch เพื่อป้องกันประวัติกระพริบหาย
+
+    fetch(`${API_URL}/chat/messages/${selectedUserId}`, {
+      headers: { Authorization: `Bearer ${tokenRef.current}` },
     })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch');
@@ -129,7 +132,7 @@ export default function AdminChatPage() {
         if (Array.isArray(data)) setMessages(data);
       })
       .catch((err) => console.error('Error fetching messages:', err));
-  }, [selectedUser, token]);
+  }, [selectedUserId]);
 
   // scroll ลงล่างสุด
   useEffect(() => {
