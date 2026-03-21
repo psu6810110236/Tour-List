@@ -53,14 +53,18 @@ export default function AdminChatPage() {
     }
   };
 
+  // tokenRef เก็บ token ล่าสุดเสมอ โดยไม่ทำให้ fetchContacts เปลี่ยน reference
+  const tokenRef = useRef<string | null>(null);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+
   const fetchContacts = useCallback(() => {
     fetch(`${API_URL}/chat/contacts`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${tokenRef.current}` },
     })
       .then((res) => res.json())
       .then((data) => setContacts(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Error fetching contacts:', err));
-  }, [token]);
+  }, []); // dependency array ว่าง → reference คงที่ → socket useEffect ไม่ re-run
 
   // สร้าง socket ครั้งเดียว
   useEffect(() => {
