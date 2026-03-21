@@ -67,36 +67,7 @@ export default function ChatWidget() {
 
   const activeUserId = user?.id || getGuestId();
 
-  useEffect(() => {
-    const newSocket = io(SOCKET_URL, {
-      query: { role: 'user', userId: activeUserId },
-      transports: ['websocket', 'polling'],
-    });
-    setSocket(newSocket);
 
-    newSocket.on('receiveMessage', (msg: any) => {
-      const isMe =
-        msg.senderId === activeUserId || msg.sender?.id === activeUserId;
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        const isImg = msg.content && msg.content.startsWith('data:image');
-        return [
-          ...prev,
-          {
-            id: msg.id,
-            senderType: isMe ? 'user' : 'admin',
-            text: msg.content,
-            timestamp: new Date(msg.createdAt || Date.now()),
-            isImage: isImg,
-          },
-        ];
-      });
-    });
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [activeUserId]);
 
   // บันทึกประวัติแชทลง localStorage ทุกครั้งที่มีข้อความใหม่
   useEffect(() => {
@@ -152,16 +123,7 @@ export default function ChatWidget() {
     }
   }, [messages, isOpen, previewImage]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+
 
   useEffect(() => {
     if (!activeUserId) return;

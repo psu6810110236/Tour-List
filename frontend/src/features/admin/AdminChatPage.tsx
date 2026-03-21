@@ -5,6 +5,7 @@ import { useAuth } from '../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL;
+const SOCKET_URL = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
 
 interface Contact {
   id: string;
@@ -58,8 +59,8 @@ export default function AdminChatPage() {
 
     fetchContacts();
 
-    // 🟢 1. สร้างการเชื่อมต่อ Socket (ไม่ต้องเติม /api)
-    const newSocket = io(API_URL, {
+    const newSocket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
       query: { role: 'admin', userId: user.id },
     });
 
@@ -104,8 +105,8 @@ export default function AdminChatPage() {
     setUnreadCounts((prev) => ({ ...prev, [selectedUser.id]: 0 }));
     setPreviewImage(null);
 
-    // 🟢 3. แก้ไข URL ดึงประวัติแชท ให้เติม /api เข้าไป
-    fetch(`${API_URL}/api/chat/messages/${selectedUser.id}`, {
+    // ดึงประวัติแชท — API_URL มี /api อยู่แล้ว ไม่ต้องเติมซ้ำ
+    fetch(`${API_URL}/chat/messages/${selectedUser.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
