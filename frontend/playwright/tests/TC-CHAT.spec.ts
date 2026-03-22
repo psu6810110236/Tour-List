@@ -1,90 +1,78 @@
-// playwright/tests/TC-CHAT.spec.ts
 import { test, expect } from '@playwright/test';
 import { loginAs, skipTutorial } from '../helpers/auth';
 
-test.beforeEach(async ({ page }) => {
-  await skipTutorial(page);
-});
+// helper scroll ลงล่างสุด
+const scrollToBottom = async (page: any) => {
+  await page.evaluate(() => {
+    const els = document.querySelectorAll('.overflow-y-auto');
+    els.forEach((el: any) => el.scrollTop = el.scrollHeight);
+  });
+  await page.waitForTimeout(300); // รอ animation เสร็จ
+};
 
-test.describe('TC-CHAT | Chat Widget', () => {
+test.describe('TC-CHAT: ระบบแชทแบบ Real-time', () => {
 
-  test('TC-CHAT-01 | User ส่งข้อความผ่าน Chat Widget', async ({ page }) => {
+  test('TC-CHAT-01: ผู้ใช้งานทั่วไปสามารถเปิด Chat Widget และส่งข้อความได้', async ({ page }) => {
     await loginAs(page, 'user');
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
-    // คลิกปุ่ม chat widget (มุมล่างขวา)
-    const chatBtn = page.locator('button').filter({ has: page.locator('svg') }).last();
-    const fixedBtn = page.locator('.fixed.bottom-6.right-6 button');
-    const btn = await fixedBtn.isVisible({ timeout: 3000 }) ? fixedBtn : chatBtn;
+    await page.locator('button.fixed.bottom-6.right-6').click();
+    await expect(page.locator('h3').filter({ hasText: 'ฝ่ายบริการลูกค้า' })).toBeVisible({ timeout: 5000 });
+    await scrollToBottom(page);
+    await page.screenshot({ path: 'screenshots/TC-CHAT-01_01_widget-opened.png' });
 
-    await btn.click();
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: 'screenshots/TC-CHAT-01_01_widget-open.png', fullPage: true });
+    const timestamp = Date.now();
+    const myMessage = `สวัสดีครับ สนใจแพ็กเกจทัวร์ครับ [${timestamp}]`;
 
-    // พิมพ์ข้อความ
-    const textarea = page.locator('textarea').last();
-    if (await textarea.isVisible({ timeout: 3000 })) {
-      await textarea.fill('สวัสดีครับ ต้องการสอบถามเรื่องทัวร์เชียงใหม่');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1500);
-      await page.screenshot({ path: 'screenshots/TC-CHAT-01_02_sent.png', fullPage: true });
-      // ข้อความควรปรากฏ
-      await expect(page.locator('body')).toContainText('สวัสดีครับ ต้องการสอบถามเรื่องทัวร์เชียงใหม่');
-    } else {
-      await page.screenshot({ path: 'screenshots/TC-CHAT-01_no-textarea.png', fullPage: true });
-      test.skip();
-    }
+    const textarea = page.locator('textarea[placeholder="สอบถามข้อมูลเพิ่มเติม..."]');
+    await expect(textarea).toBeVisible();
+    await textarea.fill(myMessage);
+    await scrollToBottom(page);
+    await page.screenshot({ path: 'screenshots/TC-CHAT-01_02_message-typed.png' });
+
+    await page.locator('div.fixed.bottom-6.right-6 button[type="submit"]').click();
+    await expect(page.getByText(myMessage)).toBeVisible({ timeout: 10000 });
+    await scrollToBottom(page);
+    await page.screenshot({ path: 'screenshots/TC-CHAT-01_03_message-sent.png' });
   });
 
-  test('TC-CHAT-02 | Admin ตอบกลับ User ผ่าน Admin Chat', async ({ page }) => {
-    await loginAs(page, 'admin');
-    await page.goto('/admin/chat');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ path: 'screenshots/TC-CHAT-02_01_admin-chat.png', fullPage: true });
+  test('TC-CHAT-02: ทดสอบการแชทโต้ตอบระหว่าง Admin และ User แบบ Real-time', async ({ browser }) => {
+    const userContext = await browser.newContext();
+    const adminContext = await browser.newContext();
+    const userPage = await userContext.newPage();
+    const adminPage = await adminContext.newPage();
 
-    // เลือก contact แรก
-    const contact = page.locator('[class*="contact"], [class*="cursor-pointer"]').first();
-    if (await contact.isVisible({ timeout: 5000 })) {
-      await contact.click();
-      await page.waitForTimeout(500);
+    await loginAs(adminPage, 'admin');
+    await adminPage.goto('/admin/chat');
+    await expect(adminPage.getByText('กล่องข้อความ')).toBeVisible({ timeout: 10000 });
 
-      const textarea = page.locator('textarea').last();
-      if (await textarea.isVisible({ timeout: 3000 })) {
-        await textarea.fill('สวัสดีครับ ยินดีให้บริการ มีอะไรสอบถามได้เลย');
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(1500);
-        await page.screenshot({ path: 'screenshots/TC-CHAT-02_02_replied.png', fullPage: true });
-      }
-    } else {
-      await page.screenshot({ path: 'screenshots/TC-CHAT-02_no-contacts.png', fullPage: true });
-      test.skip();
-    }
+    await loginAs(userPage, 'user');
+    await userPage.locator('button.fixed.bottom-6.right-6').click();
+    const userTextarea = userPage.locator('textarea[placeholder="สอบถามข้อมูลเพิ่มเติม..."]');
+    await expect(userTextarea).toBeVisible({ timeout: 10000 });
+
+    const timestamp = Date.now();
+    const userMessage = `สอบถามเรื่องทัวร์ดำน้ำครับ มีว่างช่วงเดือนหน้าไหม? [${timestamp}]`;
+    await userTextarea.fill(userMessage);
+    await userPage.locator('div.fixed.bottom-6.right-6 button[type="submit"]').click();
+    await expect(userPage.getByText(userMessage)).toBeVisible({ timeout: 10000 });
+    await scrollToBottom(userPage);
+    await userPage.screenshot({ path: 'screenshots/TC-CHAT-02_01_user-sent.png' });
+
+    await adminPage.locator('.overflow-y-auto > div').first().click();
+    await expect(adminPage.getByText(userMessage)).toBeVisible({ timeout: 10000 });
+    await scrollToBottom(adminPage);
+    await adminPage.screenshot({ path: 'screenshots/TC-CHAT-02_02_admin-received.png' });
+
+    const adminReply = `สวัสดีครับ ช่วงเดือนหน้ายังมีที่ว่างครับ [${timestamp}]`;
+    await adminPage.getByPlaceholder('พิมพ์ข้อความตอบกลับ...').fill(adminReply);
+    await adminPage.locator('button[type="submit"]').click();
+    await expect(userPage.getByText(adminReply)).toBeVisible({ timeout: 10000 });
+    await scrollToBottom(adminPage);
+    await adminPage.screenshot({ path: 'screenshots/TC-CHAT-02_03_admin-replied.png' });
+    await scrollToBottom(userPage);
+    await userPage.screenshot({ path: 'screenshots/TC-CHAT-02_04_user-got-reply.png' });
+
+    await userContext.close();
+    await adminContext.close();
   });
-
-  test('TC-CHAT-03 | Guest ส่งข้อความได้โดยไม่ต้อง Login', async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    });
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-
-    const chatBtn = page.locator('.fixed.bottom-6.right-6 button');
-    if (await chatBtn.isVisible({ timeout: 5000 })) {
-      await chatBtn.click();
-      await page.waitForTimeout(500);
-      const textarea = page.locator('textarea').last();
-      if (await textarea.isVisible({ timeout: 3000 })) {
-        await textarea.fill('สอบถามราคาทัวร์ภูเก็ตหน่อยครับ');
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(1500);
-        await page.screenshot({ path: 'screenshots/TC-CHAT-03_guest-message.png', fullPage: true });
-      }
-    } else {
-      test.skip();
-    }
-  });
-
 });
