@@ -5,11 +5,10 @@
 import { test, expect } from '@playwright/test';
 import { skipTutorial } from '../helpers/auth';
 
-test.beforeEach(async ({ page }) => {
-  await skipTutorial(page);
-});
-
 test.describe('TC-TOUR | Tours & Provinces', () => {
+  test.beforeEach(async ({ page }) => {
+    await skipTutorial(page);
+  });
 
   // ── TC-TOUR-01 ─────────────────────────────────────────────────
   test('TC-TOUR-01 | หน้า Home โหลดจังหวัดได้', async ({ page }) => {

@@ -2,11 +2,10 @@
 import { test, expect } from '@playwright/test';
 import { skipTutorial } from '../helpers/auth';
 
-test.beforeEach(async ({ page }) => {
-  await skipTutorial(page);
-});
-
 test.describe('TC-UI | Usability / Responsive', () => {
+  test.beforeEach(async ({ page }) => {
+    await skipTutorial(page);
+  });
 
   test('TC-UI-01 | Responsive Mobile (375px)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
