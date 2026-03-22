@@ -8,7 +8,6 @@ import { loginAs, skipTutorial } from '../helpers/auth';
 test.beforeEach(async ({ page }) => {
   await skipTutorial(page);
 });
-import { loginAs } from '../helpers/auth';
 
 test.describe('TC-ADMIN | Admin Dashboard', () => {
 
