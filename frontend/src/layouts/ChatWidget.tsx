@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, Image as ImageIcon, Minus, X } from 'lucide-react';
 import { useAuth } from '../features/auth/context/AuthContext';
@@ -42,10 +42,22 @@ export default function ChatWidget() {
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  // 🌟 เพิ่ม Ref สำหรับ Dummy div ที่อยู่ล่างสุด
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeUserId = user?.id || getGuestId();
+
+  // --- 🌟 ฟังก์ชันเลื่อนลงล่างสุด ---
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    } else if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, []);
 
   useEffect(() => {
     const newSocket = io(API_URL, {
@@ -70,12 +82,14 @@ export default function ChatWidget() {
           },
         ];
       });
+      // 🌟 เลื่อนลงล่างเมื่อได้รับข้อความใหม่
+      setTimeout(scrollToBottom, 100);
     });
 
     return () => {
       newSocket.disconnect();
     };
-  }, [activeUserId]);
+  }, [activeUserId, scrollToBottom]);
 
   useEffect(() => {
     fetch(`${API_URL}/chat/messages/${activeUserId}`)
@@ -94,12 +108,17 @@ export default function ChatWidget() {
           timestamp: new Date(msg.createdAt),
           isImage: msg.content?.startsWith('data:image') ?? false,
         }));
-        setMessages(mapped);
+        setMessages((prev) => {
+          const welcome = prev.find((m) => m.id === 'welcome');
+          return welcome ? [welcome, ...mapped] : mapped;
+        });
+        // 🌟 เลื่อนลงล่างเมื่อโหลดประวัติข้อความเสร็จ
+        setTimeout(scrollToBottom, 150);
       })
-      .catch(() => {
-        /* โหลดประวัติล้มเหลว — แสดงเฉพาะ welcome message */
+      .catch((err) => {
+        console.error('โหลดประวัติแชทล้มเหลว:', err);
       });
-  }, [activeUserId]);
+  }, [activeUserId, scrollToBottom]);
 
   useEffect(() => {
     const handleOpenChat = () => setIsOpen(true);
@@ -107,11 +126,13 @@ export default function ChatWidget() {
     return () => window.removeEventListener('openChatWidget', handleOpenChat);
   }, []);
 
+  // 🌟 ดักการเปลี่ยนแปลงเพื่อเลื่อนหน้าจอ (เมื่อเปิดแชท, มีข้อความ, รูปพรีวิว)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (isOpen) {
+      const timer = setTimeout(scrollToBottom, 100);
+      return () => clearTimeout(timer);
     }
-  }, [messages, isOpen, previewImage]);
+  }, [messages, isOpen, previewImage, scrollToBottom]);
 
   useEffect(() => {
     if (isOpen) {
@@ -141,7 +162,11 @@ export default function ChatWidget() {
         senderId: activeUserId,
       });
       setInput('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
     }
+    
+    // 🌟 เลื่อนลงทันทีเมื่อกดส่ง
+    setTimeout(scrollToBottom, 100);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,7 +178,11 @@ export default function ChatWidget() {
       return;
     }
     const reader = new FileReader();
-    reader.onloadend = () => setPreviewImage(reader.result as string);
+    reader.onloadend = () => {
+      setPreviewImage(reader.result as string);
+      // 🌟 เลื่อนเผื่อภาพพรีวิวดันข้อความ
+      setTimeout(scrollToBottom, 100);
+    };
     reader.readAsDataURL(file);
     e.target.value = '';
   };
@@ -206,7 +235,7 @@ export default function ChatWidget() {
 
       {/* Messages */}
       <div
-        className="flex-1 bg-[#F9FAFB] p-4 overflow-y-auto flex flex-col gap-3"
+        className="flex-1 bg-[#F9FAFB] p-4 overflow-y-auto flex flex-col gap-3 scroll-smooth"
         ref={scrollRef}
       >
         {messages.map((msg, idx) => {
@@ -222,11 +251,10 @@ export default function ChatWidget() {
                 </div>
               )}
               <div
-                className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${
-                  isUser
-                    ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
-                    : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
-                }`}
+                className={`max-w-[80%] min-w-[80px] w-fit p-3 text-[13px] leading-relaxed shadow-sm ${isUser
+                  ? 'bg-[#00A699] text-white rounded-[18px] rounded-tr-[2px]'
+                  : 'bg-white text-gray-800 border border-gray-100 rounded-[18px] rounded-tl-[2px]'
+                  }`}
               >
                 {msg.isImage ? (
                   <img
@@ -241,9 +269,8 @@ export default function ChatWidget() {
                   </p>
                 )}
                 <div
-                  className={`text-[9px] mt-1 text-right opacity-60 ${
-                    isUser ? 'text-white' : 'text-gray-400'
-                  }`}
+                  className={`text-[9px] mt-1 text-right opacity-60 ${isUser ? 'text-white' : 'text-gray-400'
+                    }`}
                 >
                   {msg.timestamp.toLocaleTimeString([], {
                     hour: '2-digit',
@@ -254,6 +281,8 @@ export default function ChatWidget() {
             </div>
           );
         })}
+        {/* 🌟 Dummy div ที่อยู่ล่างสุดเสมอ */}
+        <div ref={messagesEndRef} className="h-1" />
       </div>
 
       {/* Input */}
@@ -320,9 +349,8 @@ export default function ChatWidget() {
                 className="bg-transparent flex-1 text-xs focus:outline-none text-gray-700 placeholder-gray-400 resize-none min-h-[24px] max-h-[120px] overflow-y-auto py-1 scrollbar-hide"
               />
               <span
-                className={`text-[9px] font-mono ml-2 shrink-0 self-end mb-1 ${
-                  input.length >= 500 ? 'text-red-500' : 'text-gray-400'
-                }`}
+                className={`text-[9px] font-mono ml-2 shrink-0 self-end mb-1 ${input.length >= 500 ? 'text-red-500' : 'text-gray-400'
+                  }`}
               >
                 {input.length}/500
               </span>
@@ -331,11 +359,10 @@ export default function ChatWidget() {
             <button
               type="submit"
               disabled={!input.trim() && !previewImage}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-                input.trim() || previewImage
-                  ? 'bg-[#00A699] text-white shadow-lg'
-                  : 'bg-gray-200 text-gray-400'
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${input.trim() || previewImage
+                ? 'bg-[#00A699] text-white shadow-lg'
+                : 'bg-gray-200 text-gray-400'
+                }`}
             >
               <Send
                 size={18}
