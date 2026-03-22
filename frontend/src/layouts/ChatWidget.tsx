@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MessageCircle, Send, Image as ImageIcon, Minus, X } from 'lucide-react';
 import { useAuth } from '../features/auth/context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
-// Socket.io ต้องเชื่อมที่ base URL (ไม่มี /api) เช่น https://wd04.pupasoft.com
 const SOCKET_URL = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
 
 interface ChatMessage {
@@ -24,58 +23,77 @@ const getGuestId = () => {
   return guestId;
 };
 
+const WELCOME_MSG: ChatMessage = {
+  id: 'welcome',
+  senderType: 'admin',
+  text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
+  timestamp: new Date(),
+  isImage: false,
+};
+
 export default function ChatWidget() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-
-  // STORAGE_KEY แยกตาม user ID หรือ guest ID — ใช้ function เพื่อให้ได้ค่าล่าสุดเสมอ
-  const getStorageKey = () => {
-    const uid = user?.id || localStorage.getItem('guest_chat_id') || 'guest';
-    return `chat_history_${uid}`;
-  };
-
-  const WELCOME_MSG: ChatMessage = {
-    id: 'welcome',
-    senderType: 'admin' as const,
-    text: 'สวัสดีครับ! 🙏 RoamHub Tour ยินดีให้บริการ สนใจทัวร์ไหนสอบถามได้เลยนะครับ',
-    timestamp: new Date(),
-    isImage: false,
-  };
-
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MSG]);
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [fileErrorPopup, setFileErrorPopup] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
+  // ใช้ ref เก็บ socket เพื่อให้ handleSend ได้ instance ล่าสุดเสมอ (ไม่ติด closure เก่า)
+  const socketRef = useRef<Socket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeUserId = user?.id || getGuestId();
 
-  useEffect(() => {
-    const newSocket = io(SOCKET_URL, {
-      query: { role: 'user', userId: activeUserId },
-      transports: ['websocket', 'polling'],
-    });
-    setSocket(newSocket);
+  // ดึงประวัติจาก DB
+  const fetchHistory = useCallback(() => {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    newSocket.on('receiveMessage', (msg: any) => {
-      const isMe =
-        msg.senderId === activeUserId || msg.sender?.id === activeUserId;
+    fetch(`${API_URL}/chat/messages/${activeUserId}`, { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error('fetch failed');
+        return res.json();
+      })
+      .then((data: any[]) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        const mapped: ChatMessage[] = data.map((msg) => ({
+          id: msg.id,
+          senderType: msg.senderId === activeUserId ? 'user' : 'admin',
+          text: msg.content,
+          timestamp: new Date(msg.createdAt),
+          isImage: msg.content?.startsWith('data:image') ?? false,
+        }));
+        setMessages([WELCOME_MSG, ...mapped]);
+      })
+      .catch(() => {});
+  }, [activeUserId]);
+
+  // สร้าง socket ครั้งเดียวต่อ activeUserId และดึงประวัติด้วยในคราวเดียว
+  useEffect(() => {
+    fetchHistory();
+
+    const newSocket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      query: { userId: activeUserId },
+    });
+    socketRef.current = newSocket;
+
+    newSocket.on('receiveMessage', (incomingMsg: any) => {
       setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        const isImg = msg.content && msg.content.startsWith('data:image');
+        if (prev.some((m) => m.id === incomingMsg.id)) return prev;
         return [
           ...prev,
           {
-            id: msg.id,
-            senderType: isMe ? 'user' : 'admin',
-            text: msg.content,
-            timestamp: new Date(msg.createdAt || Date.now()),
-            isImage: isImg,
+            id: incomingMsg.id,
+            senderType: incomingMsg.senderId === activeUserId ? 'user' : 'admin',
+            text: incomingMsg.content,
+            timestamp: new Date(incomingMsg.createdAt || Date.now()),
+            isImage: incomingMsg.content?.startsWith('data:image') ?? false,
           },
         ];
       });
@@ -83,98 +101,37 @@ export default function ChatWidget() {
 
     return () => {
       newSocket.disconnect();
+      socketRef.current = null;
     };
-  }, [activeUserId]);
+  }, [activeUserId, fetchHistory]);
 
-  // บันทึกประวัติแชทลง localStorage ทุกครั้งที่มีข้อความใหม่
-  useEffect(() => {
-    try {
-      localStorage.setItem(getStorageKey(), JSON.stringify(messages));
-    } catch {}
-  }, [messages, user?.id]);
-
-  useEffect(() => {
-    if (!activeUserId) return;
-
-    const storageKey = getStorageKey();
-
-    // โหลดจาก localStorage ก่อนเลย — แสดงทันทีก่อน fetch DB
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const restored = parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
-        if (restored.length > 0) setMessages(restored);
-      }
-    } catch {}
-
-    // จากนั้น fetch จาก DB เพื่อ sync ประวัติจริง (รองรับเปลี่ยนเครื่อง)
-    const CHAT_BASE = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    fetch(`${CHAT_BASE}/chat/messages/${activeUserId}`, { headers })
-      .then((res) => {
-        if (!res.ok) throw new Error('fetch failed');
-        return res.json();
-      })
-      .then((data) => {
-        if (!Array.isArray(data) || data.length === 0) return;
-        const mapped = data.map((msg: any) => ({
-          id: msg.id,
-          senderType: (msg.senderId === activeUserId
-            ? 'user'
-            : 'admin') as 'user' | 'admin',
-          text: msg.content,
-          timestamp: new Date(msg.createdAt),
-          isImage: msg.content?.startsWith('data:image') ?? false,
-        }));
-        // DB เป็น source of truth — ใช้ทับ localStorage
-        setMessages([WELCOME_MSG, ...mapped]);
-        localStorage.setItem(storageKey, JSON.stringify([WELCOME_MSG, ...mapped]));
-      })
-      .catch(() => {
-        // fetch ล้มเหลว — ใช้ localStorage ที่โหลดไปแล้วต่อ
-      });
-  }, [activeUserId]);
-
+  // เปิด widget จาก event ภายนอก
   useEffect(() => {
     const handleOpenChat = () => setIsOpen(true);
     window.addEventListener('openChatWidget', handleOpenChat);
     return () => window.removeEventListener('openChatWidget', handleOpenChat);
   }, []);
 
+  // scroll ลงล่างสุดเมื่อมีข้อความใหม่
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isOpen, previewImage]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((!input.trim() && !previewImage) || !socket) return;
+    if ((!input.trim() && !previewImage) || !socketRef.current) return;
 
     if (previewImage) {
-      socket.emit('sendMessage', {
+      socketRef.current.emit('sendMessage', {
         content: previewImage,
         senderId: activeUserId,
       });
       setPreviewImage(null);
     }
     if (input.trim()) {
-      socket.emit('sendMessage', {
+      socketRef.current.emit('sendMessage', {
         content: input,
         senderId: activeUserId,
       });

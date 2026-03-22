@@ -25,13 +25,11 @@ export class ChatGateway implements OnGatewayConnection {
     const userId = client.handshake.query.userId as string;
     const role = client.handshake.query.role as string;
 
-    // เข้าห้องส่วนตัวตาม ID
     if (userId) {
       client.join(`user_${userId}`);
       console.log(`Client ${client.id} joined room: user_${userId}`);
     }
 
-    // Admin เข้าห้องกลางด้วย เพื่อรับ notification
     if (role === 'admin' || role === 'ADMIN') {
       client.join('admin_room');
       console.log(`Admin joined admin_room`);
@@ -43,12 +41,13 @@ export class ChatGateway implements OnGatewayConnection {
     @MessageBody() payload: { senderId: string; content: string; receiverId?: string },
     @ConnectedSocket() client: Socket,
   ) {
-    // ใช้ senderId จาก handshake แทน payload เพื่อกัน spoof ID
     const senderId =
       (client.handshake.query.userId as string) || payload.senderId;
+    const role = client.handshake.query.role as string;
     let { content, receiverId } = payload;
 
-    // ถ้าไม่มีผู้รับ ให้ส่งหา Admin อัตโนมัติ
+    const isAdminSender = role === 'admin' || role === 'ADMIN';
+
     if (!receiverId) {
       const admin = await this.chatService.getAdminUser();
       if (admin) {
@@ -56,20 +55,15 @@ export class ChatGateway implements OnGatewayConnection {
       }
     }
 
-    // บันทึกลง Database
     const saved = await this.chatService.saveMessage(content, senderId, receiverId);
 
-    // ส่งกลับหาผู้ส่ง
-    this.server.to(`user_${senderId}`).emit('receiveMessage', saved);
-
-    // ส่งหาผู้รับ
-    if (receiverId) {
-      this.server.to(`user_${receiverId}`).emit('receiveMessage', saved);
-    }
-
-    // แจ้งเตือนห้อง Admin รวม (ถ้าผู้ส่งไม่ใช่ Admin)
-    const isAdminSender = senderId === receiverId;
-    if (!isAdminSender) {
+    if (isAdminSender) {
+      this.server.to('admin_room').emit('receiveMessage', saved);
+      if (receiverId) {
+        this.server.to(`user_${receiverId}`).emit('receiveMessage', saved);
+      }
+    } else {
+      this.server.to(`user_${senderId}`).emit('receiveMessage', saved);
       this.server.to('admin_room').emit('receiveMessage', saved);
     }
   }

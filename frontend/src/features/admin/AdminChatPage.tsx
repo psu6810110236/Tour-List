@@ -5,6 +5,7 @@ import { useAuth } from '../auth/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL;
+const SOCKET_URL = (import.meta.env.VITE_API_URL as string).replace(/\/api$/, '');
 
 interface Contact {
   id: string;
@@ -28,12 +29,21 @@ export default function AdminChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [fileErrorPopup, setFileErrorPopup] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+
+  // ใช้ ref เก็บ socket และ selectedUser เพื่อให้ receiveMessage handler ได้ค่าล่าสุดเสมอ
+  const socketRef = useRef<Socket | null>(null);
+  const selectedUserRef = useRef<Contact | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // sync selectedUserRef ให้ตรงกับ state เสมอ
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
   const adjustHeight = () => {
     if (textareaRef.current) {
@@ -42,70 +52,93 @@ export default function AdminChatPage() {
       textareaRef.current.style.height = `${newHeight}px`;
     }
   };
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+
+  // tokenRef เก็บ token ล่าสุดเสมอ โดยไม่ทำให้ fetchContacts เปลี่ยน reference
+  const tokenRef = useRef<string | null>(null);
+  useEffect(() => { tokenRef.current = token; }, [token]);
 
   const fetchContacts = useCallback(() => {
     fetch(`${API_URL}/chat/contacts`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${tokenRef.current}` },
     })
       .then((res) => res.json())
-      .then((data) => setContacts(data))
+      .then((data) => setContacts(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Error fetching contacts:', err));
-  }, [token]);
+  }, []); // dependency array ว่าง → reference คงที่ → socket useEffect ไม่ re-run
 
+  // สร้าง socket ครั้งเดียว
   useEffect(() => {
     if (!user) return;
 
     fetchContacts();
 
-    const newSocket = io(API_URL, {
+    const newSocket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
       query: { role: 'admin', userId: user.id },
     });
+    socketRef.current = newSocket;
 
     newSocket.on('receiveMessage', (msg: any) => {
-      setSelectedUser((currentSelected) => {
-        const isCurrentChat =
-          currentSelected &&
-          (msg.senderId === currentSelected.id ||
-            msg.receiverId === currentSelected.id);
+      const currentSelected = selectedUserRef.current;
 
-        if (isCurrentChat) {
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === msg.id)) return prev;
-            return [...prev, msg];
-          });
-        } else {
-          if (msg.senderId !== user.id) {
-            setUnreadCounts((prev) => ({
-              ...prev,
-              [msg.senderId]: (prev[msg.senderId] || 0) + 1,
-            }));
-          }
-          fetchContacts();
+      // ข้อความเกี่ยวข้องกับ chat ที่กำลังเปิดอยู่ถ้า senderId หรือ receiverId ตรงกับ selectedUser
+      const isCurrentChat =
+        currentSelected &&
+        (msg.senderId === currentSelected.id || msg.receiverId === currentSelected.id);
+
+      if (isCurrentChat) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      } else {
+        // ข้อความจากคนอื่น เพิ่ม badge แจ้งเตือน
+        if (msg.senderId !== user.id) {
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [msg.senderId]: (prev[msg.senderId] || 0) + 1,
+          }));
         }
-        return currentSelected;
-      });
+      }
+
+      // อัปเดตรายชื่อ contact เสมอ
+      fetchContacts();
     });
 
-    setSocket(newSocket);
     return () => {
       newSocket.disconnect();
+      socketRef.current = null;
     };
   }, [user, fetchContacts]);
 
+  // ดึงประวัติเมื่อเลือก user
+  // ใช้ selectedUser.id แทน selectedUser object — ป้องกัน re-run เมื่อ contacts array สร้างใหม่
+  const selectedUserId = selectedUser?.id ?? null;
+
   useEffect(() => {
-    if (!selectedUser) return;
-    setUnreadCounts((prev) => ({ ...prev, [selectedUser.id]: 0 }));
+    if (!selectedUserId) return;
+    let cancelled = false; // flag ยกเลิก fetch เก่าเมื่อสลับ user เร็วๆ
+
+    setMessages([]);
+    setUnreadCounts((prev) => ({ ...prev, [selectedUserId]: 0 }));
     setPreviewImage(null);
 
-    fetch(`${API_URL}/chat/messages/${selectedUser.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    fetch(`${API_URL}/chat/messages/${selectedUserId}`, {
+      headers: { Authorization: `Bearer ${tokenRef.current}` },
     })
-      .then((res) => res.json())
-      .then((data) => setMessages(data))
-      .catch((err) => console.error('Error fetching messages:', err));
-  }, [selectedUser, token]);
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) setMessages(data);
+      })
+      .catch((err) => { if (!cancelled) console.error('Error fetching messages:', err); });
 
+    return () => { cancelled = true; }; // cleanup: ยกเลิก fetch เมื่อ user เปลี่ยน
+  }, [selectedUserId]);
+
+  // scroll ลงล่างสุด
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -115,11 +148,11 @@ export default function AdminChatPage() {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!input.trim() && !previewImage) || !socket || !selectedUser || !user)
+    if ((!input.trim() && !previewImage) || !socketRef.current || !selectedUser || !user)
       return;
 
     if (previewImage) {
-      socket.emit('sendMessage', {
+      socketRef.current.emit('sendMessage', {
         content: previewImage,
         senderId: user.id,
         receiverId: selectedUser.id,
@@ -128,7 +161,7 @@ export default function AdminChatPage() {
     }
 
     if (input.trim()) {
-      socket.emit('sendMessage', {
+      socketRef.current.emit('sendMessage', {
         content: input,
         senderId: user.id,
         receiverId: selectedUser.id,
@@ -140,7 +173,7 @@ export default function AdminChatPage() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !socket || !selectedUser || !user) return;
+    if (!file || !socketRef.current || !selectedUser || !user) return;
 
     if (file.size > 2 * 1024 * 1024) {
       setFileErrorPopup(true);
@@ -261,7 +294,7 @@ export default function AdminChatPage() {
             >
               {messages.map((msg, idx) => {
                 const isAdmin = msg.senderId !== selectedUser.id;
-                const isImage = msg.content.startsWith('data:image');
+                const isImage = msg.content?.startsWith('data:image');
 
                 return (
                   <div

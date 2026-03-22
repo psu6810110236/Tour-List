@@ -40,8 +40,8 @@ export class ChatService {
 
     // 2. ดึงข้อความทั้งหมดของ User คนนั้น (Support 1-on-1 Chat + Guest)
     async getMessagesByUser(userId: string): Promise<Message[]> {
-        // ใช้ QueryBuilder + LEFT JOIN เพื่อรองรับ guest ID ที่ไม่มีใน users table
-        // LEFT JOIN จะไม่ throw แม้ foreign key จะหาไม่เจอ
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(userId)) return [];
         return await this.messageRepository
             .createQueryBuilder('message')
             .leftJoinAndSelect('message.sender', 'sender')
@@ -90,7 +90,7 @@ export class ChatService {
         if (!admin) {
             const adminLower = await this.userRepository.findOne({ where: { role: { name: 'admin' } } });
             if (adminLower) return adminLower;
-            
+
             throw new Error('Admin user not found in database. Please check seeding.');
         }
 
