@@ -1,7 +1,4 @@
-// playwright/tests/TC-ADMIN.spec.ts
-// ─────────────────────────────────────────────────────────────────
-// Module: Admin Dashboard
-// ─────────────────────────────────────────────────────────────────
+
 import { test, expect } from '@playwright/test';
 import { loginAs, skipTutorial } from '../helpers/auth';
 
